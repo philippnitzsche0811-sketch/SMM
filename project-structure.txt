@@ -1,0 +1,125 @@
+﻿SMM/
++-- frontend  # Vue 3 Frontend
+|   +-- src  # Source Code
+|   |   +-- views  # Vue Pages
+|   |   |   +-- auth
+|   |   |   +-- UploadView.vue
+|   |   |   +-- UploadsView.vue
+|   |   |   +-- SettingsView.vue
+|   |   |   +-- PlatformsView.vue
+|   |   |   +-- DashboardView.vue
+|   |   |   +-- ConnectView.vue
+|   |   +-- utils
+|   |   |   +-- validators.ts
+|   |   |   +-- formatters.ts
+|   |   +-- types
+|   |   |   +-- video.types.ts
+|   |   |   +-- user.types.ts
+|   |   |   +-- platform.types.ts
+|   |   +-- stores  # Pinia Stores
+|   |   |   +-- platformStore.ts
+|   |   |   +-- authStore.ts
+|   |   +-- services  # Business Logic
+|   |   |   +-- api.ts
+|   |   +-- router
+|   |   |   +-- index.ts
+|   |   +-- composables
+|   |   |   +-- useUpload.ts
+|   |   |   +-- useAuth.ts
+|   |   +-- components  # Vue Components
+|   |   |   +-- video
+|   |   |   +-- upload  # Platform Uploads
+|   |   |   +-- platform
+|   |   |   +-- layout
+|   |   |   +-- dashboard
+|   |   |   +-- connect
+|   |   |   +-- auth
+|   |   +-- assets
+|   |   |   +-- styles
+|   |   |   +-- images
+|   |   +-- main.ts
+|   |   +-- env.d.ts
+|   |   +-- App.vue
+|   +-- public
+|   |   +-- vite.svg
+|   +-- vite.config.ts
+|   +-- tsconfig.node.json
+|   +-- tsconfig.json
+|   +-- README.md
+|   +-- package-lock.json
+|   +-- package.json
+|   +-- nginx.conf
+|   +-- index.html
+|   +-- Dockerfile
+|   +-- .gitignore
+|   +-- .dockerignore
++-- backend  # FastAPI Backend
+|   +-- utils
+|   |   +-- utils.py
+|   |   +-- auth.py
+|   |   +-- __init__.py
+|   +-- tokens
+|   +-- services  # Business Logic
+|   |   +-- youtube_service.py
+|   |   +-- video_service.py
+|   |   +-- user_service.py
+|   |   +-- token_storage.py
+|   |   +-- tiktok_service.py
+|   |   +-- instagram_service.py
+|   |   +-- file_service.py
+|   |   +-- encryption_service.py
+|   |   +-- email_service.py
+|   |   +-- auth_service.py
+|   |   +-- __init__.py
+|   +-- routers  # API Routes
+|   |   +-- youtube.py
+|   |   +-- user.py
+|   |   +-- upload.py
+|   |   +-- tiktok.py
+|   |   +-- static_pages.py
+|   |   +-- instagram.py
+|   |   +-- auth.py
+|   |   +-- __init__.py
+|   +-- models  # Database Models
+|   |   +-- video.py
+|   |   +-- user.py
+|   |   +-- database.py
+|   |   +-- __init__.py
+|   +-- migrations
+|   |   +-- 001_migrate_to_encrypted.py
+|   +-- logs
+|   +-- database
+|   |   +-- ssl
+|   |   +-- init-scripts
+|   |   |   +-- 02-create-tables.sql
+|   |   |   +-- 01-extensions.sql
+|   |   |   +-- 00-create-users.sh
+|   |   +-- backups
+|   |   +-- postgresql.conf
+|   |   +-- pg_hba.conf
+|   |   +-- generate_keys.ps1
+|   |   +-- geneate-keys.sh
+|   |   +-- backup.sh
+|   |   +-- backup.ps1
+|   +-- data
+|   +-- alembic
+|   |   +-- versions
+|   +-- requirements.txt
+|   +-- README.md
+|   +-- migrate.py
+|   +-- main.py
+|   +-- Dockerfile
+|   +-- config.py
+|   +-- .gitignore
+|   +-- .dockerignore
++-- tree-clean.ps1
++-- structure-clean.txt
++-- start-local.ps1
++-- PROJECT_BRIEFING.md
++-- docker-compose.yml
++-- docker-compose.prod.yml
++-- docker-compose.local.yml
++-- deploy-synology.ps1
++-- .gitignore
++-- .env.production
++-- .env.example

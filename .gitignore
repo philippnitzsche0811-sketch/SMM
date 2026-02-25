@@ -1,0 +1,36 @@
+# Environment files mit echten Secrets
+.env.local
+.env.production
+
+# Docker
+*.tar
+docker-compose.override.yml
+
+# Python
+__pycache__/
+*.pyc
+venv/
+*.egg-info/
+
+# Node
+node_modules/
+dist/
+
+# Logs
+*.log
+logs/
+
+# Temp & Data
+temp/
+tokens/
+data/
+backups/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
