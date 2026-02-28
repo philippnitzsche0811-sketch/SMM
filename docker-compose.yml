@@ -3,70 +3,95 @@ services:
   postgres:
     image: postgres:15-alpine
     container_name: socialhub-db
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-      - ./backend/database/init-scripts:/docker-entrypoint-initdb.d
+    env_file:
+      - .env
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: ${POSTGRES_DB}
       APP_USER_PASSWORD: ${APP_USER_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./backend/database/init-scripts:/docker-entrypoint-initdb.d
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
       interval: 10s
       timeout: 5s
       retries: 5
     restart: unless-stopped
+    networks:
+      - smm-net
 
   backend:
     build:
       context: ./backend
       dockerfile: Dockerfile
     container_name: socialhub-backend
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_ALGORITHM: ${JWT_ALGORITHM}
+      SMTP_HOST: ${SMTP_HOST}
+      SMTP_PORT: ${SMTP_PORT}
+      SMTP_USER: ${SMTP_USER}
+      SMTP_PASSWORD: ${SMTP_PASSWORD}
+      FROM_EMAIL: ${FROM_EMAIL}
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      AI_MOCK_MODE: ${AI_MOCK_MODE}
+      YOUTUBE_ENABLED: ${YOUTUBE_ENABLED}
+      TIKTOK_CLIENT_KEY: ${TIKTOK_CLIENT_KEY}
+      TIKTOK_CLIENT_SECRET: ${TIKTOK_CLIENT_SECRET}
+      INSTAGRAM_CLIENT_ID: ${INSTAGRAM_CLIENT_ID}
+      INSTAGRAM_CLIENT_SECRET: ${INSTAGRAM_CLIENT_SECRET}
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY}
+      MAX_FILE_SIZE_MB: ${MAX_FILE_SIZE_MB}
+      TEMP_DIR: ${TEMP_DIR}
+      TOKEN_DIR: ${TOKEN_DIR}
+      DATA_DIR: ${DATA_DIR}
+      BACKEND_URL: ${BACKEND_URL}
+      FRONTEND_URL: ${FRONTEND_URL}
+      ENVIRONMENT: ${ENVIRONMENT}
+      DEBUG: ${DEBUG}
     volumes:
       - backend_temp:/app/temp
       - backend_tokens:/app/tokens
       - backend_data:/app/data
-    environment:
-      - DATABASE_URL=${DATABASE_URL}
-      - JWT_SECRET=${JWT_SECRET}
-      - JWT_ALGORITHM=${JWT_ALGORITHM}
-      - SMTP_HOST=${SMTP_HOST}
-      - SMTP_PORT=${SMTP_PORT}
-      - SMTP_USER=${SMTP_USER}
-      - SMTP_PASSWORD=${SMTP_PASSWORD}
-      - FROM_EMAIL=${FROM_EMAIL}
-      - OPENAI_API_KEY=${OPENAI_API_KEY}
-      - AI_MOCK_MODE=${AI_MOCK_MODE}
-      - YOUTUBE_ENABLED=${YOUTUBE_ENABLED}
-      - TIKTOK_CLIENT_KEY=${TIKTOK_CLIENT_KEY}
-      - TIKTOK_CLIENT_SECRET=${TIKTOK_CLIENT_SECRET}
-      - INSTAGRAM_CLIENT_ID=${INSTAGRAM_CLIENT_ID}
-      - INSTAGRAM_CLIENT_SECRET=${INSTAGRAM_CLIENT_SECRET}
-      - ENCRYPTION_KEY=${ENCRYPTION_KEY}
-      - MAX_FILE_SIZE_MB=${MAX_FILE_SIZE_MB}
-      - TEMP_DIR=${TEMP_DIR}
-      - TOKEN_DIR=${TOKEN_DIR}
-      - DATA_DIR=${DATA_DIR}
     depends_on:
       postgres:
         condition: service_healthy
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --workers 4
     restart: unless-stopped
+    networks:
+      - smm-net
 
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
       args:
-        - VITE_API_URL=${VITE_API_URL}
+        VITE_API_URL: ${VITE_API_URL}
     container_name: socialhub-frontend
+    env_file:
+      - .env
+    environment:
+      VITE_API_URL: ${VITE_API_URL}
     restart: unless-stopped
+    networks:
+      - smm-net
 
 volumes:
   postgres_data:
   backend_temp:
   backend_tokens:
   backend_data:
+
+networks:
+  smm-net:
+    driver: bridge
+
+
 
 
 

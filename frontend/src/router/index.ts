@@ -35,6 +35,13 @@ const router = createRouter({
       component: () => import('@/views/PrivacyView.vue'),
       meta: { requiresAuth: false },
     },
+    {
+      path: '/verify-email',
+      name: 'verify-email',
+      component: () => import('@/views/auth/VerifyEmailView.vue'),
+      meta: { requiresAuth: false }
+    },
+
 
     // 🔒 APP ROUTES (MIT DashboardLayout) – OHNE /app Prefix
     {

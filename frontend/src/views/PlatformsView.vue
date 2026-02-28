@@ -1,9 +1,15 @@
 <template>
   <div class="platforms-view">
-    <div class="platforms-header">
-      <h2>Plattformen verwalten</h2>
-      <p class="subtitle">Verbinde deine Social Media Accounts, um Videos hochzuladen</p>
+     <!-- Ladeindikator -->
+    <div v-if="loading" style="display: flex; justify-content: center; padding: 4rem;">
+      <i class="pi pi-spin pi-spinner" style="font-size: 2rem"></i>
     </div>
+
+    <template v-else>
+      <div class="platforms-header">
+        <h2>Plattformen verwalten</h2>
+        <p class="subtitle">Verbinde deine Social Media Accounts, um Videos hochzuladen</p>
+      </div>
 
     <!-- Platforms Grid -->
     <div class="platforms-grid">
@@ -34,7 +40,7 @@
         @reconnect="handleInstagramConnect"
       />
     </div>
-
+  </template>
     <!-- YouTube File Upload Dialog -->
     <Dialog 
       v-model:visible="showYouTubeDialog" 
@@ -128,6 +134,7 @@ const authStore = useAuthStore();
 const toast = useToast();
 
 const connecting = ref(false);
+const loading = ref(true);
 const showYouTubeDialog = ref(false);
 const youtubeFile = ref<File | null>(null);
 
@@ -306,37 +313,31 @@ onMounted(async () => {
   const error = route.query.error as string | undefined;
   const message = route.query.message as string | undefined;
 
-  if (success) {
-    console.log('✅ OAuth Success detected for:', success);
-    
-    // 🆕 Refresh User Data from Backend
-    try {
-      await authStore.refreshUser();
-      
-      toast.add({
-        severity: 'success',
-        summary: 'Erfolgreich verbunden!',
-        detail: `${success.toUpperCase()} wurde erfolgreich verbunden.`,
-        life: 5000
-      });
-    } catch (error) {
-      console.error('Failed to refresh user data after OAuth:', error);
-    }
+  try {
+    await authStore.refreshUser(); // ← immer frisch laden
+  } catch (e) {
+    console.error('Failed to refresh user:', e);
+  } finally {
+    loading.value = false; // ← erst jetzt rendern
+  }
 
-    // Remove query params
+  if (success) {
+    toast.add({
+      severity: 'success',
+      summary: 'Erfolgreich verbunden!',
+      detail: `${success.toUpperCase()} wurde erfolgreich verbunden.`,
+      life: 5000
+    });
     router.replace({ query: {} });
   }
 
   if (error) {
-    console.error('❌ OAuth Error:', error, message);
-    
     toast.add({
       severity: 'error',
       summary: 'Verbindung fehlgeschlagen',
       detail: message || `${error} konnte nicht verbunden werden.`,
       life: 5000
     });
-
     router.replace({ query: {} });
   }
 });

@@ -9,7 +9,7 @@ psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" <<-E
     DO \$\$
     BEGIN
         IF NOT EXISTS (SELECT FROM pg_catalog.pg_user WHERE usename = 'socialhub_app') THEN
-            CREATE USER socialhub_app WITH PASSWORD '${APP_USER_PASSWORD}';
+            CREATE USER socialhub_app WITH PASSWORD '${287168767398265}';
         END IF;
     END
     \$\$;

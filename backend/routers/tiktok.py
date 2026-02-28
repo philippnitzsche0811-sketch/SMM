@@ -84,7 +84,7 @@ async def connect_tiktok(request: ConnectRequest):
         # Store code_verifier temporarily (mapped to user_id)
         pkce_storage[request.user_id] = code_verifier
         
-        redirect_uri = f"{settings.BACKEND_URL}/tiktok/oauth/callback"
+        redirect_uri = f"{settings.BACKEND_URL}/api/tiktok/oauth/callback"
         scopes = "user.info.basic,video.upload,video.publish"
         
         auth_url = (
@@ -192,7 +192,7 @@ async def exchange_code_for_token(code: str, code_verifier: str) -> tuple[str, s
         "client_secret": settings.TIKTOK_CLIENT_SECRET,
         "code": code,
         "grant_type": "authorization_code",
-        "redirect_uri": f"{settings.BACKEND_URL}/tiktok/oauth/callback",
+        "redirect_uri": f"{settings.BACKEND_URL}/api/tiktok/oauth/callback",
         "code_verifier": code_verifier  # âœ… PKCE code_verifier
     }
     

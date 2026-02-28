@@ -1,101 +1,19 @@
-version: '3.8'
+
 
 services:
-  postgres:
-    image: postgres:15-alpine
-    container_name: socialhub-db
-    env_file:
-      - .env.production
-    environment:
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_DB: ${POSTGRES_DB}
-      APP_USER_PASSWORD: ${APP_USER_PASSWORD}
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-      - ./backend/database/init-scripts:/docker-entrypoint-initdb.d
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    restart: unless-stopped
-
-  backend:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-    container_name: socialhub-backend
-    env_file:
-      - .env.production
-    environment:
-      DATABASE_URL: ${DATABASE_URL}
-      JWT_SECRET: ${JWT_SECRET}
-      JWT_ALGORITHM: ${JWT_ALGORITHM}
-      SMTP_HOST: ${SMTP_HOST}
-      SMTP_PORT: ${SMTP_PORT}
-      SMTP_USER: ${SMTP_USER}
-      SMTP_PASSWORD: ${SMTP_PASSWORD}
-      FROM_EMAIL: ${FROM_EMAIL}
-      OPENAI_API_KEY: ${OPENAI_API_KEY}
-      AI_MOCK_MODE: ${AI_MOCK_MODE}
-      YOUTUBE_ENABLED: ${YOUTUBE_ENABLED}
-      TIKTOK_CLIENT_KEY: ${TIKTOK_CLIENT_KEY}
-      TIKTOK_CLIENT_SECRET: ${TIKTOK_CLIENT_SECRET}
-      INSTAGRAM_CLIENT_ID: ${INSTAGRAM_CLIENT_ID}
-      INSTAGRAM_CLIENT_SECRET: ${INSTAGRAM_CLIENT_SECRET}
-      ENCRYPTION_KEY: ${ENCRYPTION_KEY}
-      MAX_FILE_SIZE_MB: ${MAX_FILE_SIZE_MB}
-      TEMP_DIR: ${TEMP_DIR}
-      TOKEN_DIR: ${TOKEN_DIR}
-      DATA_DIR: ${DATA_DIR}
-      BACKEND_URL: ${BACKEND_URL}
-      FRONTEND_URL: ${FRONTEND_URL}
-      ENVIRONMENT: ${ENVIRONMENT}
-      DEBUG: ${DEBUG}
-    volumes:
-      - backend_temp:/app/temp
-      - backend_tokens:/app/tokens
-      - backend_data:/app/data
-    depends_on:
-      postgres:
-        condition: service_healthy
-    command: uvicorn main:app --host 0.0.0.0 --port 8000 --workers 4
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.smm-backend.rule=Host(`api.decodu-smm.com`)"
-      - "traefik.http.routers.smm-backend.entrypoints=websecure"
-      - "traefik.http.routers.smm-backend.tls.certresolver=letsencrypt"
-      - "traefik.http.services.smm-backend.loadbalancer.server.port=8000"
-    restart: unless-stopped
-
-  frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
-      args:
-        VITE_API_URL: ${VITE_API_URL}
-    container_name: socialhub-frontend
-    env_file:
-      - .env.production
-    environment:
-      VITE_API_URL: ${VITE_API_URL}
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.smm-frontend.rule=Host(`app.decodu-smm.com`)"
-      - "traefik.http.routers.smm-frontend.entrypoints=websecure"
-      - "traefik.http.routers.smm-frontend.tls.certresolver=letsencrypt"
-      - "traefik.http.services.smm-frontend.loadbalancer.server.port=80"
-    restart: unless-stopped
-
   traefik:
-    image: traefik:v3.0
+    image: traefik:v3.1
     container_name: smm-traefik
+    restart: unless-stopped
     command:
+      - "--log.level=INFO"
       - "--providers.docker=true"
       - "--providers.docker.exposedbydefault=false"
+      - "--providers.docker.network=smm_smm-net"
       - "--entrypoints.web.address=:80"
       - "--entrypoints.websecure.address=:443"
+      - "--entrypoints.web.http.redirections.entrypoint.to=websecure"
+      - "--entrypoints.web.http.redirections.entrypoint.scheme=https"
       - "--certificatesresolvers.letsencrypt.acme.httpchallenge=true"
       - "--certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=web"
       - "--certificatesresolvers.letsencrypt.acme.email=${FROM_EMAIL}"
@@ -106,13 +24,38 @@ services:
     volumes:
       - "/var/run/docker.sock:/var/run/docker.sock:ro"
       - "traefik_letsencrypt:/letsencrypt"
-    restart: unless-stopped
+    networks:
+      - smm-net
+
+  backend:
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.smm-backend.rule=Host(`api.decodu-smm.com`)"
+      - "traefik.http.routers.smm-backend.entrypoints=websecure"
+      - "traefik.http.routers.smm-backend.tls.certresolver=letsencrypt"
+      - "traefik.http.services.smm-backend.loadbalancer.server.port=8000"
+    networks:
+      - smm-net
+
+  frontend:
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.smm-frontend.rule=Host(`app.decodu-smm.com`)"
+      - "traefik.http.routers.smm-frontend.entrypoints=websecure"
+      - "traefik.http.routers.smm-frontend.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.smm-frontend.service=smm-frontend"
+      - "traefik.http.services.smm-frontend.loadbalancer.server.port=80"
+    networks:
+      - smm-net
 
 volumes:
-  postgres_data:
-  backend_temp:
-  backend_tokens:
-  backend_data:
   traefik_letsencrypt:
+
+networks:
+  smm-net:
+    name: smm_smm-net
+
+
+
 
 
