@@ -11,7 +11,7 @@ jobs:
       - name: Deploy via SSH
         uses: appleboy/ssh-action@v1.0.3
         with:
-          host: ${{ secrets.SERVER_HOST }}
+          host: ${{ secrets.SERVER_ID }}
           username: root
           key: ${{ secrets.SERVER_SSH_KEY }}
           script: /opt/smm/deploy.sh
