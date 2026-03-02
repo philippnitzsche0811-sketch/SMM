@@ -21,6 +21,7 @@ class Video(BaseModel):
     platforms: List[str] = []
     privacy_status: str = "private"
     status: VideoStatus = VideoStatus.PENDING
+    file_path: Optional[str] = None
     created_at: datetime
     updated_at: Optional[datetime] = None
     upload_results: Dict[str, dict] = {}

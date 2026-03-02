@@ -9,6 +9,8 @@ from utils.auth import create_access_token, decode_access_token  # ✅ NUR diese
 from models.database import UserModel, get_db
 from services.email_service import EmailService
 from config import settings
+from typing import Optional
+
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/auth", tags=["Authentication"])
@@ -41,6 +43,9 @@ class ResetPasswordRequest(BaseModel):
 class ChangePasswordRequest(BaseModel):
     current_password: str
     new_password: str
+
+class UpdateMeRequest(BaseModel):
+    username: Optional[str] = None
 
 # ==========================================
 # Helper Functions
@@ -515,3 +520,46 @@ async def get_current_user(
     except Exception as e:
         logger.error(f"❌ Get current user failed: {str(e)}", exc_info=True)
         raise HTTPException(401, "Invalid or expired token")
+
+
+@router.patch("/me")
+async def update_me(
+    request: UpdateMeRequest,
+    authorization: str = Header(...),
+    db: Session = Depends(get_db)
+):
+    try:
+        token = authorization.replace("Bearer ", "")
+        payload = decode_access_token(token)
+        user_id = payload.get("sub")
+
+        if not user_id:
+            raise HTTPException(status_code=401, detail="Ungültiger Token")
+
+        user = db.query(UserModel).filter(UserModel.id == user_id).first()
+
+        if not user:
+            raise HTTPException(status_code=404, detail="User nicht gefunden")
+
+        if request.username is not None:
+            user.username = request.username
+
+        user.updated_at = datetime.utcnow()
+        db.commit()
+        db.refresh(user)
+
+        logger.info(f"✅ User {user_id} Profil aktualisiert")
+
+        return {
+            "id": str(user.id),
+            "email": user.email,
+            "username": user.username,
+            "is_verified": user.is_verified,
+            "updated_at": user.updated_at.isoformat()
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"❌ Update Me fehlgeschlagen: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))

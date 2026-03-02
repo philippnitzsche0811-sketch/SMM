@@ -49,6 +49,7 @@ class VideoModel(Base):
     platforms = Column(JSON, nullable=False)
     privacy_status = Column(String, default="private")
     status = Column(String, default="pending")
+    file_path = Column(String, nullable=True)
     upload_results = Column(JSON, nullable=True)
     errors = Column(JSON, nullable=True)
     created_at = Column(DateTime, default=datetime.now)
