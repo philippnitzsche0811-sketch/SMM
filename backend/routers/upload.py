@@ -34,7 +34,7 @@ class UpdateVideoRequest(BaseModel):
 
 
 # ================================================================================
-# Upload Routes
+# Upload
 # ================================================================================
 
 @router.post("/upload_video")
@@ -49,50 +49,31 @@ async def upload_video(
     platforms: str = Form(...),
     db: Session = Depends(get_db)
 ):
-    """
-    Lädt ein Video auf eine oder mehrere Plattformen hoch (asynchron)
-    
-    Args:
-        user_id: User ID
-        video: Video-Datei
-        title: Video-Titel
-        description: Video-Beschreibung
-        tags: Komma-getrennte Tags
-        privacy_status: Privacy Status (private/public/unlisted)
-        platforms: Komma-getrennte Plattformen (youtube,tiktok,instagram)
-    
-    Returns:
-        Video Upload Response mit video_id und status
-    """
     try:
         logger.info(f"📤 Video-Upload Request von User {user_id}")
-        
-        # Validate video file
+
         content_type = video.content_type or ""
         filename = video.filename or ""
-        
+
         is_video = (
-            content_type.startswith('video/') or
-            any(filename.lower().endswith(ext) for ext in ['.mp4', '.mov', '.avi', '.mkv', '.webm'])
+            content_type.startswith("video/") or
+            any(filename.lower().endswith(ext) for ext in [".mp4", ".mov", ".avi", ".mkv", ".webm"])
         )
-        
+
         if not is_video:
             raise HTTPException(
-                status_code=400, 
+                status_code=400,
                 detail=f"Hochgeladene Datei ist kein Video (Type: {content_type})"
             )
-        
-        # Parse parameters
-        platform_list = [p.strip().lower() for p in platforms.split(",")]
-        tags_list = [t.strip() for t in tags.split(",")] if tags else []
-        
-        logger.info(f"🎯 Platforms: {platform_list}, Tags: {tags_list}")
-        
-        # Save temp file
+
+        platform_list = [p.strip().lower() for p in platforms.split(",") if p.strip()]
+        tags_list = [t.strip() for t in tags.split(",") if t.strip()]
+
+        # Temp-Datei speichern
         temp_video_path = await file_service.save_temp_file(video)
         logger.info(f"💾 Temp file saved: {temp_video_path}")
-        
-        # Create video record in database
+
+        # Video in DB anlegen – file_path wird mitgespeichert
         video_record = video_service.create_video(
             db=db,
             user_id=user_id,
@@ -100,18 +81,19 @@ async def upload_video(
             description=description,
             tags=tags_list,
             platforms=platform_list,
-            privacy_status=privacy_status
+            privacy_status=privacy_status,
+            file_path=temp_video_path
         )
-        
-        # Start background upload task
+
+        # Background Upload starten
         background_tasks.add_task(
             video_service.process_video_upload,
             video_record.id,
             temp_video_path
         )
-        
+
         logger.info(f"✅ Video {video_record.id} erstellt - Background Upload gestartet")
-        
+
         return {
             "video_id": video_record.id,
             "status": video_record.status,
@@ -119,41 +101,25 @@ async def upload_video(
             "platforms": video_record.platforms,
             "created_at": video_record.created_at.isoformat()
         }
-    
+
     except HTTPException:
         raise
     except Exception as e:
         logger.error(f"❌ Video-Upload fehlgeschlagen: {str(e)}", exc_info=True)
-        raise HTTPException(
-            status_code=500, 
-            detail=f"Upload fehlgeschlagen: {str(e)}"
-        )
+        raise HTTPException(status_code=500, detail=f"Upload fehlgeschlagen: {str(e)}")
 
 
 # ================================================================================
-# Video Status & Info Routes
+# Video Status & Info
 # ================================================================================
 
 @router.get("/video/{video_id}")
 async def get_video_status(video_id: str, db: Session = Depends(get_db)):
-    """
-    Prüft den Status eines Video-Uploads
-    
-    Args:
-        video_id: Video ID
-    
-    Returns:
-        Video Status mit upload_results und errors
-    """
     try:
         video = video_service.get_video(db, video_id)
-        
         if not video:
-            raise HTTPException(
-                status_code=404, 
-                detail=f"Video {video_id} nicht gefunden"
-            )
-        
+            raise HTTPException(status_code=404, detail=f"Video {video_id} nicht gefunden")
+
         return {
             "video_id": video.id,
             "status": video.status,
@@ -167,31 +133,19 @@ async def get_video_status(video_id: str, db: Session = Depends(get_db)):
             "created_at": video.created_at.isoformat(),
             "updated_at": video.updated_at.isoformat() if video.updated_at else None
         }
-    
+
     except HTTPException:
         raise
     except Exception as e:
         logger.error(f"❌ Fehler beim Abrufen des Videos {video_id}: {str(e)}")
-        raise HTTPException(
-            status_code=500, 
-            detail=f"Fehler beim Abrufen des Videos: {str(e)}"
-        )
+        raise HTTPException(status_code=500, detail=f"Fehler beim Abrufen des Videos: {str(e)}")
 
 
 @router.get("/videos/user/{user_id}")
 async def get_user_videos(user_id: str, db: Session = Depends(get_db)):
-    """
-    Holt alle Videos eines Users aus der Datenbank
-    
-    Args:
-        user_id: User ID
-    
-    Returns:
-        Liste aller Videos des Users
-    """
     try:
         videos = video_service.get_user_videos(db, user_id)
-        
+
         return {
             "user_id": user_id,
             "total": len(videos),
@@ -212,17 +166,14 @@ async def get_user_videos(user_id: str, db: Session = Depends(get_db)):
                 for v in videos
             ]
         }
-    
+
     except Exception as e:
         logger.error(f"❌ Fehler beim Abrufen der Videos für User {user_id}: {str(e)}")
-        raise HTTPException(
-            status_code=500, 
-            detail=f"Fehler beim Abrufen der Videos: {str(e)}"
-        )
+        raise HTTPException(status_code=500, detail=f"Fehler beim Abrufen der Videos: {str(e)}")
 
 
 # ================================================================================
-# Video Management Routes (Update/Delete)
+# Update
 # ================================================================================
 
 @router.patch("/video/{video_id}")
@@ -231,66 +182,34 @@ async def update_video(
     request: UpdateVideoRequest,
     db: Session = Depends(get_db)
 ):
-    """
-    Aktualisiert Video-Metadaten
-    
-    Body:
-    ```json
-    {
-        "user_id": "user_xxx",
-        "title": "Neuer Titel",
-        "description": "Neue Beschreibung",
-        "tags": "tag1,tag2,tag3",
-        "privacy_status": "public"
-    }
-    ```
-    """
     try:
         video = video_service.get_video(db, video_id)
-        
         if not video:
-            raise HTTPException(
-                status_code=404, 
-                detail=f"Video {video_id} nicht gefunden"
-            )
-        
-        # Check authorization
+            raise HTTPException(status_code=404, detail=f"Video {video_id} nicht gefunden")
+
         if video.user_id != request.user_id:
-            logger.warning(
-                f"⚠️ User {request.user_id} versucht Video von {video.user_id} zu ändern"
-            )
-            raise HTTPException(
-                status_code=403, 
-                detail="Nicht autorisiert - Video gehört einem anderen User"
-            )
-        
-        # Update fields if provided
+            raise HTTPException(status_code=403, detail="Nicht autorisiert")
+
         updated = False
-        
+
         if request.title:
             video.title = request.title
             updated = True
-        
         if request.description is not None:
             video.description = request.description
             updated = True
-        
         if request.tags:
             video.tags = [t.strip() for t in request.tags.split(",")]
             updated = True
-        
         if request.privacy_status:
             video.privacy_status = request.privacy_status
             updated = True
-        
+
         if updated:
             video.updated_at = datetime.now()
             db.commit()
             db.refresh(video)
-            logger.info(f"✅ Video {video_id} aktualisiert von User {request.user_id}")
-        else:
-            logger.info(f"ℹ️ Keine Änderungen für Video {video_id}")
-        
+
         return {
             "success": True,
             "message": "Video aktualisiert" if updated else "Keine Änderungen",
@@ -300,19 +219,20 @@ async def update_video(
                 "description": video.description,
                 "tags": video.tags,
                 "privacy_status": video.privacy_status,
-                "updated_at": video.updated_at.isoformat()
+                "updated_at": video.updated_at.isoformat() if video.updated_at else None
             }
         }
-    
+
     except HTTPException:
         raise
     except Exception as e:
         logger.error(f"❌ Update fehlgeschlagen für Video {video_id}: {str(e)}")
-        raise HTTPException(
-            status_code=500, 
-            detail=f"Update fehlgeschlagen: {str(e)}"
-        )
+        raise HTTPException(status_code=500, detail=f"Update fehlgeschlagen: {str(e)}")
 
+
+# ================================================================================
+# Delete (lokal + Plattformen)
+# ================================================================================
 
 @router.delete("/video/{video_id}")
 async def delete_video(
@@ -324,7 +244,6 @@ async def delete_video(
         logger.info(f"🗑️ Delete Request: video_id={video_id}, user_id={request.user_id}")
 
         video = video_service.get_video(db, video_id)
-
         if not video:
             raise HTTPException(status_code=404, detail=f"Video {video_id} nicht gefunden")
 
@@ -335,10 +254,11 @@ async def delete_video(
         platforms = video.platforms or []
         upload_results = video.upload_results or {}
 
-        # Plattform-Löschung (Best Effort – kein Fehler wenn Plattform-Delete fehlschlägt)
+        # Plattform-Löschung (Best Effort)
         for platform in platforms:
-            platform_video_id = upload_results.get(platform, {}).get("video_id")
+            platform_video_id = (upload_results.get(platform) or {}).get("video_id")
             if not platform_video_id:
+                logger.info(f"ℹ️ Keine Plattform-Video-ID für {platform} – überspringe")
                 continue
             try:
                 if platform == "youtube":
@@ -347,24 +267,19 @@ async def delete_video(
                 elif platform == "tiktok":
                     from routers.tiktok import delete_from_tiktok
                     await delete_from_tiktok(request.user_id, platform_video_id)
-                logger.info(f"✅ Video {platform_video_id} von {platform} gelöscht")
+                elif platform == "instagram":
+                    from routers.instagram import delete_from_instagram
+                    await delete_from_instagram(request.user_id, platform_video_id)
+                logger.info(f"✅ Video von {platform} gelöscht")
             except Exception as e:
                 logger.warning(f"⚠️ Platform-Delete fehlgeschlagen ({platform}): {str(e)}")
 
-        # Lokale Datei löschen (falls vorhanden)
-        try:
-            file_path = video.file_path
-            if file_path:
-                import os
-                if os.path.exists(file_path):
-                    os.remove(file_path)
-                    logger.info(f"🗑️ Lokale Datei gelöscht: {file_path}")
-        except Exception as e:
-            logger.warning(f"⚠️ Lokale Datei konnte nicht gelöscht werden: {str(e)}")
+        # Lokale Datei löschen (falls noch vorhanden)
+        if video.file_path:
+            file_service.delete_file(video.file_path)
 
+        # Aus DB löschen
         video_service.delete_video(db, video_id)
-
-        logger.info(f"✅ Video {video_id} vollständig gelöscht")
 
         return {
             "success": True,
@@ -377,4 +292,3 @@ async def delete_video(
     except Exception as e:
         logger.error(f"❌ Delete fehlgeschlagen für Video {video_id}: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Löschen fehlgeschlagen: {str(e)}")
-
