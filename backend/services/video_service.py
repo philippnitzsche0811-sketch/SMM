@@ -116,7 +116,7 @@ class VideoService:
 
             if "youtube" in video.platforms:
                 try:
-                    result = await upload_to_youtube(
+                    result = upload_to_youtube(
                         video.user_id,
                         temp_file_path,
                         video.title,
