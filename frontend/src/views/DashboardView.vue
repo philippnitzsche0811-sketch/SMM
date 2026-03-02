@@ -184,7 +184,7 @@
         </div>
         <div class="form-field">
           <label>Sichtbarkeit</label>
-          <Select v-model="form.privacy" :options="privacyOptions" optionLabel="label" optionValue="value" class="w-full" />
+          <Dropdown v-model="form.privacy" :options="privacyOptions" optionLabel="label" optionValue="value" class="w-full" />
         </div>
 
         <!-- Platforms (nur bei neu) -->
@@ -232,7 +232,7 @@ import { useConfirm } from 'primevue/useconfirm';
 import Button from 'primevue/button';
 import InputText from 'primevue/inputtext';
 import Textarea from 'primevue/textarea';
-import Select from 'primevue/select';
+import Dropdown from 'primevue/dropdown';
 import DataTable from 'primevue/datatable';
 import Column from 'primevue/column';
 import Tag from 'primevue/tag';
