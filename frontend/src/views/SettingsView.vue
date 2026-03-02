@@ -1,356 +1,262 @@
 <template>
   <div class="settings-view">
-    <!-- Header -->
-    <div class="settings-header">
-      <h1>
-        <i class="pi pi-cog"></i>
-        Einstellungen
-      </h1>
+    <div class="page-header">
+      <h1>Einstellungen</h1>
+      <p class="subtitle">Verwalte dein Profil und dein Konto</p>
     </div>
 
-    <div class="settings-content">
-      <!-- Account Settings Card -->
-      <Card>
-        <template #title>
-          <i class="pi pi-user"></i>
-          Account
-        </template>
-        
-        <template #content>
-          <div class="setting-item">
-            <label>Email</label>
-            <InputText 
-              :value="authStore.userEmail" 
-              disabled 
-              class="w-full"
-            />
-          </div>
+    <div class="settings-grid">
+      <!-- Profile Card -->
+      <div class="settings-card">
+        <h3 class="settings-card-title">
+          <i class="pi pi-user"></i> Profil
+        </h3>
 
-          <div class="setting-item">
-            <label>User ID</label>
-            <InputText 
-              :value="authStore.userId" 
-              disabled 
-              class="w-full"
-            />
-          </div>
-
-          <Divider />
-
-          <div class="setting-item">
-            <Button 
-              label="Passwort ändern"
-              icon="pi pi-lock"
-              @click="showPasswordDialog = true"
-              outlined
-            />
-          </div>
-        </template>
-      </Card>
-
-      <!-- Security Settings Card -->
-      <Card>
-        <template #title>
-          <i class="pi pi-shield"></i>
-          Sicherheit
-        </template>
-        
-        <template #content>
-          <div class="setting-item">
-            <label>Email verifiziert</label>
-            <Tag 
-              :value="authStore.isVerified ? 'Verifiziert' : 'Nicht verifiziert'"
-              :severity="authStore.isVerified ? 'success' : 'warning'"
-            />
-          </div>
-        </template>
-      </Card>
-
-      <!-- Danger Zone Card -->
-      <Card class="danger-zone">
-        <template #title>
-          <i class="pi pi-exclamation-triangle"></i>
-          Danger Zone
-        </template>
-        
-        <template #content>
-          <div class="setting-item">
-            <Button 
-              label="Account löschen"
-              icon="pi pi-trash"
-              severity="danger"
-              outlined
-              @click="confirmDeleteAccount"
-            />
-          </div>
-        </template>
-      </Card>
-    </div>
-
-    <!-- ✅ Password Change Dialog -->
-    <Dialog 
-      v-model:visible="showPasswordDialog"
-      header="Passwort ändern"
-      :modal="true"
-      :style="{ width: '500px' }"
-    >
-      <div class="password-form">
         <div class="form-field">
-          <label for="currentPassword">Aktuelles Passwort</label>
-          <Password 
-            id="currentPassword"
-            v-model="passwordForm.currentPassword"
-            :feedback="false"
-            toggleMask
-            class="w-full"
-            :class="{ 'p-invalid': passwordErrors.currentPassword }"
-          />
-          <small v-if="passwordErrors.currentPassword" class="p-error">
-            {{ passwordErrors.currentPassword }}
-          </small>
+          <label>Benutzername</label>
+          <InputText v-model="profile.username" placeholder="Benutzername" class="w-full" />
+        </div>
+        <div class="form-field">
+          <label>E-Mail</label>
+          <InputText :value="authStore.userEmail || ''" disabled class="w-full" />
+          <small class="field-hint">E-Mail kann nicht geändert werden</small>
         </div>
 
-        <div class="form-field">
-          <label for="newPassword">Neues Passwort</label>
-          <Password 
-            id="newPassword"
-            v-model="passwordForm.newPassword"
-            toggleMask
-            class="w-full"
-            :class="{ 'p-invalid': passwordErrors.newPassword }"
+        <div class="card-footer">
+          <Button
+            label="Speichern"
+            icon="pi pi-check"
+            :loading="savingProfile"
+            @click="saveProfile"
           />
-          <small v-if="passwordForm.newPassword && passwordForm.newPassword.length < 8" class="p-error">
-            Passwort muss mindestens 8 Zeichen lang sein
-          </small>
-        </div>
-
-        <div class="form-field">
-          <label for="confirmPassword">Neues Passwort bestätigen</label>
-          <Password 
-            id="confirmPassword"
-            v-model="passwordForm.confirmPassword"
-            :feedback="false"
-            toggleMask
-            class="w-full"
-            :class="{ 'p-invalid': passwordErrors.confirmPassword }"
-          />
-          <small v-if="passwordForm.confirmPassword && passwordForm.newPassword !== passwordForm.confirmPassword" class="p-error">
-            Passwörter stimmen nicht überein
-          </small>
         </div>
       </div>
 
-      <template #footer>
-        <Button 
-          label="Abbrechen" 
-          severity="secondary"
-          @click="closePasswordDialog"
+      <!-- Change Password Card -->
+      <div class="settings-card">
+        <h3 class="settings-card-title">
+          <i class="pi pi-lock"></i> Passwort ändern
+        </h3>
+
+        <div class="form-field">
+          <label>Aktuelles Passwort</label>
+          <Password v-model="passwords.current" :feedback="false" toggleMask class="w-full" inputClass="w-full" />
+        </div>
+        <div class="form-field">
+          <label>Neues Passwort</label>
+          <Password v-model="passwords.new" toggleMask class="w-full" inputClass="w-full" />
+        </div>
+        <div class="form-field">
+          <label>Neues Passwort bestätigen</label>
+          <Password v-model="passwords.confirm" :feedback="false" toggleMask class="w-full" inputClass="w-full" />
+          <small v-if="passwordMismatch" class="field-error">Passwörter stimmen nicht überein</small>
+        </div>
+
+        <div class="card-footer">
+          <Button
+            label="Passwort ändern"
+            icon="pi pi-lock"
+            :loading="savingPassword"
+            :disabled="!canChangePassword"
+            @click="changePassword"
+          />
+        </div>
+      </div>
+
+      <!-- Account Info Card -->
+      <div class="settings-card info-card">
+        <h3 class="settings-card-title">
+          <i class="pi pi-info-circle"></i> Konto-Informationen
+        </h3>
+
+        <div class="info-row">
+          <span class="info-label">Konto-ID</span>
+          <span class="info-value mono">{{ authStore.userId }}</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">E-Mail verifiziert</span>
+          <Tag
+            :value="authStore.isVerified ? 'Verifiziert' : 'Nicht verifiziert'"
+            :severity="authStore.isVerified ? 'success' : 'warn'"
+          />
+        </div>
+        <div class="info-row">
+          <span class="info-label">Verbundene Plattformen</span>
+          <span class="info-value">{{ authStore.user?.connectedPlatforms?.length || 0 }}</span>
+        </div>
+      </div>
+
+      <!-- Danger Zone -->
+      <div class="settings-card danger-card">
+        <h3 class="settings-card-title danger">
+          <i class="pi pi-exclamation-triangle"></i> Gefahrenzone
+        </h3>
+        <p class="danger-text">Diese Aktion kann nicht rückgängig gemacht werden.</p>
+        <Button
+          label="Konto löschen"
+          icon="pi pi-trash"
+          class="p-button-danger p-button-outlined"
+          @click="confirmDeleteAccount"
         />
-        <Button 
-          label="Passwort ändern"
-          icon="pi pi-check"
-          :loading="isChangingPassword"
-          :disabled="!isPasswordFormValid"
-          @click="handleChangePassword"
-        />
-      </template>
-    </Dialog>
+      </div>
+    </div>
+
+    <ConfirmDialog />
+    <Toast />
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted } from 'vue';
+import { useRouter } from 'vue-router';
 import { useAuthStore } from '@/stores/authStore';
 import { useToast } from 'primevue/usetoast';
-import Card from 'primevue/card';
+import { useConfirm } from 'primevue/useconfirm';
 import Button from 'primevue/button';
 import InputText from 'primevue/inputtext';
 import Password from 'primevue/password';
 import Tag from 'primevue/tag';
-import Divider from 'primevue/divider';
-import Dialog from 'primevue/dialog';
-import axios from 'axios';
+import ConfirmDialog from 'primevue/confirmdialog';
+import Toast from 'primevue/toast';
+import api from '@/services/api';
 
 const authStore = useAuthStore();
 const toast = useToast();
+const confirm = useConfirm();
+const router = useRouter();
 
-// Password Dialog
-const showPasswordDialog = ref(false);
-const isChangingPassword = ref(false);
+const savingProfile = ref(false);
+const savingPassword = ref(false);
 
-const passwordForm = ref({
-  currentPassword: '',
-  newPassword: '',
-  confirmPassword: ''
+const profile = ref({
+  username: authStore.userName || '',
 });
 
-const passwordErrors = ref({
-  currentPassword: '',
-  newPassword: '',
-  confirmPassword: ''
+const passwords = ref({
+  current: '',
+  new: '',
+  confirm: '',
 });
 
-const isPasswordFormValid = computed(() => {
-  return (
-    passwordForm.value.currentPassword &&
-    passwordForm.value.newPassword &&
-    passwordForm.value.newPassword.length >= 8 &&
-    passwordForm.value.newPassword === passwordForm.value.confirmPassword
-  );
-});
+const passwordMismatch = computed(
+  () => passwords.value.new && passwords.value.confirm && passwords.value.new !== passwords.value.confirm
+);
 
-const handleChangePassword = async () => {
-  if (!isPasswordFormValid.value) return;
+const canChangePassword = computed(
+  () => passwords.value.current && passwords.value.new && passwords.value.confirm && !passwordMismatch.value
+);
 
-  // Reset errors
-  passwordErrors.value = {
-    currentPassword: '',
-    newPassword: '',
-    confirmPassword: ''
-  };
-
-  isChangingPassword.value = true;
-
+const saveProfile = async () => {
+  savingProfile.value = true;
   try {
-    await axios.post('/api/auth/change-password', {
-      current_password: passwordForm.value.currentPassword,
-      new_password: passwordForm.value.newPassword
+    await api.patch(`/api/auth/me`, {
+      username: profile.value.username,
     });
 
-    toast.add({
-      severity: 'success',
-      summary: 'Passwort geändert',
-      detail: 'Dein Passwort wurde erfolgreich geändert',
-      life: 3000
-    });
-
-    closePasswordDialog();
-  } catch (error: any) {
-    const errorMessage = error.response?.data?.detail || 'Passwort konnte nicht geändert werden';
-    
-    // Check if it's a wrong password error
-    if (errorMessage.includes('Aktuelles Passwort ist falsch')) {
-      passwordErrors.value.currentPassword = errorMessage;
+    if (authStore.user) {
+      authStore.user.username = profile.value.username;
+      localStorage.setItem('user', JSON.stringify(authStore.user));
     }
-    
-    toast.add({
-      severity: 'error',
-      summary: 'Fehler',
-      detail: errorMessage,
-      life: 5000
-    });
+
+    toast.add({ severity: 'success', summary: 'Gespeichert', detail: 'Profil aktualisiert', life: 3000 });
+  } catch (err: any) {
+    toast.add({ severity: 'error', summary: 'Fehler', detail: err.response?.data?.detail || 'Speichern fehlgeschlagen', life: 5000 });
   } finally {
-    isChangingPassword.value = false;
+    savingProfile.value = false;
   }
 };
 
-const closePasswordDialog = () => {
-  showPasswordDialog.value = false;
-  passwordForm.value = {
-    currentPassword: '',
-    newPassword: '',
-    confirmPassword: ''
-  };
-  passwordErrors.value = {
-    currentPassword: '',
-    newPassword: '',
-    confirmPassword: ''
-  };
+const changePassword = async () => {
+  savingPassword.value = true;
+  try {
+    await api.post('/api/auth/change-password', {
+      current_password: passwords.value.current,
+      new_password: passwords.value.new,
+    });
+
+    passwords.value = { current: '', new: '', confirm: '' };
+    toast.add({ severity: 'success', summary: 'Geändert', detail: 'Passwort erfolgreich geändert', life: 3000 });
+  } catch (err: any) {
+    toast.add({ severity: 'error', summary: 'Fehler', detail: err.response?.data?.detail || 'Passwort-Änderung fehlgeschlagen', life: 5000 });
+  } finally {
+    savingPassword.value = false;
+  }
 };
 
 const confirmDeleteAccount = () => {
-  toast.add({
-    severity: 'warn',
-    summary: 'Noch nicht implementiert',
-    detail: 'Account-Löschung ist noch nicht verfügbar',
-    life: 3000
+  confirm.require({
+    message: 'Dein Konto und alle Daten werden unwiderruflich gelöscht.',
+    header: 'Konto wirklich löschen?',
+    icon: 'pi pi-exclamation-triangle',
+    acceptLabel: 'Endgültig löschen',
+    rejectLabel: 'Abbrechen',
+    acceptClass: 'p-button-danger',
+    accept: async () => {
+      try {
+        await api.delete('/api/auth/me');
+        authStore.logout();
+        router.push('/login');
+      } catch (err: any) {
+        toast.add({ severity: 'error', summary: 'Fehler', detail: 'Konto konnte nicht gelöscht werden', life: 5000 });
+      }
+    },
   });
 };
 </script>
 
 <style scoped>
-.settings-view {
-  min-height: 100vh;
-  background: var(--surface-ground);
-  padding: 2rem;
-}
+.settings-view { max-width: 900px; margin: 0 auto; }
 
-.settings-header {
-  max-width: 1200px;
-  margin: 0 auto 2rem;
-}
+.page-header { margin-bottom: 2rem; }
+.page-header h1 { font-size: 1.75rem; font-weight: 700; color: #1e293b; margin: 0 0 0.25rem 0; }
+.subtitle { color: #64748b; font-size: 0.9rem; margin: 0; }
 
-.settings-header h1 {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  font-size: 2rem;
-  margin: 0;
-}
-
-.settings-content {
-  max-width: 800px;
-  margin: 0 auto;
-  display: flex;
-  flex-direction: column;
+.settings-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
   gap: 1.5rem;
 }
 
-.setting-item {
-  margin-bottom: 1.5rem;
-}
-
-.setting-item:last-child {
-  margin-bottom: 0;
-}
-
-.setting-item label {
-  display: block;
-  margin-bottom: 0.5rem;
-  font-weight: 600;
-  color: var(--text-color);
-}
-
-.danger-zone {
-  border: 2px solid var(--red-500);
-}
-
-.password-form {
+.settings-card {
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 1.75rem;
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
-  padding: 1rem 0;
+  gap: 1.25rem;
 }
 
-.form-field {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
+.settings-card-title {
+  display: flex; align-items: center; gap: 0.5rem;
+  font-size: 1rem; font-weight: 600; color: #1e293b;
+  margin: 0 0 0.25rem 0;
 }
 
-.form-field label {
-  font-weight: 600;
-  color: var(--text-color);
-}
+.settings-card-title.danger { color: #ef4444; }
 
-.p-error {
-  color: var(--red-500);
-  font-size: 0.875rem;
-  margin-top: 0.25rem;
-}
+.form-field { display: flex; flex-direction: column; gap: 0.375rem; }
+.form-field label { font-size: 0.875rem; font-weight: 500; color: #374151; }
+.field-hint { color: #94a3b8; font-size: 0.8rem; }
+.field-error { color: #ef4444; font-size: 0.8rem; }
 
-.p-invalid {
-  border-color: var(--red-500);
+.card-footer { display: flex; justify-content: flex-end; margin-top: 0.5rem; }
+
+/* Info Card */
+.info-row {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 0.75rem 0; border-bottom: 1px solid #f1f5f9;
 }
+.info-row:last-child { border-bottom: none; }
+.info-label { font-size: 0.875rem; color: #64748b; }
+.info-value { font-size: 0.875rem; font-weight: 500; color: #1e293b; }
+.mono { font-family: monospace; font-size: 0.8rem; }
+
+/* Danger */
+.danger-card { border-color: #fecaca; }
+.danger-text { font-size: 0.875rem; color: #64748b; margin: 0; }
 
 @media (max-width: 768px) {
-  .settings-view {
-    padding: 1rem;
-  }
-
-  .settings-header h1 {
-    font-size: 1.5rem;
-  }
+  .settings-grid { grid-template-columns: 1fr; }
 }
 </style>
-

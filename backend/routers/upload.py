@@ -320,55 +320,61 @@ async def delete_video(
     request: DeleteVideoRequest,
     db: Session = Depends(get_db)
 ):
-    """
-    Löscht ein Video
-    
-    Body:
-    ```json
-    {
-        "user_id": "user_xxx"
-    }
-    ```
-    """
     try:
         logger.info(f"🗑️ Delete Request: video_id={video_id}, user_id={request.user_id}")
-        
+
         video = video_service.get_video(db, video_id)
-        
+
         if not video:
-            raise HTTPException(
-                status_code=404, 
-                detail=f"Video {video_id} nicht gefunden"
-            )
-        
-        # Check if user owns the video
+            raise HTTPException(status_code=404, detail=f"Video {video_id} nicht gefunden")
+
         if video.user_id != request.user_id:
-            logger.warning(
-                f"⚠️ User {request.user_id} versucht Video von {video.user_id} zu löschen"
-            )
-            raise HTTPException(
-                status_code=403, 
-                detail="Nicht autorisiert - Video gehört einem anderen User"
-            )
-        
+            raise HTTPException(status_code=403, detail="Nicht autorisiert")
+
         video_title = video.title
-        
-        # Delete from database
+        platforms = video.platforms or []
+        upload_results = video.upload_results or {}
+
+        # Plattform-Löschung (Best Effort – kein Fehler wenn Plattform-Delete fehlschlägt)
+        for platform in platforms:
+            platform_video_id = upload_results.get(platform, {}).get("video_id")
+            if not platform_video_id:
+                continue
+            try:
+                if platform == "youtube":
+                    from routers.youtube import delete_from_youtube
+                    await delete_from_youtube(request.user_id, platform_video_id)
+                elif platform == "tiktok":
+                    from routers.tiktok import delete_from_tiktok
+                    await delete_from_tiktok(request.user_id, platform_video_id)
+                logger.info(f"✅ Video {platform_video_id} von {platform} gelöscht")
+            except Exception as e:
+                logger.warning(f"⚠️ Platform-Delete fehlgeschlagen ({platform}): {str(e)}")
+
+        # Lokale Datei löschen (falls vorhanden)
+        try:
+            file_path = video.file_path
+            if file_path:
+                import os
+                if os.path.exists(file_path):
+                    os.remove(file_path)
+                    logger.info(f"🗑️ Lokale Datei gelöscht: {file_path}")
+        except Exception as e:
+            logger.warning(f"⚠️ Lokale Datei konnte nicht gelöscht werden: {str(e)}")
+
         video_service.delete_video(db, video_id)
-        
-        logger.info(f"✅ Video {video_id} von User {request.user_id} gelöscht")
-        
+
+        logger.info(f"✅ Video {video_id} vollständig gelöscht")
+
         return {
             "success": True,
             "message": f"Video '{video_title}' wurde gelöscht",
             "video_id": video_id
         }
-    
+
     except HTTPException:
         raise
     except Exception as e:
         logger.error(f"❌ Delete fehlgeschlagen für Video {video_id}: {str(e)}")
-        raise HTTPException(
-            status_code=500, 
-            detail=f"Löschen fehlgeschlagen: {str(e)}"
-        )
+        raise HTTPException(status_code=500, detail=f"Löschen fehlgeschlagen: {str(e)}")
+

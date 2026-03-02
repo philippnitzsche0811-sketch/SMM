@@ -1,14 +1,8 @@
 <template>
   <div class="dashboard-layout">
-    <!-- Sidebar -->
     <Sidebar />
-
-    <!-- Main Content -->
     <div class="main-content">
-      <!-- Top Bar -->
       <TopBar />
-
-      <!-- Page Content -->
       <div class="page-content">
         <router-view />
       </div>
@@ -26,7 +20,7 @@ import TopBar from './TopBar.vue';
   display: flex;
   height: 100vh;
   overflow: hidden;
-  background: #f5f5f5;
+  background: #f8fafc;
 }
 
 .main-content {
@@ -34,6 +28,7 @@ import TopBar from './TopBar.vue';
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  min-width: 0;
 }
 
 .page-content {
@@ -42,3 +37,4 @@ import TopBar from './TopBar.vue';
   padding: 2rem;
 }
 </style>
+
