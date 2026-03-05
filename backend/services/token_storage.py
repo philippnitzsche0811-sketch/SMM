@@ -3,7 +3,7 @@ import logging
 import os
 import secrets
 from pathlib import Path
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Optional
 from sqlalchemy.orm import Session
 from models.database import SessionLocal, PlatformConnection
