@@ -167,26 +167,28 @@ class TokenStorage:
     # YouTube
     # ==========================================
 
-    def save_youtube_credentials(self, user_id: str, credentials,
-                                  channel_title: str = None, channel_id: str = None):
+    def save_youtube_credentials(self, user_id: str, credentials,channel_title: str = None, channel_id: str = None):
         """credentials = Google OAuth Credentials Objekt"""
+        full_token_json = json.dumps({
+        "token": credentials.token,
+        "refresh_token": credentials.refresh_token,
+        "token_uri": credentials.token_uri,
+        "client_id": credentials.client_id,
+        "client_secret": credentials.client_secret,
+        "scopes": list(credentials.scopes) if credentials.scopes else [],
+        })
+
         self._save_credentials(
             user_id=user_id,
             platform="youtube",
             data={
-                "access_token": json.dumps({
-                    "token": credentials.token,
-                    "refresh_token": credentials.refresh_token,
-                    "token_uri": credentials.token_uri,
-                    "client_id": credentials.client_id,
-                    "client_secret": credentials.client_secret,
-                    "scopes": list(credentials.scopes) if credentials.scopes else [],
-                }),
+                "access_token": full_token_json,      # ← kompletter JSON
                 "refresh_token": credentials.refresh_token,
             },
             username=channel_title,
             channel_id=channel_id
         )
+
 
     def load_youtube_credentials(self, user_id: str) -> Optional[dict]:
         creds = self._load_credentials(user_id, "youtube")
@@ -231,3 +233,8 @@ class TokenStorage:
                     token_file.unlink()
                 except Exception as e:
                     logger.warning(f"⚠️ Migration fehlgeschlagen ({platform}): {str(e)}")
+
+
+    def _get_token_path(self, user_id: str, platform: str) -> str:
+        """Rückwärtskompatibilität – gibt DB-Quelle zurück"""
+        return f"DB: platform_connections WHERE user_id={user_id} AND platform={platform}"
