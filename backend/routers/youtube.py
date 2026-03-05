@@ -60,7 +60,14 @@ async def connect_youtube(
             raise HTTPException(400, str(e))
         
         # Store temp path for callback
-        user_service.set_temp_data(user_id, "youtube_client_secrets", temp_path)
+        token_storage._save_credentials(
+            user_id=user_id,
+            platform="youtube_temp",
+            data={
+                "access_token": temp_path,
+                "refresh_token": None,
+            }
+        )
         
         # Generate OAuth URL
         auth_url = get_youtube_auth_url(temp_path, user_id)
@@ -117,7 +124,8 @@ async def youtube_oauth_callback(request: FastAPIRequest, db: Session = Depends(
 
         
         # Load client secrets
-        client_secrets_path = user_service.get_temp_data(user_id, "youtube_client_secrets")
+        temp_creds = token_storage._load_credentials(user_id, "youtube_temp")
+        client_secrets_path = temp_creds.get("access_token") if temp_creds else None
         logger.info(f"ðŸ“„ Client secrets path: {client_secrets_path}")
         
         if not client_secrets_path:
@@ -183,7 +191,7 @@ async def youtube_oauth_callback(request: FastAPIRequest, db: Session = Depends(
         
         # Cleanup
         file_service.delete_file(client_secrets_path)
-        user_service.remove_temp_data(user_id, "youtube_client_secrets")
+        token_storage._delete_credentials(user_id, "youtube_temp")
         
         logger.info(f"ðŸ§¹ Cleanup completed")
         logger.info(f"âœ… YouTube erfolgreich verbunden fÃ¼r User {user_id}")
