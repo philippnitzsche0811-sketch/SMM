@@ -117,16 +117,47 @@ class TokenStorage:
     # ==========================================
 
     def save_tiktok_credentials(self, user_id: str, access_token: str,
-                                 open_id: str, refresh_token: str = None):
-        self._save_credentials(
-            user_id=user_id,
-            platform="tiktok",
-            data={
-                "access_token": access_token,
-                "refresh_token": refresh_token or "",
-            },
-            channel_id=open_id
-        )
+                             open_id: str, refresh_token: str = None,
+                             expires_in: int = 86400):
+        db = self._get_db()
+        try:
+            expiry = datetime.now() + timedelta(seconds=expires_in)
+            existing = db.query(PlatformConnection).filter(
+                PlatformConnection.user_id == user_id,
+                PlatformConnection.platform == "tiktok"
+            ).first()
+
+            if existing:
+                existing.access_token = access_token
+                existing.refresh_token = refresh_token or ""
+                existing.channel_id = open_id
+                existing.token_expiry = expiry
+                existing.connected = True
+                existing.updated_at = datetime.now()
+            else:
+                from models.database import PlatformConnection as PC
+                import secrets
+                connection = PC(
+                    id=f"plat_{secrets.token_hex(8)}",
+                    user_id=user_id,
+                    platform="tiktok",
+                    connected=True,
+                    access_token=access_token,
+                    refresh_token=refresh_token or "",
+                    channel_id=open_id,
+                    token_expiry=expiry,
+                    created_at=datetime.now(),
+                    updated_at=datetime.now()
+                )
+                db.add(connection)
+
+            db.commit()
+            logger.info(f"✅ TikTok Token gespeichert (User: {user_id}, Expiry: {expiry})")
+        except Exception as e:
+            db.rollback()
+            raise
+        finally:
+            db.close()
 
     def load_tiktok_credentials(self, user_id: str) -> Optional[dict]:
         creds = self._load_credentials(user_id, "tiktok")

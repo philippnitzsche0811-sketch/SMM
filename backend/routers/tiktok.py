@@ -6,7 +6,8 @@ import requests
 import hashlib
 import base64
 import secrets
-
+import httpx
+from datetime import datetime, timedelta
 from config import settings
 from services.tiktok_service import tiktok_upload_video
 from utils.utils import build_tiktok_caption
@@ -145,10 +146,8 @@ async def tiktok_oauth_callback(request: FastAPIRequest):
         logger.info(f"TikTok OAuth Callback fÃ¼r User {user_id}")
         
         # Exchange code for token (with code_verifier)
-        access_token, open_id, refresh_token = await exchange_code_for_token(code, code_verifier)
-        
-        # Save credentials
-        token_storage.save_tiktok_credentials(user_id, access_token, open_id, refresh_token)
+        access_token, open_id, refresh_token, expires_in = await exchange_code_for_token(code, code_verifier)
+        token_storage.save_tiktok_credentials(user_id, access_token, open_id, refresh_token, expires_in=expires_in)
         
         user_service.set_platform_credentials(
             user_id=user_id,
@@ -219,7 +218,8 @@ async def exchange_code_for_token(code: str, code_verifier: str) -> tuple[str, s
         open_id = result["open_id"]
         refresh_token = result.get("refresh_token", "")
         
-        return access_token, open_id, refresh_token
+        expires_in = result.get("expires_in", 86400)
+        return access_token, open_id, refresh_token, expires_in
         
     except requests.RequestException as e:
         logger.error(f"âŒ TikTok Token Exchange fehlgeschlagen: {str(e)}")
@@ -320,35 +320,64 @@ async def disconnect_tiktok(request: DisconnectRequest):
 
 async def upload_to_tiktok(user_id: str, video_path: str, title: str,
                            description: str, tags_list: list):
-    """
-    Hilfsfunktion fÃ¼r TikTok Upload
+    from models.database import SessionLocal, PlatformConnection
     
-    Returns:
-        dict: Upload-Ergebnis
-    """
-    tiktok_creds = user_service.get_platform_credentials(user_id, "tiktok")
-    
-    if not tiktok_creds:
-        logger.info(f"Lade TikTok-Token von Disk fÃ¼r User {user_id}")
-        tiktok_creds = token_storage.load_tiktok_credentials(user_id)
-        
-        if tiktok_creds:
-            user_service.set_platform_credentials(user_id, "tiktok", tiktok_creds)
-    
-    if not tiktok_creds:
-        raise ValueError("TikTok nicht verbunden - User muss sich authentifizieren")
-    
+    # Token-Gültigkeit prüfen + ggf. auto-refreshen
+    db = SessionLocal()
+    try:
+        conn = db.query(PlatformConnection).filter(
+            PlatformConnection.user_id == user_id,
+            PlatformConnection.platform == "tiktok"
+        ).first()
+
+        if not conn:
+            raise ValueError("TikTok nicht verbunden - User muss sich authentifizieren")
+
+        needs_refresh = (
+            conn.token_expiry is None or
+            conn.token_expiry < datetime.now() + timedelta(hours=1)
+        )
+
+        if needs_refresh and conn.refresh_token:
+            logger.info(f"🔄 TikTok Token abgelaufen – Auto-Refresh für User {user_id}")
+            async with httpx.AsyncClient() as client:
+                resp = await client.post(
+                    "https://open.tiktokapis.com/v2/oauth/token/",
+                    data={
+                        "client_key": settings.TIKTOK_CLIENT_KEY,
+                        "client_secret": settings.TIKTOK_CLIENT_SECRET,
+                        "grant_type": "refresh_token",
+                        "refresh_token": conn.refresh_token
+                    },
+                    headers={"Content-Type": "application/x-www-form-urlencoded"}
+                )
+            result = resp.json()
+            access_token = result.get("access_token", conn.access_token)
+            new_refresh = result.get("refresh_token", conn.refresh_token)
+            expires_in = result.get("expires_in", 86400)
+            token_storage.save_tiktok_credentials(
+                user_id, access_token, conn.channel_id, new_refresh, expires_in=expires_in
+            )
+            open_id = conn.channel_id
+            logger.info(f"✅ TikTok Token refreshed für User {user_id}")
+        else:
+            access_token = conn.access_token
+            open_id = conn.channel_id
+    finally:
+        db.close()
+
+    tiktok_creds = {"access_token": access_token, "open_id": open_id}
+    user_service.set_platform_credentials(user_id, "tiktok", tiktok_creds)
+
+    # Rest bleibt gleich ↓
     caption = build_tiktok_caption(title, description, tags_list)
-    
     result = tiktok_upload_video(
         access_token=tiktok_creds["access_token"],
         open_id=tiktok_creds["open_id"],
         video_path=video_path,
         caption=caption
     )
-    
-    logger.info(f"âœ… TikTok Upload erfolgreich fÃ¼r User {user_id}")
-    
+    logger.info(f"✅ TikTok Upload erfolgreich für User {user_id}")
     return result
 
 
