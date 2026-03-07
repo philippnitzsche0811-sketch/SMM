@@ -2,6 +2,7 @@
 import logging
 import os
 import secrets
+import uuid
 from pathlib import Path
 from datetime import datetime, timedelta
 from typing import Optional
@@ -282,6 +283,7 @@ class TokenStorage:
                 existing.updated_at = datetime.now()
             else:
                 db.add(PlatformConnection(
+                    id=str(uuid.uuid4()),  # ← NEU
                     user_id=user_id,
                     platform="tiktok_pkce",
                     access_token=code_verifier,
