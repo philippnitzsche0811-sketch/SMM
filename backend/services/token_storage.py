@@ -271,9 +271,11 @@ class TokenStorage:
         return f"DB: platform_connections WHERE user_id={user_id} AND platform={platform}"
     
     def save_pkce_verifier(self, user_id: str, code_verifier: str):
-        with self.get_db() as db:
-            existing = db.query(PlatformConnection).filter_by(
-                user_id=user_id, platform="tiktok_pkce"
+        db = self._get_db()
+        try:
+            existing = db.query(PlatformConnection).filter(
+                PlatformConnection.user_id == user_id,
+                PlatformConnection.platform == "tiktok_pkce"
             ).first()
             if existing:
                 existing.access_token = code_verifier
@@ -287,11 +289,21 @@ class TokenStorage:
                     updated_at=datetime.now()
                 ))
             db.commit()
+        except Exception as e:
+            db.rollback()
+            raise e
+        finally:
+            db.close()
 
-def get_pkce_verifier(self, user_id: str) -> str | None:
-    with self.get_db() as db:
-        row = db.query(PlatformConnection).filter_by(
-            user_id=user_id, platform="tiktok_pkce"
-        ).first()
-        return row.access_token if row else None
+    def get_pkce_verifier(self, user_id: str) -> str | None:
+        db = self._get_db()
+        try:
+            row = db.query(PlatformConnection).filter(
+                PlatformConnection.user_id == user_id,
+                PlatformConnection.platform == "tiktok_pkce"
+            ).first()
+            return row.access_token if row else None
+        finally:
+            db.close()
+
 
