@@ -312,8 +312,10 @@ async def login(request: LoginRequest, db: Session = Depends(get_db)):
             
             platforms = db.query(PlatformConnection).filter(
                 PlatformConnection.user_id == user.id,
-                PlatformConnection.connected == True
+                PlatformConnection.connected == True,
+                PlatformConnection.platform != "tiktok_pkce"  # ← NEU
             ).all()
+
             
             connected_platforms = [
                 {
@@ -484,8 +486,10 @@ async def get_current_user(
             
             platforms = db.query(PlatformConnection).filter(
                 PlatformConnection.user_id == user_id,
-                PlatformConnection.connected == True
+                PlatformConnection.connected == True,
+                PlatformConnection.platform != "tiktok_pkce"  # ← NEU
             ).all()
+
             
             logger.info(f"📊 Found {len(platforms)} connected platforms")
             
