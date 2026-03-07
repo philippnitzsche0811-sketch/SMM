@@ -83,7 +83,7 @@ async def connect_tiktok(request: ConnectRequest):
         code_challenge = generate_code_challenge(code_verifier)
         
         # Store code_verifier temporarily (mapped to user_id)
-        pkce_storage[request.user_id] = code_verifier
+        token_storage.save_pkce_verifier(request.user_id, code_verifier)
         
         redirect_uri = f"{settings.BACKEND_URL}/api/tiktok/oauth/callback"
         scopes = "user.info.basic,video.upload,video.publish"
@@ -139,7 +139,7 @@ async def tiktok_oauth_callback(request: FastAPIRequest):
             raise HTTPException(400, "Code oder User-ID fehlt in Callback")
         
         # Retrieve code_verifier
-        code_verifier = pkce_storage.get(user_id)
+        code_verifier = token_storage.get_pkce_verifier(user_id)
         if not code_verifier:
             raise HTTPException(400, "Code Verifier nicht gefunden - Session abgelaufen")
         

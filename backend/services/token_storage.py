@@ -269,3 +269,29 @@ class TokenStorage:
     def _get_token_path(self, user_id: str, platform: str) -> str:
         """Rückwärtskompatibilität – gibt DB-Quelle zurück"""
         return f"DB: platform_connections WHERE user_id={user_id} AND platform={platform}"
+    
+    def save_pkce_verifier(self, user_id: str, code_verifier: str):
+        with self.get_db() as db:
+            existing = db.query(PlatformConnection).filter_by(
+                user_id=user_id, platform="tiktok_pkce"
+            ).first()
+            if existing:
+                existing.access_token = code_verifier
+                existing.updated_at = datetime.now()
+            else:
+                db.add(PlatformConnection(
+                    user_id=user_id,
+                    platform="tiktok_pkce",
+                    access_token=code_verifier,
+                    created_at=datetime.now(),
+                    updated_at=datetime.now()
+                ))
+            db.commit()
+
+def get_pkce_verifier(self, user_id: str) -> str | None:
+    with self.get_db() as db:
+        row = db.query(PlatformConnection).filter_by(
+            user_id=user_id, platform="tiktok_pkce"
+        ).first()
+        return row.access_token if row else None
+
