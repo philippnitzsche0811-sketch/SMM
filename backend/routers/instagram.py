@@ -4,6 +4,7 @@ from fastapi.responses import RedirectResponse
 from pydantic import BaseModel
 import logging
 import httpx
+from urllib.parse import quote
 
 from config import settings
 from services.instagram_service import instagram_upload_video
@@ -53,13 +54,15 @@ async def connect_instagram(request: ConnectRequest):
         if not redirect_uri:
             raise HTTPException(400, "Instagram Redirect URI nicht konfiguriert.")
 
-        scopes = ",".join([
+        scopes_raw = ",".join([
             "instagram_business_basic",
             "instagram_business_content_publish",
             "instagram_business_manage_comments",
             "instagram_business_manage_messages",
             "instagram_business_manage_insights"
         ])
+
+        scopes = quote(scopes_raw, safe="")
 
         auth_url = (
             f"https://www.instagram.com/oauth/authorize"
