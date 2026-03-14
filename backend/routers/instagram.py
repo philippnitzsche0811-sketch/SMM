@@ -1,13 +1,15 @@
-﻿from fastapi import APIRouter, Request as FastAPIRequest, HTTPException
+﻿# instagram_router.py
+from fastapi import APIRouter, Request as FastAPIRequest, HTTPException
 from fastapi.responses import RedirectResponse
 from pydantic import BaseModel
 import logging
-import requests
+import httpx
 
 from config import settings
 from services.instagram_service import instagram_upload_video
 from services.user_service import UserService
 from services.token_storage import TokenStorage
+
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="", tags=["Instagram"])
@@ -37,38 +39,40 @@ class RefreshRequest(BaseModel):
 @router.post("/connect")
 async def connect_instagram(request: ConnectRequest):
     """
-    Generiert Instagram OAuth URL fÃ¼r User
-    
-    Body:
-        {
-            "user_id": "user_xxx"
-        }
-    
-    Returns:
-        OAuth URL zum Weiterleiten des Users
+    Generates Instagram OAuth URL for user.
+    Uses new Instagram Graph API with Instagram Login.
     """
     try:
-        logger.info(f"Instagram Auth-URL wird fÃ¼r User {request.user_id} generiert...")
-        
+        logger.info(f"Generating Instagram auth URL for user {request.user_id}")
+
         client_id = settings.INSTAGRAM_CLIENT_ID
-        
+        redirect_uri = settings.INSTAGRAM_REDIRECT_URI
+
         if not client_id:
             raise HTTPException(400, "Instagram Client ID nicht konfiguriert.")
-        
-        redirect_uri = f"{settings.BACKEND_URL}/instagram/oauth/callback"
-        scopes = "user_profile,user_media"
-        
+        if not redirect_uri:
+            raise HTTPException(400, "Instagram Redirect URI nicht konfiguriert.")
+
+        scopes = ",".join([
+            "instagram_business_basic",
+            "instagram_business_content_publish",
+            "instagram_business_manage_comments",
+            "instagram_business_manage_messages",
+            "instagram_business_manage_insights"
+        ])
+
         auth_url = (
-            f"https://api.instagram.com/oauth/authorize"
-            f"?client_id={client_id}"
+            f"https://www.instagram.com/oauth/authorize"
+            f"?force_reauth=true"
+            f"&client_id={client_id}"
             f"&redirect_uri={redirect_uri}"
-            f"&scope={scopes}"
             f"&response_type=code"
+            f"&scope={scopes}"
             f"&state={request.user_id}"
         )
-        
-        logger.info(f"âœ… Instagram Auth-URL generiert fÃ¼r User {request.user_id}")
-        
+
+        logger.info(f"Instagram auth URL generated for user {request.user_id}")
+
         return {
             "status": "success",
             "message": "Bitte im Browser authentifizieren",
@@ -76,46 +80,56 @@ async def connect_instagram(request: ConnectRequest):
             "user_id": request.user_id,
             "platform": "instagram"
         }
-        
+
+    except HTTPException:
+        raise
     except Exception as e:
-        logger.error(f"âŒ Instagram Auth-URL Generierung fehlgeschlagen: {str(e)}")
+        logger.error(f"Instagram auth URL generation failed: {str(e)}")
         raise HTTPException(500, f"Instagram-Auth fehlgeschlagen: {str(e)}")
 
 
-@router.get("/oauth/callback")
+@router.get("/callback")
 async def instagram_oauth_callback(request: FastAPIRequest):
     """
-    Callback fÃ¼r Instagram OAuth Flow
-    
-    Query Parameters:
-        code: Authorization Code von Instagram
-        state: User-ID (wurde im OAuth-Start Ã¼bergeben)
+    Callback for Instagram OAuth Flow.
+    Instagram redirects here after user authorization.
     """
     try:
         code = request.query_params.get("code")
         user_id = request.query_params.get("state")
         error = request.query_params.get("error")
-        
+        error_reason = request.query_params.get("error_reason", "")
+
         if error:
-            logger.error(f"Instagram OAuth Fehler: {error}")
+            logger.error(f"Instagram OAuth error: {error} - {error_reason}")
             return RedirectResponse(
-                url=f"{settings.FRONTEND_URL}/platforms?error=instagram&message={error}"
+                url=f"{settings.FRONTEND_URL}/platforms?error=instagram&message={error_reason or error}"
             )
-        
-        if not code or not user_id:
-            raise HTTPException(400, "Code oder User-ID fehlt in Callback")
-        
-        logger.info(f"Instagram OAuth Callback fÃ¼r User {user_id}")
-        
-        # Exchange code for token
+
+        if not code:
+            logger.error("Instagram callback: missing code")
+            return RedirectResponse(
+                url=f"{settings.FRONTEND_URL}/platforms?error=instagram&message=missing_code"
+            )
+
+        if not user_id:
+            logger.error("Instagram callback: missing state/user_id")
+            return RedirectResponse(
+                url=f"{settings.FRONTEND_URL}/platforms?error=instagram&message=missing_state"
+            )
+
+        logger.info(f"Instagram OAuth callback for user {user_id}")
+
+        # Exchange code for short-lived token
         access_token, ig_user_id = await exchange_instagram_code_for_token(code)
-        
-        # Get long-lived token
+
+        # Convert to long-lived token (60 days)
         long_lived_token = await get_long_lived_token(access_token)
-        
-        # Save credentials
+
+        # Save to token storage
         token_storage.save_instagram_credentials(user_id, long_lived_token, ig_user_id)
-        
+
+        # Save to user service
         user_service.set_platform_credentials(
             user_id=user_id,
             platform="instagram",
@@ -124,17 +138,17 @@ async def instagram_oauth_callback(request: FastAPIRequest):
                 "user_id": ig_user_id
             }
         )
-        
-        logger.info(f"âœ… Instagram erfolgreich verbunden fÃ¼r User {user_id}")
-        
+
+        logger.info(f"Instagram successfully connected for user {user_id}")
+
         return RedirectResponse(
             url=f"{settings.FRONTEND_URL}/platforms?success=instagram"
         )
-        
+
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"âŒ Instagram OAuth fehlgeschlagen: {str(e)}")
+        logger.error(f"Instagram OAuth failed: {str(e)}")
         return RedirectResponse(
             url=f"{settings.FRONTEND_URL}/platforms?error=instagram&message={str(e)}"
         )
@@ -142,57 +156,66 @@ async def instagram_oauth_callback(request: FastAPIRequest):
 
 async def exchange_instagram_code_for_token(code: str) -> tuple[str, str]:
     """
-    Tauscht Authorization Code gegen Access Token
-    
+    Exchanges authorization code for short-lived access token.
+    Uses new Instagram Graph API endpoint.
+
     Returns:
         tuple: (access_token, ig_user_id)
     """
     url = "https://api.instagram.com/oauth/access_token"
-    redirect_uri = f"{settings.BACKEND_URL}/instagram/oauth/callback"
-    
+
     data = {
         "client_id": settings.INSTAGRAM_CLIENT_ID,
         "client_secret": settings.INSTAGRAM_CLIENT_SECRET,
         "grant_type": "authorization_code",
-        "redirect_uri": redirect_uri,
+        "redirect_uri": settings.INSTAGRAM_REDIRECT_URI,
         "code": code
     }
-    
+
     try:
-        resp = requests.post(url, data=data, timeout=10)
-        resp.raise_for_status()
-        result = resp.json()
-        
-        if "access_token" not in result:
-            raise ValueError(f"UngÃ¼ltige Instagram API Response: {result}")
-        
-        return result["access_token"], str(result["user_id"])
-        
-    except requests.RequestException as e:
-        logger.error(f"Instagram Token Exchange fehlgeschlagen: {str(e)}")
+        async with httpx.AsyncClient(timeout=15) as client:
+            resp = await client.post(url, data=data)
+            result = resp.json()
+
+            logger.debug(f"Instagram token exchange response: {result}")
+
+            if "access_token" not in result:
+                error_msg = result.get("error_message", result.get("error", str(result)))
+                raise ValueError(f"Token exchange failed: {error_msg}")
+
+            return result["access_token"], str(result["user_id"])
+
+    except httpx.RequestError as e:
+        logger.error(f"Instagram token exchange request failed: {str(e)}")
         raise ValueError(f"Token Exchange fehlgeschlagen: {str(e)}")
 
 
 async def get_long_lived_token(short_lived_token: str) -> str:
     """
-    Konvertiert Short-Lived Token in Long-Lived Token (60 Tage)
+    Converts short-lived token to long-lived token (valid 60 days).
     """
     url = "https://graph.instagram.com/access_token"
-    
+
     params = {
         "grant_type": "ig_exchange_token",
         "client_secret": settings.INSTAGRAM_CLIENT_SECRET,
         "access_token": short_lived_token
     }
-    
+
     try:
-        resp = requests.get(url, params=params, timeout=10)
-        resp.raise_for_status()
-        result = resp.json()
-        return result["access_token"]
-        
+        async with httpx.AsyncClient(timeout=15) as client:
+            resp = await client.get(url, params=params)
+            result = resp.json()
+
+            if "access_token" not in result:
+                logger.warning(f"Long-lived token exchange failed, using short-lived: {result}")
+                return short_lived_token
+
+            logger.info("Successfully exchanged for long-lived token")
+            return result["access_token"]
+
     except Exception as e:
-        logger.warning(f"Long-lived token exchange fehlgeschlagen: {str(e)}")
+        logger.warning(f"Long-lived token exchange failed: {str(e)}, using short-lived token")
         return short_lived_token
 
 
@@ -203,72 +226,63 @@ async def get_long_lived_token(short_lived_token: str) -> str:
 @router.post("/refresh")
 async def refresh_instagram_token(request: RefreshRequest):
     """
-    Erneuert Instagram Access Token (vor Ablauf)
-    
-    Body:
-        {
-            "user_id": "user_xxx"
-        }
+    Refreshes Instagram long-lived access token (before expiry).
+    Long-lived tokens are valid 60 days and can be refreshed when > 24h old.
     """
     try:
         creds = token_storage.load_instagram_credentials(request.user_id)
-        
+
         if not creds or "access_token" not in creds:
             raise HTTPException(404, "Keine Instagram Credentials gefunden")
-        
+
         url = "https://graph.instagram.com/refresh_access_token"
-        
+
         params = {
             "grant_type": "ig_refresh_token",
             "access_token": creds["access_token"]
         }
-        
-        resp = requests.get(url, params=params, timeout=10)
-        resp.raise_for_status()
-        result = resp.json()
-        
-        # Save new token
+
+        async with httpx.AsyncClient(timeout=15) as client:
+            resp = await client.get(url, params=params)
+            result = resp.json()
+
+            if "access_token" not in result:
+                raise ValueError(f"Token refresh failed: {result}")
+
         token_storage.save_instagram_credentials(
             request.user_id,
             result["access_token"],
             creds["user_id"]
         )
-        
-        logger.info(f"âœ… Instagram Token erneuert fÃ¼r User {request.user_id}")
-        
-        return {"status": "success", "message": "Token erneuert"}
-        
+
+        logger.info(f"Instagram token refreshed for user {request.user_id}")
+        return {"status": "success", "message": "Token erfolgreich erneuert"}
+
+    except HTTPException:
+        raise
     except Exception as e:
-        logger.error(f"âŒ Instagram Token Refresh fehlgeschlagen: {str(e)}")
+        logger.error(f"Instagram token refresh failed: {str(e)}")
         raise HTTPException(500, str(e))
 
 
 @router.post("/disconnect")
 async def disconnect_instagram(request: DisconnectRequest):
     """
-    Trennt Instagram Verbindung
-    
-    Body:
-        {
-            "user_id": "user_xxx"
-        }
+    Disconnects Instagram account for user.
     """
     try:
-        # Delete tokens
         token_storage.delete_instagram_credentials(request.user_id)
-        
-        # Remove from user service
         user_service.remove_platform_credentials(request.user_id, "instagram")
-        
-        logger.info(f"âœ… Instagram getrennt fÃ¼r User {request.user_id}")
-        
+
+        logger.info(f"Instagram disconnected for user {request.user_id}")
+
         return {
             "status": "success",
-            "message": "Instagram wurde getrennt"
+            "message": "Instagram wurde erfolgreich getrennt"
         }
-        
+
     except Exception as e:
-        logger.error(f"âŒ Instagram Disconnect fehlgeschlagen: {str(e)}")
+        logger.error(f"Instagram disconnect failed: {str(e)}")
         raise HTTPException(500, f"Disconnect fehlgeschlagen: {str(e)}")
 
 
@@ -278,33 +292,33 @@ async def disconnect_instagram(request: DisconnectRequest):
 
 async def upload_to_instagram(user_id: str, video_path: str, title: str):
     """
-    Hilfsfunktion fÃ¼r Instagram Upload
-    
+    Helper function for Instagram video upload.
+
     Returns:
-        dict: Upload-Ergebnis
+        dict: Upload result
     """
     ig_creds = user_service.get_platform_credentials(user_id, "instagram")
-    
+
     if not ig_creds:
-        logger.info(f"Lade Instagram-Token von Disk fÃ¼r User {user_id}")
+        logger.info(f"Loading Instagram token from disk for user {user_id}")
         ig_creds = token_storage.load_instagram_credentials(user_id)
-        
+
         if ig_creds:
             user_service.set_platform_credentials(user_id, "instagram", ig_creds)
-    
+
     if not ig_creds:
-        raise ValueError("Instagram nicht verbunden - User muss sich authentifizieren")
-    
+        raise ValueError("Instagram nicht verbunden – bitte zuerst authentifizieren")
+
     result = instagram_upload_video(
         ig_user_id=ig_creds["user_id"],
         access_token=ig_creds["access_token"],
         video_path=video_path,
         caption=title
     )
-    
-    logger.info(f"âœ… Instagram Upload erfolgreich fÃ¼r User {user_id}")
-    
+
+    logger.info(f"Instagram upload successful for user {user_id}")
     return result
+
 
 
 
