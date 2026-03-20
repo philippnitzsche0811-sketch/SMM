@@ -181,6 +181,9 @@ async def exchange_instagram_code_for_token(code: str) -> tuple[str, str]:
         async with httpx.AsyncClient(timeout=15) as client:
             resp = await client.post(url, data=data)
             result = resp.json()
+            logger.info(f"Token exchange full response: status={resp.status_code}, body={result}")
+            logger.info(f"Request that was sent: url={url}, data={data}")
+
 
             logger.debug(f"Instagram token exchange response: {result}")
 
