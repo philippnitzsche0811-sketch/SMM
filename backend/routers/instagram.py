@@ -100,6 +100,11 @@ async def instagram_oauth_callback(request: FastAPIRequest):
     """
     try:
         code = request.query_params.get("code")
+
+        # Instagram hängt manchmal "#_" ans Ende des Codes
+        if code and "#_" in code:
+            code = code.split("#_")[0]
+
         user_id = request.query_params.get("state")
         error = request.query_params.get("error")
         error_reason = request.query_params.get("error_reason", "")
@@ -179,7 +184,12 @@ async def exchange_instagram_code_for_token(code: str) -> tuple[str, str]:
 
     try:
         async with httpx.AsyncClient(timeout=15) as client:
-            resp = await client.post(url, data=data)
+            resp = await client.post(
+                url, 
+                data=data,
+                headers={"Content-Type": "application/x-www-form-urlencoded"}
+            )
+
             result = resp.json()
             logger.info(f"Token exchange full response: status={resp.status_code}, body={result}")
             logger.info(f"Request that was sent: url={url}, data={data}")
