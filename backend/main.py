@@ -17,8 +17,10 @@ logger = logging.getLogger(__name__)
 app = FastAPI(
     title="Social Media Upload Manager",
     version="1.0.0",
-    description="Multi-Platform Video Upload Manager"
+    description="Multi-Platform Video Upload Manager",
+    redirect_slashes=False
 )
+
 
 # CORS Middleware - dynamisch aus ENV
 allowed_origins = [
