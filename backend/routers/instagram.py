@@ -63,16 +63,18 @@ async def connect_instagram(request: ConnectRequest):
         ])
 
         scopes = quote(scopes_raw, safe="")
+        redirect_uri_encoded = quote(redirect_uri, safe="")
 
         auth_url = (
             f"https://www.instagram.com/oauth/authorize"
             f"?force_reauth=true"
             f"&client_id={client_id}"
-            f"&redirect_uri={redirect_uri}"
+            f"&redirect_uri={redirect_uri_encoded}"
             f"&response_type=code"
             f"&scope={scopes}"
             f"&state={request.user_id}"
         )
+
 
         logger.info(f"Instagram auth URL generated for user {request.user_id}")
 
