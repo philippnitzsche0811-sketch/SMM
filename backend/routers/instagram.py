@@ -175,6 +175,7 @@ async def exchange_instagram_code_for_token(code: str) -> tuple[str, str]:
         "redirect_uri": settings.INSTAGRAM_REDIRECT_URI,
         "code": code
     }
+    logger.info(f"Token exchange data: client_id={settings.INSTAGRAM_CLIENT_ID}, redirect_uri={settings.INSTAGRAM_REDIRECT_URI}, code_length={len(code)}")
 
     try:
         async with httpx.AsyncClient(timeout=15) as client:
