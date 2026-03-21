@@ -12,11 +12,11 @@
           <i class="pi pi-user"></i> Profil
         </h3>
         <div class="form-field">
-          abel>Benutzername</label>
+          <span class="form-label">Benutzername</span>
           <InputText v-model="profile.username" placeholder="Benutzername" class="w-full" />
         </div>
         <div class="form-field">
-          abel>E-Mail</label>
+          <span class="form-label">E-Mail</span>
           <InputText :value="authStore.userEmail || ''" disabled class="w-full" />
           <small class="field-hint">E-Mail kann nicht geändert werden</small>
         </div>
@@ -31,15 +31,15 @@
           <i class="pi pi-lock"></i> Passwort ändern
         </h3>
         <div class="form-field">
-          abel>Aktuelles Passwort</label>
+          <span class="form-label">Aktuelles Passwort</span>
           <Password v-model="passwords.current" :feedback="false" toggleMask class="w-full" inputClass="w-full" />
         </div>
         <div class="form-field">
-          abel>Neues Passwort</label>
+          <span class="form-label">Neues Passwort</span>
           <Password v-model="passwords.new" toggleMask class="w-full" inputClass="w-full" />
         </div>
         <div class="form-field">
-          abel>Neues Passwort bestätigen</label>
+          <span class="form-label">Neues Passwort bestätigen</span>
           <Password v-model="passwords.confirm" :feedback="false" toggleMask class="w-full" inputClass="w-full" />
           <small v-if="passwordMismatch" class="field-error">Passwörter stimmen nicht überein</small>
         </div>
@@ -103,12 +103,13 @@
         <p class="data-text">
           Du hast das Recht, alle deine gespeicherten Daten zu löschen. Dazu gehören:
         </p>
-        <ul class="data-list">
-          ><i class="pi pi-check-circle"></i> Dein Benutzerprofil und deine E-Mail-Adresse</li>
-          ><i class="pi pi-check-circle"></i> Alle verbundenen Social-Media-Plattformen</li>
-          ><i class="pi pi-check-circle"></i> Deine hochgeladenen Videos und Metadaten</li>
-          ><i class="pi pi-check-circle"></i> Alle gespeicherten Zugriffstoken</li>
-        </ul>
+        <div class="data-list">
+          <div class="data-list-item"><i class="pi pi-check-circle"></i> Dein Benutzerprofil und deine E-Mail-Adresse</div>
+          <div class="data-list-item"><i class="pi pi-check-circle"></i> Alle verbundenen Social-Media-Plattformen</div>
+          <div class="data-list-item"><i class="pi pi-check-circle"></i> Deine hochgeladenen Videos und Metadaten</div>
+          <div class="data-list-item"><i class="pi pi-check-circle"></i> Alle gespeicherten Zugriffstoken</div>
+        </div>
+
         <p class="data-text">
           Um alle deine Daten vollständig zu löschen, klicke auf <strong>"Konto löschen"</strong> in der Gefahrenzone.
           Deine Daten werden sofort und unwiderruflich entfernt.
@@ -230,6 +231,8 @@ const confirmDeleteAccount = () => {
 .page-header { margin-bottom: 2rem; }
 .page-header h1 { font-size: 1.75rem; font-weight: 700; color: #1e293b; margin: 0 0 0.25rem 0; }
 .subtitle { color: #64748b; font-size: 0.9rem; margin: 0; }
+.form-label { font-size: 0.875rem; font-weight: 500; color: #374151; }
+
 
 .settings-grid {
   display: grid;
@@ -292,7 +295,7 @@ const confirmDeleteAccount = () => {
   list-style: none; padding: 0; margin: 0;
   display: flex; flex-direction: column; gap: 0.5rem;
 }
-.data-list li {
+.data-list-item {
   display: flex; align-items: center; gap: 0.5rem;
   font-size: 0.875rem; color: #374151;
 }
