@@ -141,7 +141,7 @@ async def terms_of_service():
             <h2>9. Contact</h2>
             <p>
                 For questions about these Terms:<br>
-                <strong>Email:</strong> philippnitzsche0811@gmail.com
+                <strong>Email:</strong> support@decodu-smm.com
             </p>
             
             <footer>
@@ -356,8 +356,8 @@ async def privacy_policy():
             <h2>8. Contact</h2>
             <p>
                 For privacy questions or to exercise your rights:<br>
-                <strong>Email:</strong> philippnitzsche0811@gmail.com<br>
-                <strong>Support:</strong> philippnitzsche0811@gmail.com
+                <strong>Email:</strong> privacy@decodu-smm.com<br>
+                <strong>Support:</strong> support@decodu-smm.com
             </p>
             
             <footer>

@@ -87,7 +87,7 @@
       <section>
         <h2>9. Contact</h2>
         <p>For questions about these Terms:</p>
-        <p><strong>Email:</strong> philippnitzsche0811@gmail.com</p>
+        <p><strong>Email:</strong> support@decodu-smm.com</p>
       </section>
 
       <div class="last-updated">

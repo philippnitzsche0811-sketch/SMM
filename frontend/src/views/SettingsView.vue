@@ -116,7 +116,7 @@
         </p>
         <p class="data-text">
           Alternativ kannst du uns per E-Mail kontaktieren:
-          <a href="mailto:philippnitzsche0811@gmail.com" class="data-email">philippnitzsche0811@gmail.com</a>
+          <a href="mailto:support@decodu-smm.com" class="data-email">support@decodu-smm.com</a>
         </p>
       </div>
 

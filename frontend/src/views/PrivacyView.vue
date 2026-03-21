@@ -99,8 +99,8 @@
       <section>
         <h2>8. Contact & Data Requests</h2>
         <p>For privacy questions or to exercise your rights:</p>
-        <p><strong>Email:</strong> philippnitzsche0811@gmail.com</p>
-        <p><strong>Support:</strong> philippnitzsche0811@gmail.com</p>
+        <p><strong>Email:</strong> privacy@decodu-smm.com</p>
+        <p><strong>Support:</strong> support@decodu-smm.com</p>
       </section>
 
       <div class="last-updated">
