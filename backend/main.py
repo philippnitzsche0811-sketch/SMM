@@ -5,6 +5,8 @@ import logging
 from config import settings
 from models.database import init_db
 from routers import youtube, tiktok, instagram, upload, user, static_pages, auth
+from fastapi.staticfiles import StaticFiles
+
 
 # Logging Setup
 logging.basicConfig(
@@ -21,7 +23,8 @@ app = FastAPI(
     redirect_slashes=False
 )
 
-
+os.makedirs(settings.TEMP_DIR, exist_ok=True)
+app.mount("/api/videos/temp", StaticFiles(directory=settings.TEMP_DIR), name="temp_videos")
 # CORS Middleware - dynamisch aus ENV
 allowed_origins = [
     settings.FRONTEND_URL,
