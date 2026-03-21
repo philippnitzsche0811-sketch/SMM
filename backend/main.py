@@ -3,9 +3,12 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 import logging
 from config import settings
-from models.database import init_db
+from models.database import init_db,SessionLocal, UserModel
 from routers import youtube, tiktok, instagram, upload, user, static_pages, auth
 from fastapi.staticfiles import StaticFiles
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from datetime import datetime, timedelta
+
 
 
 # Logging Setup
@@ -14,7 +17,7 @@ logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger(__name__)
-
+scheduler = AsyncIOScheduler()
 # FastAPI App
 app = FastAPI(
     title="Social Media Upload Manager",
@@ -48,13 +51,16 @@ app.add_middleware(
 # Database initialization
 @app.on_event("startup")
 async def startup_event():
-    logger.info(f"ðŸš€ Starting application in {settings.ENVIRONMENT} mode...")
+    logger.info(f"🚀 Starting application in {settings.ENVIRONMENT} mode...")
     try:
         init_db()
-        logger.info("âœ… Database tables initialized")
+        logger.info("✅ Database tables initialized")
+        scheduler.start()
+        logger.info("✅ Scheduler gestartet")
     except Exception as e:
-        logger.error(f"âŒ Database initialization failed: {e}")
+        logger.error(f"❌ Startup failed: {e}")
         raise
+
 
 # Include Routers
 app.include_router(auth.router, prefix="/api")
@@ -85,6 +91,24 @@ async def root():
         "health": "/health",
         "environment": settings.ENVIRONMENT
     }
+@scheduler.scheduled_job("interval", hours=1)
+def cleanup_unverified_accounts():
+    db = SessionLocal()
+    try:
+        cutoff = datetime.now() - timedelta(hours=2)
+        deleted = db.query(UserModel).filter(
+            UserModel.is_verified == False,
+            UserModel.created_at < cutoff
+        ).delete()
+        db.commit()
+        if deleted:
+            logger.info(f"🗑️ {deleted} unverifizierte Accounts gelöscht")
+    except Exception as e:
+        db.rollback()
+        logger.error(f"❌ Cleanup fehlgeschlagen: {str(e)}")
+    finally:
+        db.close()
+
 
 if __name__ == "__main__":
     import uvicorn

@@ -36,4 +36,6 @@ email-validator==2.1.0
 # Utils
 python-dateutil==2.8.2
 
+apscheduler==3.10.4
+
 
