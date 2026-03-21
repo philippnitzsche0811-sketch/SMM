@@ -25,6 +25,7 @@ app = FastAPI(
 
 os.makedirs(settings.TEMP_DIR, exist_ok=True)
 app.mount("/api/videos/temp", StaticFiles(directory=settings.TEMP_DIR), name="temp_videos")
+
 # CORS Middleware - dynamisch aus ENV
 allowed_origins = [
     settings.FRONTEND_URL,

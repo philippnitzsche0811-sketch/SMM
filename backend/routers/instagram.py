@@ -285,12 +285,14 @@ async def refresh_instagram_token(request: RefreshRequest):
 
 @router.post("/disconnect")
 async def disconnect_instagram(request: DisconnectRequest):
-    """
-    Disconnects Instagram account for user.
-    """
     try:
         token_storage.delete_instagram_credentials(request.user_id)
-        user_service.remove_platform_credentials(request.user_id, "instagram")
+        
+        # Fehler ignorieren wenn User nicht im Memory
+        try:
+            user_service.remove_platform_credentials(request.user_id, "instagram")
+        except ValueError:
+            pass
 
         logger.info(f"Instagram disconnected for user {request.user_id}")
 
@@ -302,6 +304,7 @@ async def disconnect_instagram(request: DisconnectRequest):
     except Exception as e:
         logger.error(f"Instagram disconnect failed: {str(e)}")
         raise HTTPException(500, f"Disconnect fehlgeschlagen: {str(e)}")
+
 
 
 # ==========================================

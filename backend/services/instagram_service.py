@@ -79,7 +79,7 @@ def _create_reel_container(
     caption: str,
     share_to_feed: bool
 ) -> str:
-    url = f"https://graph.facebook.com/v18.0/{ig_user_id}/media"
+    url = f"https://graph.instagram.com/v21.0/{ig_user_id}/media"
 
     data = {
         "media_type": "REELS",
@@ -108,7 +108,7 @@ def _wait_for_container_ready(
     container_id: str,
     max_wait_time: int = 300
 ) -> bool:
-    url = f"https://graph.facebook.com/v18.0/{container_id}"
+    url = f"https://graph.instagram.com/v21.0/{container_id}"
     params = {
         "fields": "status_code",
         "access_token": access_token
@@ -148,7 +148,7 @@ def _publish_reel_container(
     access_token: str,
     creation_id: str
 ) -> str:
-    url = f"https://graph.facebook.com/v18.0/{ig_user_id}/media_publish"
+    url = f"https://graph.instagram.com/v21.0/{ig_user_id}/media_publish"
 
     data = {
         "creation_id": creation_id,
@@ -167,7 +167,7 @@ def _publish_reel_container(
 
 
 def get_media_insights(media_id: str, access_token: str) -> dict:
-    url = f"https://graph.facebook.com/v18.0/{media_id}/insights"
+    url = f"https://graph.instagram.com/v21.0/{media_id}/insights"
 
     params = {
         "metric": "plays,likes,comments,shares,saved",
