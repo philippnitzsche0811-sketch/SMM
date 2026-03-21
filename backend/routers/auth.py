@@ -6,7 +6,7 @@ import secrets
 import bcrypt
 import logging
 from utils.auth import create_access_token, decode_access_token  # ✅ NUR diese beiden
-from models.database import UserModel, get_db
+from models.database import UserModel, get_db, PlatformConnection
 from services.email_service import EmailService
 from config import settings
 from typing import Optional
@@ -567,3 +567,25 @@ async def update_me(
     except Exception as e:
         logger.error(f"❌ Update Me fehlgeschlagen: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
+
+@router.delete("/me")
+async def delete_account(current_user=Depends(get_current_user), db: Session = Depends(get_db)):
+    """Löscht den Account und alle zugehörigen Daten"""
+    try:
+        user_id = current_user.id
+
+        # Platform connections löschen
+        db.query(PlatformConnection).filter(PlatformConnection.user_id == user_id).delete()
+
+        # User löschen
+        db.query(User).filter(User.id == user_id).delete()
+
+        db.commit()
+
+        logger.info(f"✅ Account gelöscht: {user_id}")
+        return {"status": "success", "message": "Account erfolgreich gelöscht"}
+
+    except Exception as e:
+        db.rollback()
+        logger.error(f"❌ Account löschen fehlgeschlagen: {str(e)}")
+        raise HTTPException(500, f"Account konnte nicht gelöscht werden: {str(e)}")
