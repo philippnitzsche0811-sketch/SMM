@@ -569,22 +569,35 @@ async def update_me(
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.delete("/me")
-async def delete_account(current_user=Depends(get_current_user), db: Session = Depends(get_db)):
+async def delete_account(
+    authorization: str = Header(...),
+    db: Session = Depends(get_db)
+):
     """Löscht den Account und alle zugehörigen Daten"""
     try:
-        user_id = current_user.id
+        if not authorization.startswith("Bearer "):
+            raise HTTPException(401, "Invalid authorization header")
+        
+        token = authorization.replace("Bearer ", "")
+        payload = decode_access_token(token)
+        user_id = payload.get("user_id")
+        
+        if not user_id:
+            raise HTTPException(401, "Invalid token")
 
         # Platform connections löschen
         db.query(PlatformConnection).filter(PlatformConnection.user_id == user_id).delete()
 
         # User löschen
-        db.query(User).filter(User.id == user_id).delete()
+        db.query(UserModel).filter(UserModel.id == user_id).delete()
 
         db.commit()
 
         logger.info(f"✅ Account gelöscht: {user_id}")
         return {"status": "success", "message": "Account erfolgreich gelöscht"}
 
+    except HTTPException:
+        raise
     except Exception as e:
         db.rollback()
         logger.error(f"❌ Account löschen fehlgeschlagen: {str(e)}")
