@@ -8,6 +8,7 @@ from routers import youtube, tiktok, instagram, upload, user, static_pages, auth
 from fastapi.staticfiles import StaticFiles
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from datetime import datetime, timedelta
+from routers.optimizer import router as optimizer_router
 
 
 
@@ -70,7 +71,7 @@ app.include_router(instagram.router, prefix="/api/instagram")
 app.include_router(upload.router, prefix="/api/upload")
 app.include_router(user.router, prefix="/api/user")
 app.include_router(static_pages.router)
-
+app.include_router(optimizer_router) 
 # Health Check
 @app.get("/health")
 async def health_check():

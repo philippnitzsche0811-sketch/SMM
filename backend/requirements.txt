@@ -38,4 +38,8 @@ python-dateutil==2.8.2
 
 apscheduler==3.10.4
 
+# Add to existing requirements.txt
+openai>=1.30.0
+
+
 
