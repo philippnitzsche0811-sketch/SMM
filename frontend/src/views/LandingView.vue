@@ -9,8 +9,8 @@
           <span>SocialHub</span>
         </div>
         <div class="nav-links">
-          <Button label="Sign In" outlined size="small" @click="router.push('/login')" />
-          <Button label="Get Started" size="small" @click="router.push('/register')" />
+          <Button label="Sign In" outlined class="p-button-sm" @click="router.push('/login')" />
+          <Button label="Get Started" class="p-button-sm" @click="router.push('/register')" />
         </div>
       </div>
     </nav>
@@ -29,8 +29,8 @@
           from a single dashboard. One login, all your platforms.
         </p>
         <div class="hero-cta">
-          <Button label="Create free account" icon="pi pi-user-plus" size="large" @click="router.push('/register')" />
-          <Button label="Sign in" icon="pi pi-sign-in" outlined size="large" @click="router.push('/login')" />
+          <Button label="Create free account" icon="pi pi-user-plus" class="p-button-lg" @click="router.push('/register')" />
+          <Button label="Sign in" icon="pi pi-sign-in" outlined class="p-button-lg" @click="router.push('/login')" />
         </div>
       </div>
     </section>
@@ -138,8 +138,7 @@
           label="Get started for free"
           icon="pi pi-arrow-right"
           iconPos="right"
-          size="large"
-          class="cta-btn"
+          class="p-button-lg cta-btn"
           @click="router.push('/register')"
         />
       </div>
