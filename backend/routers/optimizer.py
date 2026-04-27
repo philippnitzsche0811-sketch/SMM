@@ -6,7 +6,7 @@ from typing import Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from models.database import get_db
-from utils.auth import get_current_user
+from routers.auth import get_current_user
 from services.optimizer_service import (
     generate_suggestions,
     get_trending_hashtags,
