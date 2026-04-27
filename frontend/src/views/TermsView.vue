@@ -93,12 +93,14 @@
       <div class="last-updated">
         Last updated: February 2026
       </div>
+
+      <LegalFooter class="footer-in-page" />
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-// Static page - no logic needed
+import LegalFooter from '@/components/layout/LegalFooter.vue';
 </script>
 
 <style scoped>
@@ -163,6 +165,10 @@ li {
   color: #94a3b8;
   font-size: 0.875rem;
   text-align: center;
+}
+
+.footer-in-page {
+  margin-top: 1rem;
 }
 
 @media (max-width: 768px) {

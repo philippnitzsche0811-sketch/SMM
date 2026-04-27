@@ -4,9 +4,13 @@ import { useAuthStore } from '@/stores/authStore';
 const router = createRouter({
   history: createWebHistory('/'),
   routes: [
-    // Root leitet abhängig vom Auth-Status um, das machen wir im Guard
-    // oder lässt man komplett weg – wichtig ist nur, dass es keine zweite
-    // Route mit path: '/' neben dem Layout gibt.
+    // 🏠 PUBLIC LANDING PAGE
+    {
+      path: '/',
+      name: 'landing',
+      component: () => import('@/views/LandingView.vue'),
+      meta: { requiresAuth: false },
+    },
 
     // 🔓 AUTH ROUTES
     {
@@ -20,6 +24,24 @@ const router = createRouter({
       name: 'register',
       component: () => import('@/views/auth/RegisterView.vue'),
       meta: { guest: true },
+    },
+    {
+      path: '/forgot-password',
+      name: 'forgot-password',
+      component: () => import('@/views/auth/ForgotPasswordView.vue'),
+      meta: { guest: true },
+    },
+    {
+      path: '/reset-password',
+      name: 'reset-password',
+      component: () => import('@/views/auth/ResetPasswordView.vue'),
+      meta: { requiresAuth: false },
+    },
+    {
+      path: '/verify-email',
+      name: 'verify-email',
+      component: () => import('@/views/auth/VerifyEmailView.vue'),
+      meta: { requiresAuth: false },
     },
 
     // 📄 LEGAL PAGES (Public)
@@ -36,45 +58,45 @@ const router = createRouter({
       meta: { requiresAuth: false },
     },
     {
-      path: '/verify-email',
-      name: 'verify-email',
-      component: () => import('@/views/auth/VerifyEmailView.vue'),
-      meta: { requiresAuth: false }
+      path: '/impressum',
+      name: 'impressum',
+      component: () => import('@/views/ImpressumView.vue'),
+      meta: { requiresAuth: false },
     },
 
-
-    // 🔒 APP ROUTES (MIT DashboardLayout) – OHNE /app Prefix
+    // 🔒 APP ROUTES (with DashboardLayout)
     {
-      path: '/', // Layout hängt an Root
+      path: '/',
       component: () => import('@/components/layout/DashboardLayout.vue'),
       meta: { requiresAuth: true },
       children: [
         {
-          path: '',              // '/' → redirect auf /dashboard
-          redirect: '/dashboard',
-        },
-        {
-          path: 'dashboard',     // /dashboard
+          path: 'dashboard',
           name: 'dashboard',
           component: () => import('@/views/DashboardView.vue'),
         },
         {
-          path: 'upload',        // /upload
+          path: 'upload',
           name: 'upload',
           component: () => import('@/views/UploadView.vue'),
         },
         {
-          path: 'uploads',       // /uploads
+          path: 'uploads',
           name: 'uploads',
-          component: () => import('@/views/UploadView.vue'),
+          component: () => import('@/views/UploadsView.vue'),
         },
         {
-          path: 'platforms',     // /platforms
+          path: 'connect',
+          name: 'connect',
+          component: () => import('@/views/ConnectView.vue'),
+        },
+        {
+          path: 'platforms',
           name: 'platforms',
           component: () => import('@/views/PlatformsView.vue'),
         },
         {
-          path: 'settings',      // /settings
+          path: 'settings',
           name: 'settings',
           component: () => import('@/views/SettingsView.vue'),
         },
@@ -87,16 +109,15 @@ const router = createRouter({
 router.beforeEach((to, from, next) => {
   const authStore = useAuthStore();
 
-  // Public routes explizit erlauben
+  // Landing page and guest routes: redirect authenticated users to dashboard
   if (to.meta.requiresAuth === false || to.meta.guest) {
-    if (to.meta.guest && authStore.isAuthenticated) {
-      // Eingeloggt, aber will auf /login → ab auf Dashboard
+    if ((to.name === 'landing' || to.meta.guest) && authStore.isAuthenticated) {
       return next('/dashboard');
     }
     return next();
   }
 
-  // Alle anderen Routes: Auth benötigt
+  // Protected routes: redirect unauthenticated users to login
   if (!authStore.isAuthenticated) {
     return next('/login');
   }

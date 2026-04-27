@@ -69,12 +69,14 @@
       </template>
     </Card>
     <Toast />
+    <LegalFooter />
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
+import LegalFooter from '@/components/layout/LegalFooter.vue';
 import { useAuthStore } from '@/stores/authStore';
 import { useToast } from 'primevue/usetoast';
 import Card from 'primevue/card';

@@ -6,6 +6,7 @@
       <div class="page-content">
         <router-view />
       </div>
+      <LegalFooter :dark="true" />
     </div>
   </div>
 </template>
@@ -13,6 +14,7 @@
 <script setup lang="ts">
 import Sidebar from './Sidebar.vue';
 import TopBar from './TopBar.vue';
+import LegalFooter from './LegalFooter.vue';
 </script>
 
 <style scoped>
