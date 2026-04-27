@@ -73,9 +73,9 @@ SMM/
 │           ├── user.types.ts
 │           ├── video.types.ts
 │           └── platform.types.ts
-├── docker-compose.yml
-├── docker-compose.local.yml     ← Local dev overrides
-├── docker-compose.prod.yml
+├── docker compose.yml
+├── docker compose.local.yml     ← Local dev overrides
+├── docker compose.prod.yml
 └── deploy-synology.ps1
 ```
 
@@ -83,22 +83,28 @@ SMM/
 
 ## Development Workflow
 
+**Where things run:**
+- Claude Code + VS Code edit files on Windows (`C:\Users\Philipp\SMM`)
+- All testing happens on the **Linux server (Synology NAS)** — git push to deploy, then test there
+- Server uses `docker compose` (space) — the old `docker-compose` hyphen binary is not installed
+
+
 ```powershell
 # Start local dev environment
-docker-compose -f docker-compose.yml -f docker-compose.local.yml up -d
+docker compose -f docker compose.yml -f docker compose.local.yml up -d
 
 # Stop
-docker-compose -f docker-compose.yml -f docker-compose.local.yml down
+docker compose -f docker compose.yml -f docker compose.local.yml down
 
 # Rebuild after code changes (frontend only — backend auto-reloads in local mode)
-docker-compose -f docker-compose.yml -f docker-compose.local.yml build --no-cache frontend
+docker compose -f docker compose.yml -f docker compose.local.yml build --no-cache frontend
 
 # NOTE: In local dev, backend/  is mounted as a volume with --reload,
 # so Python changes apply instantly. Only rebuild if you change requirements.txt or Dockerfile.
-docker-compose -f docker-compose.yml -f docker-compose.local.yml build --no-cache backend
+docker compose -f docker compose.yml -f docker compose.local.yml build --no-cache backend
 
 # View logs — service names: postgres, backend, frontend
-docker-compose -f docker-compose.yml -f docker-compose.local.yml logs -f backend
+docker compose -f docker compose.yml -f docker compose.local.yml logs -f backend
 
 # Deploy to Synology
 ./deploy-synology.ps1

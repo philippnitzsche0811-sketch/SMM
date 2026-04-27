@@ -17,7 +17,7 @@ async def terms_of_service():
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Terms of Service</title>
+        <title>SocialHub – Terms of Service</title>
         <style>
             * { margin: 0; padding: 0; box-sizing: border-box; }
             body {
@@ -74,13 +74,17 @@ async def terms_of_service():
     </head>
     <body>
         <div class="container">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px;">
+                <span style="font-size:1.5rem;">📹</span>
+                <span style="font-size:1.1rem;font-weight:700;color:#3498db;">SocialHub</span>
+            </div>
             <h1>Terms of Service</h1>
             <p class="meta">Last updated: December 28, 2024</p>
-            
+
             <h2>1. Acceptance of Terms</h2>
             <p>
-                By accessing and using this Social Media Upload Tool ("Service"), you accept and agree 
-                to be bound by these terms. If you do not agree, please do not use this Service.
+                By accessing and using SocialHub ("Service"), you accept and agree
+                to be bound by these terms. If you do not agree, please do not use SocialHub.
             </p>
             
             <h2>2. Use of Service</h2>
@@ -163,7 +167,7 @@ async def privacy_policy():
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Privacy Policy</title>
+        <title>SocialHub – Privacy Policy</title>
         <style>
             * { margin: 0; padding: 0; box-sizing: border-box; }
             body {
@@ -245,11 +249,15 @@ async def privacy_policy():
     </head>
     <body>
         <div class="container">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px;">
+                <span style="font-size:1.5rem;">📹</span>
+                <span style="font-size:1.1rem;font-weight:700;color:#3498db;">SocialHub</span>
+            </div>
             <h1>Privacy Policy</h1>
             <p class="meta">Last updated: December 28, 2024</p>
-            
+
             <div class="highlight">
-                <strong>TL;DR:</strong> We only store what's necessary to operate the service. 
+                <strong>TL;DR:</strong> SocialHub only stores what's necessary to operate the service.
                 No passwords, only OAuth tokens. Videos are deleted after upload.
             </div>
             

@@ -27,7 +27,7 @@ Check each item in the current code changes:
 - [ ] New routes are added to `frontend/src/router/index.ts`
 
 ### Docker
-- [ ] `docker-compose.yml` doesn't have local dev settings leaked in
+- [ ] `docker compose.yml` doesn't have local dev settings leaked in
 - [ ] New environment variables are documented in `.env.example`
 
 ## Deploy command
@@ -37,6 +37,6 @@ Check each item in the current code changes:
 
 ## After deploy — verify
 ```
-docker-compose logs -f backend   # check for startup errors
+docker compose logs -f backend   # check for startup errors
 curl https://your-domain/health  # should return {"status": "healthy"}
 ```

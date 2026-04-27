@@ -9,27 +9,27 @@ User types: `/logs backend` or `/logs frontend` or `/logs` (all)
 
 **All services:**
 ```powershell
-docker-compose -f docker-compose.yml -f docker-compose.local.yml logs -f
+docker compose -f docker compose.yml -f docker compose.local.yml logs -f
 ```
 
 **Backend only (most useful for debugging API errors):**
 ```powershell
-docker-compose -f docker-compose.yml -f docker-compose.local.yml logs -f backend
+docker compose -f docker compose.yml -f docker compose.local.yml logs -f backend
 ```
 
 **Frontend:**
 ```powershell
-docker-compose -f docker-compose.yml -f docker-compose.local.yml logs -f frontend
+docker compose -f docker compose.yml -f docker compose.local.yml logs -f frontend
 ```
 
 **Database (service is named 'postgres', not 'db'):**
 ```powershell
-docker-compose -f docker-compose.yml -f docker-compose.local.yml logs -f postgres
+docker compose -f docker compose.yml -f docker compose.local.yml logs -f postgres
 ```
 
 **Last 50 lines only (useful for quick check):**
 ```powershell
-docker-compose -f docker-compose.yml -f docker-compose.local.yml logs --tail=50 backend
+docker compose -f docker compose.yml -f docker compose.local.yml logs --tail=50 backend
 ```
 
 ## What to look for

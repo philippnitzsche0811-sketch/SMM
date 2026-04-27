@@ -6,7 +6,7 @@
           <div class="logo">
             <i class="pi pi-video" style="font-size: 3rem; color: #667eea;"></i>
           </div>
-          <h1>Social Media Manager</h1>
+          <h1>SocialHub</h1>
           <p>Melde dich an</p>
         </div>
       </template>

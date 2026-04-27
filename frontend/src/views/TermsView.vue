@@ -1,13 +1,18 @@
 <template>
   <div class="legal-page">
     <div class="legal-container">
+      <div class="app-brand">
+        <i class="pi pi-video brand-icon"></i>
+        <span class="brand-name">SocialHub</span>
+      </div>
+
       <h1>Terms of Service</h1>
-      
+
       <section>
         <h2>1. Acceptance of Terms</h2>
         <p>
-          By accessing and using this Social Media Upload Tool ("Service"), you accept and agree to be bound by these terms. 
-          If you do not agree, please do not use this Service.
+          By accessing and using SocialHub ("Service"), you accept and agree to be bound by these terms.
+          If you do not agree, please do not use SocialHub.
         </p>
       </section>
 
@@ -156,6 +161,24 @@ li {
   line-height: 1.8;
   color: #64748b;
   margin-bottom: 0.5rem;
+}
+
+.app-brand {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-bottom: 1.5rem;
+}
+
+.brand-icon {
+  font-size: 1.75rem;
+  color: #667eea;
+}
+
+.brand-name {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #667eea;
 }
 
 .last-updated {

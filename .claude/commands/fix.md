@@ -10,7 +10,7 @@ You are helping fix a bug in the SMM platform (FastAPI backend + Vue 3 frontend)
 
 3. **Check the logs** — if the user hasn't shared error details, remind them to run:
    ```
-   docker-compose -f docker-compose.yml -f docker-compose.local.yml logs -f backend
+   docker compose -f docker compose.yml -f docker compose.local.yml logs -f backend
    ```
 
 4. **Propose the fix** — show the exact file path and line numbers. Explain WHY the fix works, not just what it does.
@@ -19,7 +19,7 @@ You are helping fix a bug in the SMM platform (FastAPI backend + Vue 3 frontend)
 
 6. **Remind the user** to test with Docker rebuild if frontend changed:
    ```
-   docker-compose -f docker-compose.yml -f docker-compose.local.yml build --no-cache frontend
+   docker compose -f docker compose.yml -f docker compose.local.yml build --no-cache frontend
    ```
    Or for backend: `build --no-cache backend`
 

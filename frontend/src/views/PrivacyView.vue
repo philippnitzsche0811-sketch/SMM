@@ -1,11 +1,16 @@
 <template>
   <div class="legal-page">
     <div class="legal-container">
+      <div class="app-brand">
+        <i class="pi pi-video brand-icon"></i>
+        <span class="brand-name">SocialHub</span>
+      </div>
+
       <h1>Privacy Policy</h1>
-      
+
       <section>
         <h2>1. Information We Collect</h2>
-        <p>When you use our Service, we collect:</p>
+        <p>When you use SocialHub, we collect:</p>
         <ul>
           <li><strong>Account Information:</strong> Email address (for authentication)</li>
           <li><strong>Platform Tokens:</strong> OAuth tokens for YouTube, TikTok, Instagram</li>
@@ -197,6 +202,24 @@ strong {
 
 .data-table td {
   color: #64748b;
+}
+
+.app-brand {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-bottom: 1.5rem;
+}
+
+.brand-icon {
+  font-size: 1.75rem;
+  color: #667eea;
+}
+
+.brand-name {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #667eea;
 }
 
 .last-updated {
