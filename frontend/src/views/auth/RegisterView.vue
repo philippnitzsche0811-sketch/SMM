@@ -28,6 +28,8 @@
               v-model="password"
               placeholder="Min. 8 characters"
               toggleMask
+              maskIcon="pi pi-eye-slash"
+              unmaskIcon="pi pi-eye"
               class="w-full"
               inputClass="w-full"
             />
@@ -41,6 +43,8 @@
               placeholder="Repeat password"
               :feedback="false"
               toggleMask
+              maskIcon="pi pi-eye-slash"
+              unmaskIcon="pi pi-eye"
               class="w-full"
               inputClass="w-full"
             />
@@ -238,4 +242,15 @@ const handleRegister = async () => {
 :deep(.legal-footer a)       { color: #94a3b8; }
 :deep(.legal-footer a:hover) { color: #475569; }
 :deep(.legal-footer .dot)    { color: #cbd5e1; }
+
+:deep(.p-password) { width: 100%; position: relative; }
+:deep(.p-password input) { width: 100%; padding-right: 2.5rem; }
+:deep(.p-password-toggle-mask-icon) {
+  position: absolute;
+  right: 0.75rem;
+  top: 50%;
+  transform: translateY(-50%);
+  cursor: pointer;
+  color: #94a3b8;
+}
 </style>

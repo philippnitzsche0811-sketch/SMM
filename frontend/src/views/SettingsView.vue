@@ -28,15 +28,15 @@
         <h3 class="settings-card-title"><i class="pi pi-lock"></i> Change Password</h3>
         <div class="form-field">
           <span class="form-label">Current Password</span>
-          <Password v-model="passwords.current" :feedback="false" toggleMask class="w-full" inputClass="w-full" />
+          <Password v-model="passwords.current" :feedback="false" toggleMask maskIcon="pi pi-eye-slash" unmaskIcon="pi pi-eye" class="w-full" inputClass="w-full" />
         </div>
         <div class="form-field">
           <span class="form-label">New Password</span>
-          <Password v-model="passwords.new" toggleMask class="w-full" inputClass="w-full" />
+          <Password v-model="passwords.new" toggleMask maskIcon="pi pi-eye-slash" unmaskIcon="pi pi-eye" class="w-full" inputClass="w-full" />
         </div>
         <div class="form-field">
           <span class="form-label">Confirm New Password</span>
-          <Password v-model="passwords.confirm" :feedback="false" toggleMask class="w-full" inputClass="w-full" />
+          <Password v-model="passwords.confirm" :feedback="false" toggleMask maskIcon="pi pi-eye-slash" unmaskIcon="pi pi-eye" class="w-full" inputClass="w-full" />
           <small v-if="passwordMismatch" class="field-error">Passwords do not match</small>
         </div>
         <div class="card-footer">
@@ -266,5 +266,16 @@ const confirmDeleteAccount = () => {
 
 @media (max-width: 768px) {
   .settings-grid { grid-template-columns: 1fr; }
+}
+
+:deep(.p-password) { width: 100%; position: relative; }
+:deep(.p-password input) { width: 100%; padding-right: 2.5rem; }
+:deep(.p-password-toggle-mask-icon) {
+  position: absolute;
+  right: 0.75rem;
+  top: 50%;
+  transform: translateY(-50%);
+  cursor: pointer;
+  color: #94a3b8;
 }
 </style>
