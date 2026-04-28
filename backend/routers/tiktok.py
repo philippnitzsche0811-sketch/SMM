@@ -208,12 +208,12 @@ async def exchange_code_for_token(code: str, code_verifier: str) -> tuple[str, s
     }
     
     try:
-        logger.info(f"ðŸ”„ Token Exchange Request: {url}")
-        
+        logger.info(f"Token Exchange Request: {url}")
+
         resp = requests.post(url, data=data, headers=headers, timeout=10)
-        
-        logger.info(f"ðŸ“¥ Token Exchange Response Status: {resp.status_code}")
-        logger.info(f"ðŸ“¥ Token Exchange Response: {resp.text}")
+
+        logger.info(f"Token Exchange Response Status: {resp.status_code}")
+        logger.info(f"Token Exchange Response: {resp.text}")
         
         resp.raise_for_status()
         result = resp.json()

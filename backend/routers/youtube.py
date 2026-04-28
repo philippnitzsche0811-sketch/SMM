@@ -1,6 +1,6 @@
-﻿from fastapi import APIRouter, UploadFile, File, Form, Request as FastAPIRequest, HTTPException, Depends  # âœ… FÃ¼ge Depends hinzu
+from fastapi import APIRouter, UploadFile, File, Form, Request as FastAPIRequest, HTTPException, Depends
 from fastapi.responses import RedirectResponse
-from sqlalchemy.orm import Session  # âœ… NEU: Import Session
+from sqlalchemy.orm import Session
 import logging
 import json
 
@@ -27,44 +27,37 @@ async def connect_youtube(
     client_secrets_file: UploadFile = File(...),
     current_user: dict = Depends(get_current_user),
 ):
-    """
-    Generiert YouTube OAuth URL fÃ¼r User
-    """
-    if str(current_user[“id”]) != str(user_id):
-        raise HTTPException(status_code=403, detail=”Not authorized”)
+    """Generates YouTube OAuth URL for user."""
+    if str(current_user["id"]) != str(user_id):
+        raise HTTPException(status_code=403, detail="Not authorized")
 
     try:
-        logger.info(f”ðŸ”¥ YouTube Connect Request fÃ¼r User: {user_id}”)
-        logger.info(f"ðŸ“„ Dateiname: {client_secrets_file.filename}")
-        logger.info(f"ðŸ“¦ Content-Type: {client_secrets_file.content_type}")
-        
-        # Validate file extension
+        logger.info(f"YouTube Connect Request for user: {user_id}")
+        logger.info(f"File: {client_secrets_file.filename}")
+        logger.info(f"Content-Type: {client_secrets_file.content_type}")
+
         if not client_secrets_file.filename.endswith('.json'):
-            raise HTTPException(400, "Client Secrets muss eine JSON-Datei sein (.json)")
-        
-        # Save temp file
+            raise HTTPException(400, "Client Secrets must be a JSON file (.json)")
+
         temp_path = await file_service.save_temp_file(
-            client_secrets_file, 
+            client_secrets_file,
             f"{user_id}_client_secret.json"
         )
-        
-        logger.info(f"ðŸ’¾ Temp-Datei gespeichert: {temp_path}")
-        
-        # Validate JSON content
+
+        logger.info(f"Temp file saved: {temp_path}")
+
         try:
             with open(temp_path, 'r', encoding='utf-8') as f:
                 client_secrets = json.load(f)
-            
-            # Check if valid Google OAuth structure
+
             if 'web' not in client_secrets and 'installed' not in client_secrets:
-                raise ValueError("UngÃ¼ltige client_secrets.json Struktur")
-                
+                raise ValueError("Invalid client_secrets.json structure")
+
         except json.JSONDecodeError:
-            raise HTTPException(400, "UngÃ¼ltige JSON-Datei - Bitte prÃ¼fe das Format")
+            raise HTTPException(400, "Invalid JSON file")
         except ValueError as e:
             raise HTTPException(400, str(e))
-        
-        # Store temp path for callback
+
         token_storage._save_credentials(
             user_id=user_id,
             platform="youtube_temp",
@@ -73,111 +66,101 @@ async def connect_youtube(
                 "refresh_token": None,
             }
         )
-        
-        # Generate OAuth URL
+
         auth_url = get_youtube_auth_url(temp_path, user_id)
-        
-        logger.info(f"âœ… YouTube Auth-URL generiert fÃ¼r User {user_id}")
-        
+
+        logger.info(f"YouTube Auth-URL generated for user {user_id}")
+
         return {
             "status": "success",
-            "message": "Bitte im Browser authentifizieren",
+            "message": "Please authenticate in browser",
             "auth_url": auth_url,
             "user_id": user_id,
             "platform": "youtube"
         }
-        
+
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"âŒ YouTube Auth-URL Generierung fehlgeschlagen: {str(e)}")
-        raise HTTPException(500, f"YouTube-Auth fehlgeschlagen: {str(e)}")
+        logger.error(f"YouTube Auth-URL generation failed: {str(e)}")
+        raise HTTPException(500, f"YouTube auth failed: {str(e)}")
 
 
 @router.get("/oauth_callback")
 @router.get("/oauth/callback")
 async def youtube_oauth_callback(request: FastAPIRequest, db: Session = Depends(get_db)):
-    """
-    Callback fÃ¼r YouTube OAuth Flow
-    """
+    """Callback for YouTube OAuth flow."""
     logger.info("=" * 50)
-    logger.info("ðŸŽ¯ YOUTUBE OAUTH CALLBACK STARTED")
+    logger.info("YOUTUBE OAUTH CALLBACK STARTED")
     logger.info("=" * 50)
-    
+
     try:
         code = request.query_params.get("code")
         state = request.query_params.get("state")
         error = request.query_params.get("error")
-        
-        logger.info(f"ðŸ“¥ Query params - code: {bool(code)}, state: {state}, error: {error}")
-        
+
+        logger.info(f"Query params - code: {bool(code)}, state: {state}, error: {error}")
+
         if error:
-            logger.error(f"YouTube OAuth Fehler: {error}")
+            logger.error(f"YouTube OAuth error: {error}")
             return RedirectResponse(
                 url=f"{settings.FRONTEND_URL}/platforms?error=youtube&message={error}"
             )
-        
+
         if not code or not state:
-            logger.error(f"âŒ Missing parameters!")
+            logger.error("Missing parameters!")
             return RedirectResponse(
                 url=f"{settings.FRONTEND_URL}/platforms?error=youtube&message=missing_parameters"
             )
-        
-        # âœ… State IST bereits die vollstÃ¤ndige User ID!
-        user_id = state  # State ist "user_517b3b295a111f54"
-        logger.info(f"ðŸ‘¤ User ID: {user_id}")
 
-        
-        # Load client secrets
+        user_id = state
+        logger.info(f"User ID: {user_id}")
+
         temp_creds = token_storage._load_credentials(user_id, "youtube_temp")
         client_secrets_path = temp_creds.get("access_token") if temp_creds else None
-        logger.info(f"ðŸ“„ Client secrets path: {client_secrets_path}")
-        
+        logger.info(f"Client secrets path: {client_secrets_path}")
+
         if not client_secrets_path:
-            logger.error("âŒ Client secrets not found!")
+            logger.error("Client secrets not found!")
             return RedirectResponse(
                 url=f"{settings.FRONTEND_URL}/platforms?error=youtube&message=secrets_not_found"
             )
-        
-        logger.info("ðŸ” Starting authentication...")
-        
-        # Authenticate and get credentials
+
+        logger.info("Starting authentication...")
+
         credentials = authenticate_youtube_with_code(client_secrets_path, code, user_id)
-        
-        logger.info("âœ… Credentials obtained!")
-        
-        # Save credentials to file
+
+        logger.info("Credentials obtained!")
+
         token_storage.save_youtube_credentials(user_id, credentials)
         user_service.set_platform_credentials(
             user_id=user_id,
             platform="youtube",
             credentials=credentials
         )
-        
-        logger.info("ðŸ’¾ Credentials saved to file")
-        
-        # âœ… Speichere in der Datenbank!
+
+        logger.info("Credentials saved to file")
+
         from models.database import PlatformConnection
         import secrets as secret_gen
         from datetime import datetime
-        
-        logger.info("ðŸ’¾ Saving to database...")
-        
-        # Check if platform connection already exists
+
+        logger.info("Saving to database...")
+
         existing_platform = db.query(PlatformConnection).filter(
             PlatformConnection.user_id == user_id,
             PlatformConnection.platform == "youtube"
         ).first()
-        
+
         if existing_platform:
-            logger.info(f"ðŸ“ Updating existing YouTube connection")
+            logger.info(f"Updating existing YouTube connection")
             existing_platform.connected = True
             existing_platform.access_token = credentials.token
             existing_platform.refresh_token = credentials.refresh_token
             existing_platform.token_expiry = credentials.expiry
             existing_platform.updated_at = datetime.now()
         else:
-            logger.info(f"âœ¨ Creating new YouTube connection")
+            logger.info(f"Creating new YouTube connection")
             new_platform = PlatformConnection(
                 id=f"plat_{secret_gen.token_hex(8)}",
                 user_id=user_id,
@@ -190,68 +173,56 @@ async def youtube_oauth_callback(request: FastAPIRequest, db: Session = Depends(
                 updated_at=datetime.now()
             )
             db.add(new_platform)
-        
+
         db.commit()
-        logger.info(f"âœ… Database commit successful!")
-        
-        # Cleanup
+        logger.info("Database commit successful!")
+
         file_service.delete_file(client_secrets_path)
         token_storage._delete_credentials(user_id, "youtube_temp")
-        
-        logger.info(f"ðŸ§¹ Cleanup completed")
-        logger.info(f"âœ… YouTube erfolgreich verbunden fÃ¼r User {user_id}")
+
+        logger.info(f"Cleanup completed")
+        logger.info(f"YouTube successfully connected for user {user_id}")
         logger.info("=" * 50)
-        logger.info("ðŸŽ‰ REDIRECTING TO FRONTEND")
+        logger.info("REDIRECTING TO FRONTEND")
         logger.info("=" * 50)
-        
+
         return RedirectResponse(
             url=f"{settings.FRONTEND_URL}/platforms?success=youtube",
-            status_code=302  # âœ… Explizit 302 statt 307
+            status_code=302
         )
-        
+
     except Exception as e:
-        logger.error(f"âŒ YouTube OAuth fehlgeschlagen: {str(e)}", exc_info=True)
+        logger.error(f"YouTube OAuth failed: {str(e)}", exc_info=True)
         return RedirectResponse(
             url=f"{settings.FRONTEND_URL}/platforms?error=youtube&message={str(e)}",
             status_code=302
         )
 
 
+def upload_to_youtube(user_id: str, video_path: str, title: str,
+                      description: str, tags_list: list, privacy_status: str):
+    """Helper for YouTube upload."""
+    logger.info(f"Looking for YouTube credentials for user: {user_id}")
 
-
-
-def upload_to_youtube(user_id: str, video_path: str, title: str, 
-                     description: str, tags_list: list, privacy_status: str):
-    """
-    Hilfsfunktion für YouTube Upload
-    
-    Returns:
-        dict: Upload-Ergebnis
-    """
-    logger.info(f"🔍 Suche YouTube Credentials für User: {user_id}")
-    
-    # Erst im Memory suchen
     youtube_creds = user_service.get_platform_credentials(user_id, "youtube")
-    logger.info(f"Memory: {'✅ gefunden' if youtube_creds else '❌ nicht gefunden'}")
-    
-    # Falls nicht im Memory, von Disk laden
+    logger.info(f"Memory: {'found' if youtube_creds else 'not found'}")
+
     if not youtube_creds:
-        logger.info(f"💾 Lade YouTube-Token von Disk für User {user_id}")
+        logger.info(f"Loading YouTube token from disk for user {user_id}")
         youtube_creds = token_storage.load_youtube_credentials(user_id)
-        logger.info(f"Disk: {'✅ gefunden' if youtube_creds else '❌ nicht gefunden'}")
-        
+        logger.info(f"Disk: {'found' if youtube_creds else 'not found'}")
+
         if youtube_creds:
             user_service.set_platform_credentials(user_id, "youtube", youtube_creds)
-            logger.info("✅ Credentials in Memory gecacht")
-    
+            logger.info("Credentials cached in memory")
+
     if not youtube_creds:
-        logger.error(f"❌ FEHLER: Keine YouTube Credentials für User {user_id} gefunden!")
-        logger.error(f"Token-Datei: {token_storage._get_token_path(user_id, 'youtube')}")
-        raise ValueError("User nicht authentifiziert")
-    
-    # ✅ Konvertiere dict zu Credentials Objekt (Import ist jetzt oben)
+        logger.error(f"No YouTube credentials found for user {user_id}!")
+        logger.error(f"Token file: {token_storage._get_token_path(user_id, 'youtube')}")
+        raise ValueError("User not authenticated")
+
     if isinstance(youtube_creds, dict):
-        logger.info("🔄 Konvertiere dict zu Credentials Objekt")
+        logger.info("Converting dict to Credentials object")
         credentials = Credentials(
             token=youtube_creds.get("token"),
             refresh_token=youtube_creds.get("refresh_token"),
@@ -262,9 +233,9 @@ def upload_to_youtube(user_id: str, video_path: str, title: str,
         )
     else:
         credentials = youtube_creds
-    
-    logger.info(f"🚀 Starte YouTube Upload mit Credentials-Typ: {type(credentials)}")
-    
+
+    logger.info(f"Starting YouTube upload, credentials type: {type(credentials)}")
+
     result = upload_video_to_youtube(
         credentials=credentials,
         video_path=video_path,
@@ -273,7 +244,6 @@ def upload_to_youtube(user_id: str, video_path: str, title: str,
         tags=tags_list,
         privacy_status=privacy_status
     )
-    
-    logger.info(f"✅ YouTube Upload erfolgreich für User {user_id}")
-    return result
 
+    logger.info(f"YouTube upload successful for user {user_id}")
+    return result
