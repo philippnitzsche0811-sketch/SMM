@@ -12,7 +12,7 @@
     <!-- Logo -->
     <div class="sidebar-logo">
       <div class="logo-mark">
-        <i class="pi pi-play-circle"></i>
+        <img :src="logoUrl" alt="SocialHub" class="logo-img" />
       </div>
       <span class="logo-name" v-show="!isCollapsed">SocialHub</span>
       <button
@@ -60,6 +60,7 @@
 import { ref, computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useAuthStore } from '@/stores/authStore';
+import logoUrl from '@/assets/images/logo.png';
 
 defineProps<{ mobileOpen: boolean }>();
 defineEmits<{ close: [] }>();
@@ -150,13 +151,18 @@ const handleLogout = () => { authStore.logout(); router.push('/login'); };
   width: 32px;
   height: 32px;
   border-radius: 8px;
-  background: var(--primary-500);
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  color: white;
-  font-size: 1rem;
+  overflow: hidden;
+}
+
+.logo-img {
+  width: 32px;
+  height: 32px;
+  object-fit: contain;
+  border-radius: 8px;
 }
 
 .logo-name {

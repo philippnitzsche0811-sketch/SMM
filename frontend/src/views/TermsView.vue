@@ -2,7 +2,7 @@
   <div class="legal-page">
     <div class="legal-container">
       <div class="app-brand">
-        <i class="pi pi-video brand-icon"></i>
+        <img :src="logoUrl" alt="SocialHub" class="brand-logo" />
         <span class="brand-name">SocialHub</span>
       </div>
 
@@ -106,6 +106,7 @@
 
 <script setup lang="ts">
 import LegalFooter from '@/components/layout/LegalFooter.vue';
+import logoUrl from '@/assets/images/logo.png';
 </script>
 
 <style scoped>
@@ -170,9 +171,11 @@ li {
   margin-bottom: 1.5rem;
 }
 
-.brand-icon {
-  font-size: 1.75rem;
-  color: #667eea;
+.brand-logo {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  object-fit: contain;
 }
 
 .brand-name {
