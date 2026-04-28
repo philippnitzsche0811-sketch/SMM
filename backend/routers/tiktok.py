@@ -104,6 +104,7 @@ async def connect_tiktok(
             f"&state={request.user_id}"
             f"&code_challenge={code_challenge}"
             f"&code_challenge_method=S256"
+            f"&force_reauth=1"
         )
         
         logger.info(f"âœ… TikTok Auth-URL mit PKCE generiert fÃ¼r User {request.user_id}")
