@@ -144,7 +144,7 @@
       </div>
     </section>
 
-    <LegalFooter />
+    <LegalFooter dark />
   </div>
 </template>
 
@@ -437,6 +437,13 @@ const router = useRouter();
   color: rgba(255, 255, 255, 0.85);
   font-size: 1.05rem;
   margin: 0 0 2rem 0;
+}
+
+/* ── Legal footer ─────────────────────────────────── */
+:deep(.legal-footer) {
+  background: #f8fafc;
+  border-top: 1px solid #e2e8f0;
+  padding: 1.25rem 2rem;
 }
 
 /* ── Responsive ───────────────────────────────────── */
