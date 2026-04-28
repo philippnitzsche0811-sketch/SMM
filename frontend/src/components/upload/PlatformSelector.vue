@@ -90,12 +90,18 @@ const togglePlatform = (id: string, connected: boolean) => {
   else localSelected.value.push(id);
 };
 
-watch(localSelected, (val) => emit('update:modelValue', val), { deep: true });
-watch(() => props.modelValue, (val) => { localSelected.value = [...val]; });
+watch(localSelected, (val) => emit('update:modelValue', [...val]), { deep: true });
+
+watch(() => props.modelValue, (newVal) => {
+  const cur = localSelected.value;
+  const same = newVal.length === cur.length && newVal.every((v, i) => v === cur[i]);
+  if (!same) localSelected.value = [...newVal];
+});
 
 onMounted(() => {
   if (localSelected.value.length === 0) {
-    localSelected.value = platforms.filter(p => p.connected).map(p => p.id);
+    const preselect = platforms.filter(p => p.connected).map(p => p.id);
+    if (preselect.length > 0) localSelected.value = preselect;
   }
 });
 </script>
