@@ -30,7 +30,6 @@ htmlcov/
 node_modules/
 temp/
 tokens/
-data/
 logs/
 *.log
 .pytest_cache/
