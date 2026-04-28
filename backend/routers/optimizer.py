@@ -51,7 +51,7 @@ async def suggest(
     db: Session = Depends(get_db),
     current_user: dict = Depends(get_current_user),
 ):
-    if current_user["user_id"] != body.user_id:
+    if str(current_user["id"]) != str(body.user_id):
         raise HTTPException(status_code=403, detail="Not authorized to optimize for this user.")
 
     if not body.platforms:
@@ -89,7 +89,7 @@ async def best_times(
     db: Session = Depends(get_db),
     current_user: dict = Depends(get_current_user),
 ) -> dict:
-    if current_user["user_id"] != user_id:
+    if str(current_user["id"]) != str(user_id):
         raise HTTPException(status_code=403, detail="Not authorized.")
 
     platform = platform.lower()
