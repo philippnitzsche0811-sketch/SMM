@@ -1,8 +1,9 @@
 <template>
-  <div class="dashboard-layout">
-    <Sidebar />
-    <div class="main-content">
-      <TopBar />
+  <div class="app-shell">
+    <Sidebar :mobile-open="sidebarOpen" @close="sidebarOpen = false" />
+
+    <div class="app-main">
+      <TopBar @toggle-sidebar="sidebarOpen = !sidebarOpen" />
       <div class="page-content">
         <router-view />
       </div>
@@ -12,25 +13,28 @@
 </template>
 
 <script setup lang="ts">
+import { ref } from 'vue';
 import Sidebar from './Sidebar.vue';
 import TopBar from './TopBar.vue';
 import LegalFooter from './LegalFooter.vue';
+
+const sidebarOpen = ref(false);
 </script>
 
 <style scoped>
-.dashboard-layout {
+.app-shell {
   display: flex;
   height: 100vh;
   overflow: hidden;
-  background: #f8fafc;
+  background: var(--bg-secondary);
 }
 
-.main-content {
+.app-main {
   flex: 1;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  min-width: 0;
 }
 
 .page-content {
@@ -38,5 +42,8 @@ import LegalFooter from './LegalFooter.vue';
   overflow-y: auto;
   padding: 2rem;
 }
-</style>
 
+@media (max-width: 767px) {
+  .page-content { padding: 1rem; }
+}
+</style>

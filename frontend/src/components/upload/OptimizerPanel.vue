@@ -1,8 +1,9 @@
 <template>
   <div class="optimizer-panel">
     <div class="optimizer-header">
-      <span class="optimizer-title">KI-Vorschläge</span>
-      <small class="optimizer-hint">Klicke "Übernehmen" um einen Vorschlag in das Formular zu übertragen</small>
+      <i class="pi pi-sparkles"></i>
+      <span class="optimizer-title">AI Suggestions</span>
+      <small class="optimizer-hint">Click "Apply" to use a suggestion in the form</small>
     </div>
 
     <div class="platform-cards">
@@ -11,71 +12,40 @@
         :key="platform"
         class="platform-card"
       >
-        <!-- Platform Header -->
         <div class="platform-header">
           <span class="platform-badge" :class="`badge-${platform}`">
             {{ platformLabel(platform as string) }}
           </span>
         </div>
 
-        <!-- Title -->
         <div class="suggestion-block">
-          <div class="suggestion-label">Titel</div>
+          <div class="suggestion-label">Title</div>
           <div class="suggestion-text">{{ suggestion.title }}</div>
-          <Button
-            label="Übernehmen"
-            size="small"
-            outlined
-            class="apply-btn"
-            @click="$emit('apply-title', suggestion.title)"
-          />
+          <Button label="Apply" size="small" outlined class="apply-btn" @click="$emit('apply-title', suggestion.title)" />
         </div>
 
-        <!-- Description -->
         <div class="suggestion-block">
-          <div class="suggestion-label">Beschreibung</div>
+          <div class="suggestion-label">Description</div>
           <div class="suggestion-text description-preview">{{ suggestion.description }}</div>
-          <Button
-            label="Übernehmen"
-            size="small"
-            outlined
-            class="apply-btn"
-            @click="$emit('apply-description', suggestion.description)"
-          />
+          <Button label="Apply" size="small" outlined class="apply-btn" @click="$emit('apply-description', suggestion.description)" />
         </div>
 
-        <!-- Hashtags -->
         <div class="suggestion-block">
           <div class="suggestion-label">Hashtags</div>
           <div class="tags-row">
-            <span
-              v-for="tag in suggestion.tags.slice(0, 12)"
-              :key="tag"
-              class="tag-chip"
-            >#{{ tag }}</span>
+            <span v-for="tag in suggestion.tags.slice(0, 12)" :key="tag" class="tag-chip">#{{ tag }}</span>
           </div>
-          <Button
-            label="Übernehmen"
-            size="small"
-            outlined
-            class="apply-btn"
-            @click="$emit('apply-tags', suggestion.tags)"
-          />
+          <Button label="Apply" size="small" outlined class="apply-btn" @click="$emit('apply-tags', suggestion.tags)" />
         </div>
 
-        <!-- Upload times -->
         <div class="suggestion-block">
-          <div class="suggestion-label">Beste Upload-Zeiten</div>
+          <div class="suggestion-label">Best Upload Times</div>
           <div class="times-list">
-            <div
-              v-for="time in suggestion.upload_times.slice(0, 3)"
-              :key="time"
-              class="time-entry"
-            >
+            <div v-for="time in suggestion.upload_times.slice(0, 3)" :key="time" class="time-entry">
               {{ formatDateTime(time) }}
             </div>
             <div v-if="suggestion.upload_times.length === 0" class="time-entry muted">
-              Keine Daten – nach mehr Uploads personalisiert
+              No data yet &mdash; improves after more uploads
             </div>
           </div>
         </div>
@@ -88,124 +58,101 @@
 import Button from 'primevue/button'
 import type { OptimizerSuggestions } from '@/types/optimizer.types'
 
-defineProps<{
-  suggestions: OptimizerSuggestions
-}>()
-
+defineProps<{ suggestions: OptimizerSuggestions }>()
 defineEmits<{
-  'apply-title': [value: string]
+  'apply-title':       [value: string]
   'apply-description': [value: string]
-  'apply-tags': [value: string[]]
+  'apply-tags':        [value: string[]]
 }>()
 
-const platformLabel = (platform: string): string => {
-  const labels: Record<string, string> = {
-    youtube: 'YouTube',
-    tiktok: 'TikTok',
-    instagram: 'Instagram',
-  }
-  return labels[platform] ?? platform
-}
+const platformLabel = (platform: string) =>
+  ({ youtube: 'YouTube', tiktok: 'TikTok', instagram: 'Instagram' }[platform] ?? platform)
 
-const formatDateTime = (iso: string): string => {
+const formatDateTime = (iso: string) => {
   try {
-    return new Intl.DateTimeFormat('de-DE', {
-      weekday: 'short',
-      day: 'numeric',
-      month: 'short',
-      hour: '2-digit',
-      minute: '2-digit',
+    return new Intl.DateTimeFormat('en-US', {
+      weekday: 'short', month: 'short', day: 'numeric',
+      hour: '2-digit', minute: '2-digit',
     }).format(new Date(iso))
-  } catch {
-    return iso
-  }
+  } catch { return iso }
 }
 </script>
 
 <style scoped>
 .optimizer-panel {
-  margin-top: 1.5rem;
-  border: 1px solid var(--border-color, #e2e8f0);
-  border-radius: 10px;
+  margin-top: 1.25rem;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
   overflow: hidden;
 }
 
 .optimizer-header {
   display: flex;
   align-items: center;
-  gap: 1rem;
+  gap: 0.625rem;
   padding: 0.75rem 1rem;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #4f46e5, #7c3aed);
   color: white;
 }
 
+.optimizer-header i { font-size: 1rem; }
+
 .optimizer-title {
   font-weight: 700;
-  font-size: 0.95rem;
+  font-size: 0.9375rem;
+  flex: 1;
 }
 
 .optimizer-hint {
-  opacity: 0.85;
+  opacity: 0.8;
   font-size: 0.78rem;
 }
 
 .platform-cards {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-  gap: 0;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
 }
 
 .platform-card {
   padding: 1rem;
-  border-right: 1px solid var(--border-color, #e2e8f0);
+  border-right: 1px solid var(--border-color);
 }
+.platform-card:last-child { border-right: none; }
 
-.platform-card:last-child {
-  border-right: none;
-}
-
-.platform-header {
-  margin-bottom: 0.75rem;
-}
+.platform-header { margin-bottom: 0.75rem; }
 
 .platform-badge {
   display: inline-block;
   padding: 0.2rem 0.6rem;
-  border-radius: 12px;
-  font-size: 0.8rem;
+  border-radius: 99px;
+  font-size: 0.78rem;
   font-weight: 700;
   color: white;
 }
-
-.badge-youtube  { background: #ff0000; }
-.badge-tiktok   { background: #010101; }
-.badge-instagram { background: linear-gradient(45deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888); }
+.badge-youtube   { background: #ff0000; }
+.badge-tiktok    { background: #010101; }
+.badge-instagram { background: linear-gradient(45deg,#f09433,#e6683c,#dc2743,#cc2366,#bc1888); }
 
 .suggestion-block {
-  margin-bottom: 0.9rem;
-  padding-bottom: 0.9rem;
-  border-bottom: 1px solid var(--border-color, #f0f0f0);
+  margin-bottom: 0.875rem;
+  padding-bottom: 0.875rem;
+  border-bottom: 1px solid #f1f5f9;
 }
-
-.suggestion-block:last-child {
-  border-bottom: none;
-  margin-bottom: 0;
-  padding-bottom: 0;
-}
+.suggestion-block:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
 
 .suggestion-label {
-  font-size: 0.72rem;
+  font-size: 0.7rem;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: var(--text-secondary, #64748b);
+  letter-spacing: 0.06em;
+  color: var(--text-secondary);
   margin-bottom: 0.3rem;
 }
 
 .suggestion-text {
-  font-size: 0.88rem;
-  line-height: 1.4;
-  color: var(--text-primary, #1e293b);
+  font-size: 0.875rem;
+  line-height: 1.45;
+  color: var(--text-primary);
   margin-bottom: 0.4rem;
 }
 
@@ -217,60 +164,34 @@ const formatDateTime = (iso: string): string => {
   -webkit-box-orient: vertical;
 }
 
-.apply-btn {
-  font-size: 0.78rem !important;
-  padding: 0.2rem 0.6rem !important;
-}
+.apply-btn { font-size: 0.75rem !important; padding: 0.2rem 0.55rem !important; }
 
-.tags-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.3rem;
-  margin-bottom: 0.4rem;
-}
+.tags-row { display: flex; flex-wrap: wrap; gap: 0.25rem; margin-bottom: 0.4rem; }
 
 .tag-chip {
-  background: #f1f5f9;
-  color: #475569;
+  background: var(--bg-tertiary);
+  color: var(--text-secondary);
   border-radius: 4px;
   padding: 0.15rem 0.4rem;
   font-size: 0.75rem;
 }
 
-.times-list {
-  display: flex;
-  flex-direction: column;
-  gap: 0.2rem;
-}
+.times-list { display: flex; flex-direction: column; gap: 0.2rem; }
 
 .time-entry {
-  font-size: 0.85rem;
-  color: var(--text-primary, #1e293b);
+  font-size: 0.825rem;
+  color: var(--text-primary);
   padding: 0.2rem 0.4rem;
-  background: #f8fafc;
+  background: var(--bg-secondary);
   border-radius: 4px;
 }
 
-.time-entry.muted {
-  color: var(--text-secondary, #94a3b8);
-  font-style: italic;
-}
+.time-entry.muted { color: var(--text-secondary); font-style: italic; }
 
 @media (max-width: 640px) {
-  .platform-cards {
-    grid-template-columns: 1fr;
-  }
-  .platform-card {
-    border-right: none;
-    border-bottom: 1px solid var(--border-color, #e2e8f0);
-  }
-  .platform-card:last-child {
-    border-bottom: none;
-  }
-  .optimizer-header {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 0.25rem;
-  }
+  .platform-cards { grid-template-columns: 1fr; }
+  .platform-card { border-right: none; border-bottom: 1px solid var(--border-color); }
+  .platform-card:last-child { border-bottom: none; }
+  .optimizer-header { flex-direction: column; align-items: flex-start; gap: 0.2rem; }
 }
 </style>

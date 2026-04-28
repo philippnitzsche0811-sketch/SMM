@@ -1,47 +1,45 @@
 <template>
   <div class="video-meta-form">
-    <h3>Video-Details</h3>
-
     <div class="field">
-      <label for="title">Titel *</label>
+      <label for="title">Title *</label>
       <InputText
         id="title"
         v-model="localTitle"
-        placeholder="Gib einen Titel ein..."
+        placeholder="Enter a title..."
         :class="{ 'p-invalid': !localTitle }"
       />
     </div>
 
     <div class="field">
-      <label for="description">Beschreibung</label>
+      <label for="description">Description</label>
       <Textarea
         id="description"
         v-model="localDescription"
         rows="5"
-        placeholder="Beschreibe dein Video..."
+        placeholder="Describe your video..."
       />
     </div>
 
     <div class="field">
-      <label for="tags">Tags (komma-getrennt)</label>
+      <label for="tags">Tags (comma-separated)</label>
       <Chips v-model="localTags" separator="," />
     </div>
 
     <div class="fields-row">
       <div class="field field-half">
-        <label for="category">Kategorie</label>
+        <label for="category">Category</label>
         <Dropdown
           id="category"
           v-model="localCategory"
           :options="categoryOptions"
           optionLabel="label"
           optionValue="value"
-          placeholder="Kategorie wählen"
+          placeholder="Select category"
         />
       </div>
 
       <div class="field field-half">
-        <label for="privacy">Sichtbarkeit</label>
+        <label for="privacy">Visibility</label>
         <Dropdown
           id="privacy"
           v-model="localPrivacyStatus"
@@ -52,18 +50,18 @@
       </div>
     </div>
 
-    <!-- Optimizer trigger -->
+    <!-- AI Optimizer -->
     <div class="optimizer-trigger">
       <Button
-        label="KI-Optimierung"
+        label="AI Suggestions"
         icon="pi pi-sparkles"
         :loading="optimizerLoading"
         :disabled="!localTitle"
         severity="secondary"
         @click="runOptimizer"
       />
-      <small v-if="!localTitle" class="hint">Bitte zuerst einen Titel eingeben</small>
-      <small v-else class="hint">Vorschläge für Titel, Beschreibung, Hashtags und Upload-Zeiten</small>
+      <small v-if="!localTitle" class="hint">Enter a title first</small>
+      <small v-else class="hint">Get AI-powered title, description, hashtags &amp; upload times</small>
     </div>
 
     <Message v-if="optimizerError" severity="error" :closable="true" class="mt-2" @close="optimizerError = ''">
@@ -102,94 +100,87 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits<{
-  'update:title': [value: string]
-  'update:description': [value: string]
-  'update:tags': [value: string[]]
+  'update:title':         [value: string]
+  'update:description':   [value: string]
+  'update:tags':          [value: string[]]
   'update:privacyStatus': [value: string]
-  'update:category': [value: string]
+  'update:category':      [value: string]
 }>()
 
-const localTitle = ref(props.title)
-const localDescription = ref(props.description)
-const localTags = ref(props.tags)
+const localTitle         = ref(props.title)
+const localDescription   = ref(props.description)
+const localTags          = ref(props.tags)
 const localPrivacyStatus = ref(props.privacyStatus)
-const localCategory = ref(props.category || 'default')
+const localCategory      = ref(props.category || 'default')
 
-watch(localTitle, (val) => emit('update:title', val))
-watch(localDescription, (val) => emit('update:description', val))
-watch(localTags, (val) => emit('update:tags', val))
+watch(localTitle,         (val) => emit('update:title', val))
+watch(localDescription,   (val) => emit('update:description', val))
+watch(localTags,          (val) => emit('update:tags', val))
 watch(localPrivacyStatus, (val) => emit('update:privacyStatus', val))
-watch(localCategory, (val) => emit('update:category', val))
+watch(localCategory,      (val) => emit('update:category', val))
 
 const privacyOptions = [
-  { label: 'Privat', value: 'private' },
-  { label: 'Öffentlich', value: 'public' },
-  { label: 'Nicht gelistet', value: 'unlisted' },
+  { label: 'Private',  value: 'private'  },
+  { label: 'Public',   value: 'public'   },
+  { label: 'Unlisted', value: 'unlisted' },
 ]
 
 const categoryOptions = [
-  { label: 'Standard', value: 'default' },
-  { label: 'Gaming', value: 'gaming' },
-  { label: 'Bildung', value: 'education' },
-  { label: 'Musik', value: 'music' },
+  { label: 'General',       value: 'default'       },
+  { label: 'Gaming',        value: 'gaming'        },
+  { label: 'Education',     value: 'education'     },
+  { label: 'Music',         value: 'music'         },
   { label: 'Entertainment', value: 'entertainment' },
-  { label: 'Lifestyle', value: 'lifestyle' },
-  { label: 'Technologie', value: 'tech' },
-  { label: 'Sport', value: 'sports' },
-  { label: 'Essen', value: 'food' },
+  { label: 'Lifestyle',     value: 'lifestyle'     },
+  { label: 'Technology',    value: 'tech'          },
+  { label: 'Sports',        value: 'sports'        },
+  { label: 'Food',          value: 'food'          },
 ]
 
-// Optimizer state
-const authStore = useAuthStore()
+const authStore       = useAuthStore()
 const optimizerLoading = ref(false)
-const optimizerResult = ref<OptimizerResponse | null>(null)
-const optimizerError = ref('')
+const optimizerResult  = ref<OptimizerResponse | null>(null)
+const optimizerError   = ref('')
 
 const runOptimizer = async () => {
   const userId = authStore.user?.id
   if (!userId || !localTitle.value) return
 
   optimizerLoading.value = true
-  optimizerError.value = ''
-  optimizerResult.value = null
+  optimizerError.value   = ''
+  optimizerResult.value  = null
 
   try {
     optimizerResult.value = await optimizeSuggest({
-      user_id: userId,
-      title_draft: localTitle.value,
+      user_id:          userId,
+      title_draft:      localTitle.value,
       description_draft: localDescription.value,
-      category: localCategory.value,
-      platforms: ['youtube', 'tiktok', 'instagram'],
+      category:         localCategory.value,
+      platforms:        ['youtube', 'tiktok', 'instagram'],
     })
   } catch {
-    optimizerError.value = 'KI-Optimierung fehlgeschlagen. Bitte erneut versuchen.'
+    optimizerError.value = 'AI optimization failed. Please try again.'
   } finally {
     optimizerLoading.value = false
   }
 }
 
-const applyTitle = (title: string) => {
-  localTitle.value = title
-}
-
-const applyDescription = (desc: string) => {
-  localDescription.value = desc
-}
-
-const applyTags = (tags: string[]) => {
-  localTags.value = tags
-}
+const applyTitle       = (title: string)  => { localTitle.value       = title }
+const applyDescription = (desc: string)   => { localDescription.value = desc  }
+const applyTags        = (tags: string[]) => { localTags.value        = tags  }
 </script>
 
 <style scoped>
 .field {
-  margin-bottom: 1.5rem;
+  margin-bottom: 1.375rem;
 }
 
 label {
   display: block;
-  margin-bottom: 0.5rem;
-  font-weight: 600;
+  margin-bottom: 0.4rem;
+  font-weight: 500;
+  font-size: 0.875rem;
+  color: var(--text-primary);
 }
 
 .fields-row {
@@ -197,30 +188,28 @@ label {
   gap: 1rem;
 }
 
-.field-half {
-  flex: 1;
-}
+.field-half { flex: 1; }
 
 .optimizer-trigger {
   display: flex;
   align-items: center;
-  gap: 1rem;
-  margin-top: 0.5rem;
-  margin-bottom: 0.5rem;
+  gap: 0.875rem;
+  margin-top: 0.25rem;
+  margin-bottom: 0.25rem;
+  padding: 0.875rem;
+  background: var(--bg-secondary);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-color);
 }
 
 .hint {
-  color: var(--text-secondary, #64748b);
-  font-size: 0.82rem;
+  color: var(--text-secondary);
+  font-size: 0.8125rem;
 }
 
-.mt-2 {
-  margin-top: 0.75rem;
-}
+.mt-2 { margin-top: 0.75rem; }
 
 @media (max-width: 600px) {
-  .fields-row {
-    flex-direction: column;
-  }
+  .fields-row { flex-direction: column; }
 }
 </style>

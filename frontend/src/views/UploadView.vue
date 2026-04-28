@@ -1,163 +1,105 @@
 <template>
   <div class="upload-view">
-    <!-- Header / Navigation -->
-    <header class="app-header">
-      <div class="header-content">
-        <div class="header-left">
-          <i class="pi pi-video"></i>
-          <h2>Social Media Manager</h2>
+    <div class="upload-card">
+      <!-- Step Indicator -->
+      <div class="steps">
+        <div
+          v-for="(step, idx) in steps"
+          :key="idx"
+          class="step-item"
+          :class="{ active: currentStep > idx, current: currentStep === idx + 1 }"
+        >
+          <div class="step-dot">
+            <i v-if="currentStep > idx + 1" class="pi pi-check"></i>
+            <span v-else>{{ idx + 1 }}</span>
+          </div>
+          <span class="step-label">{{ step }}</span>
+          <div v-if="idx < steps.length - 1" class="step-connector" :class="{ active: currentStep > idx + 1 }"></div>
         </div>
+      </div>
 
-        <div class="header-right">
-          <Button 
-            label="Plattformen"
-            icon="pi pi-link"
-            severity="secondary"
-            text
-            @click="router.push('/connect')"
-          />
-          <Avatar 
-            :label="userInitial" 
-            shape="circle"
-            style="background-color: #667eea; color: white"
-          />
+      <!-- Step 1: Select Video -->
+      <div v-show="currentStep === 1" class="step-content">
+        <DragDropZone @file-selected="handleFileSelect" />
+      </div>
+
+      <!-- Step 2: Video Details -->
+      <div v-show="currentStep === 2" class="step-content">
+        <VideoMetaForm
+          v-model:title="videoMeta.title"
+          v-model:description="videoMeta.description"
+          v-model:tags="videoMeta.tags"
+          v-model:privacyStatus="videoMeta.privacyStatus"
+          v-model:category="videoMeta.category"
+        />
+        <div class="nav-buttons">
+          <Button label="Back" severity="secondary" outlined @click="currentStep = 1" />
+          <Button label="Continue" @click="currentStep = 3" :disabled="!videoMeta.title" />
+        </div>
+      </div>
+
+      <!-- Step 3: Choose Platforms -->
+      <div v-show="currentStep === 3" class="step-content">
+        <PlatformSelector v-model="selectedPlatforms" />
+        <div class="nav-buttons">
+          <Button label="Back" severity="secondary" outlined @click="currentStep = 2" />
           <Button
-            icon="pi pi-sign-out"
-            severity="danger"
-            text
-            @click="handleLogout"
-            v-tooltip.bottom="'Abmelden'"
+            label="Publish Now"
+            icon="pi pi-upload"
+            iconPos="right"
+            @click="handleUpload"
+            :loading="isUploading"
+            :disabled="!canUpload"
           />
         </div>
       </div>
-    </header>
 
-    <!-- Main Content -->
-    <div class="upload-container">
-      <Card class="upload-card">
-        <template #title>
-          <div class="card-title">
-            <i class="pi pi-cloud-upload"></i>
-            <span>Video hochladen</span>
-          </div>
-        </template>
+      <!-- Upload Progress -->
+      <div v-if="isUploading" class="progress-section">
+        <div class="progress-header">
+          <i class="pi pi-spin pi-spinner"></i>
+          <span>Uploading to your platforms...</span>
+        </div>
+        <ProgressBar :value="uploadProgress" />
+        <p class="progress-pct">{{ uploadProgress }}% complete</p>
+      </div>
 
-        <template #content>
-          <!-- Step Indicator -->
-          <div class="steps">
-            <div class="step" :class="{ active: currentStep >= 1, completed: currentStep > 1 }">
-              <div class="step-number">1</div>
-              <span>Video auswählen</span>
-            </div>
-            <div class="step-line" :class="{ active: currentStep > 1 }"></div>
-            <div class="step" :class="{ active: currentStep >= 2, completed: currentStep > 2 }">
-              <div class="step-number">2</div>
-              <span>Details eingeben</span>
-            </div>
-            <div class="step-line" :class="{ active: currentStep > 2 }"></div>
-            <div class="step" :class="{ active: currentStep >= 3 }">
-              <div class="step-number">3</div>
-              <span>Plattformen</span>
+      <!-- Upload Results -->
+      <div v-if="uploadResults.length > 0" class="results-section">
+        <h3 class="results-title">Upload Results</h3>
+        <div class="results-list">
+          <div
+            v-for="result in uploadResults"
+            :key="result.platform"
+            class="result-item"
+            :class="result.success ? 'success' : 'error'"
+          >
+            <i :class="result.success ? 'pi pi-check-circle' : 'pi pi-times-circle'"></i>
+            <div class="result-body">
+              <strong>{{ capitalizeFirst(result.platform) }}</strong>
+              <a v-if="result.success && result.url" :href="result.url" target="_blank">View video</a>
+              <span v-else-if="!result.success" class="result-error">{{ result.error }}</span>
             </div>
           </div>
-
-          <!-- Video Upload -->
-          <div v-show="currentStep === 1">
-            <DragDropZone @file-selected="handleFileSelect" />
-          </div>
-
-          <!-- Video Metadata -->
-          <div v-show="currentStep === 2">
-            <VideoMetaForm
-              v-model:title="videoMeta.title"
-              v-model:description="videoMeta.description"
-              v-model:tags="videoMeta.tags"
-              v-model:privacyStatus="videoMeta.privacyStatus"
-              v-model:category="videoMeta.category"
-            />
-            <div class="button-group">
-              <Button label="Zurück" severity="secondary" @click="currentStep = 1" />
-              <Button label="Weiter" @click="currentStep = 3" :disabled="!videoMeta.title" />
-            </div>
-          </div>
-
-          <!-- Platform Selection -->
-          <div v-show="currentStep === 3">
-            <PlatformSelector v-model="selectedPlatforms" />
-            <div class="button-group">
-              <Button label="Zurück" severity="secondary" @click="currentStep = 2" />
-              <Button 
-                label="Jetzt hochladen"
-                icon="pi pi-upload"
-                iconPos="right"
-                severity="success"
-                @click="handleUpload"
-                :loading="isUploading"
-                :disabled="!canUpload"
-              />
-            </div>
-          </div>
-
-          <!-- Upload Progress -->
-          <div v-if="isUploading" class="upload-progress-section">
-            <Divider />
-            <h3>Upload läuft...</h3>
-            <ProgressBar :value="uploadProgress" />
-            <p class="progress-text">{{ uploadProgress }}% hochgeladen</p>
-          </div>
-
-          <!-- Upload Results -->
-          <div v-if="uploadResults.length > 0" class="upload-results">
-            <Divider />
-            <h3>Upload-Ergebnisse</h3>
-            <div class="results-list">
-              <Message 
-                v-for="result in uploadResults" 
-                :key="result.platform"
-                :severity="result.success ? 'success' : 'error'"
-                :closable="false"
-              >
-                <div class="result-content">
-                  <strong>{{ capitalizeFirst(result.platform) }}</strong>
-                  <span v-if="result.success && result.url">
-                    <a :href="result.url" target="_blank">Video ansehen</a>
-                  </span>
-                  <span v-else-if="!result.success">{{ result.error }}</span>
-                </div>
-              </Message>
-            </div>
-            <Button 
-              label="Neues Video hochladen" 
-              icon="pi pi-plus"
-              @click="resetUpload"
-              class="mt-3"
-            />
-          </div>
-        </template>
-      </Card>
+        </div>
+        <Button label="Upload Another Video" icon="pi pi-plus" outlined @click="resetUpload" class="mt-4" />
+      </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed } from 'vue';
-import { useRouter } from 'vue-router';
-import Card from 'primevue/card';
 import Button from 'primevue/button';
-import Avatar from 'primevue/avatar';
-import Divider from 'primevue/divider';
 import ProgressBar from 'primevue/progressbar';
-import Message from 'primevue/message';
 import { DragDropZone, VideoMetaForm, PlatformSelector } from '@/components/upload';
-import { useAuth } from '@/composables/useAuth';
 import { useUpload } from '@/composables/useUpload';
 import { capitalizeFirst } from '@/utils/formatters';
 import type { VideoMetadata } from '@/types/video.types';
 
-const router = useRouter();
-const { user, logout } = useAuth();
 const { upload, isUploading, uploadProgress, uploadResults, reset } = useUpload();
 
+const steps = ['Select Video', 'Video Details', 'Platforms'];
 const currentStep = ref(1);
 const videoFile = ref<File | null>(null);
 const videoMeta = ref<VideoMetadata>({
@@ -169,15 +111,9 @@ const videoMeta = ref<VideoMetadata>({
 });
 const selectedPlatforms = ref<string[]>([]);
 
-const userInitial = computed(() => {
-  return user.value?.email?.charAt(0).toUpperCase() || 'U';
-});
-
-const canUpload = computed(() => {
-  return videoFile.value && 
-         videoMeta.value.title && 
-         selectedPlatforms.value.length > 0;
-});
+const canUpload = computed(() =>
+  !!videoFile.value && !!videoMeta.value.title && selectedPlatforms.value.length > 0
+);
 
 const handleFileSelect = (file: File) => {
   videoFile.value = file;
@@ -186,7 +122,6 @@ const handleFileSelect = (file: File) => {
 
 const handleUpload = async () => {
   if (!canUpload.value || !videoFile.value) return;
-
   try {
     await upload(videoFile.value, videoMeta.value, selectedPlatforms.value);
   } catch (error) {
@@ -196,212 +131,202 @@ const handleUpload = async () => {
 
 const resetUpload = () => {
   videoFile.value = null;
-  videoMeta.value = {
-    title: '',
-    description: '',
-    tags: [],
-    privacyStatus: 'private',
-    category: 'default',
-  };
+  videoMeta.value = { title: '', description: '', tags: [], privacyStatus: 'private', category: 'default' };
   selectedPlatforms.value = [];
   currentStep.value = 1;
   reset();
-};
-
-const handleLogout = () => {
-  logout();
 };
 </script>
 
 <style scoped>
 .upload-view {
-  min-height: 100vh;
-  background: var(--bg-secondary);
-}
-
-.app-header {
-  background: white;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  position: sticky;
-  top: 0;
-  z-index: 100;
-}
-
-.header-content {
-  max-width: 1200px;
+  max-width: 860px;
   margin: 0 auto;
-  padding: 1rem 2rem;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.header-left {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-}
-
-.header-left i {
-  font-size: 2rem;
-  color: var(--primary-color);
-}
-
-.header-left h2 {
-  margin: 0;
-  font-size: 1.5rem;
-}
-
-.header-right {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-}
-
-.upload-container {
-  max-width: 900px;
-  margin: 2rem auto;
-  padding: 0 2rem;
 }
 
 .upload-card {
-  box-shadow: var(--shadow-md);
+  background: white;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-xl);
+  padding: 2rem;
+  box-shadow: var(--shadow-sm);
 }
 
-.card-title {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  color: var(--primary-color);
-}
-
-.card-title i {
-  font-size: 1.8rem;
-}
-
+/* Step indicator */
 .steps {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
-  margin-bottom: 2rem;
-  padding: 2rem 0;
+  margin-bottom: 2.5rem;
+  gap: 0;
 }
 
-.step {
+.step-item {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.5rem;
-  color: var(--text-secondary);
-  transition: all var(--transition-normal);
+  position: relative;
+  flex: 1;
+  max-width: 140px;
 }
 
-.step.active {
-  color: var(--primary-color);
-}
-
-.step.completed {
-  color: var(--success-color);
-}
-
-.step-number {
-  width: 40px;
-  height: 40px;
+.step-dot {
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
   border: 2px solid var(--border-color);
+  background: white;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-weight: 700;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-disabled);
   transition: all var(--transition-normal);
+  position: relative;
+  z-index: 1;
 }
 
-.step.active .step-number {
-  border-color: var(--primary-color);
-  background: var(--primary-color);
+.step-item.current .step-dot {
+  border-color: var(--primary-500);
+  background: var(--primary-500);
   color: white;
 }
 
-.step.completed .step-number {
-  border-color: var(--success-color);
-  background: var(--success-color);
+.step-item.active .step-dot {
+  border-color: #10b981;
+  background: #10b981;
   color: white;
 }
 
-.step-line {
-  width: 100px;
+.step-label {
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+  margin-top: 0.5rem;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.step-item.current .step-label,
+.step-item.active .step-label {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.step-connector {
+  position: absolute;
+  top: 17px;
+  left: calc(50% + 18px);
+  right: calc(-50% + 18px);
   height: 2px;
   background: var(--border-color);
-  margin: 0 1rem;
-  transition: all var(--transition-normal);
+  transition: background var(--transition-normal);
 }
 
-.step-line.active {
-  background: var(--primary-color);
+.step-connector.active {
+  background: #10b981;
 }
 
-.button-group {
+/* Content */
+.step-content {
+  min-height: 300px;
+}
+
+.nav-buttons {
   display: flex;
-  gap: 1rem;
   justify-content: flex-end;
-  margin-top: 2rem;
+  gap: 0.75rem;
+  margin-top: 1.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--border-color);
 }
 
-.upload-progress-section {
-  margin-top: 2rem;
+/* Progress */
+.progress-section {
+  margin-top: 1.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--border-color);
 }
 
-.progress-text {
-  text-align: center;
-  margin-top: 0.5rem;
+.progress-header {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  margin-bottom: 0.75rem;
+  font-weight: 500;
   color: var(--text-secondary);
 }
 
-.upload-results {
-  margin-top: 2rem;
+.progress-pct {
+  text-align: center;
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  margin-top: 0.5rem;
+}
+
+/* Results */
+.results-section {
+  margin-top: 1.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--border-color);
+}
+
+.results-title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 1rem;
 }
 
 .results-list {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
-  margin-top: 1rem;
+  gap: 0.625rem;
 }
 
-.result-content {
+.result-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0.875rem 1rem;
+  border-radius: var(--radius-md);
+  font-size: 0.9rem;
+}
+
+.result-item.success {
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  color: #15803d;
+}
+
+.result-item.error {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #dc2626;
+}
+
+.result-item i { font-size: 1.125rem; margin-top: 1px; }
+
+.result-body {
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
+  gap: 0.2rem;
 }
 
-.result-content a {
-  color: var(--primary-color);
+.result-body a {
+  font-size: 0.825rem;
   text-decoration: underline;
 }
 
-@media (max-width: 768px) {
-  .header-content {
-    padding: 1rem;
-  }
+.result-error { font-size: 0.825rem; opacity: 0.85; }
 
-  .header-left h2 {
-    display: none;
-  }
+.mt-4 { margin-top: 1rem; }
 
-  .upload-container {
-    padding: 0 1rem;
-  }
-
-  .steps {
-    font-size: 0.85rem;
-  }
-
-  .step-line {
-    width: 50px;
-  }
-
-  .button-group {
-    flex-direction: column;
-  }
+@media (max-width: 640px) {
+  .upload-card { padding: 1.25rem; }
+  .step-label  { display: none; }
+  .nav-buttons { flex-direction: column-reverse; }
+  .nav-buttons .p-button { width: 100%; justify-content: center; }
 }
 </style>
