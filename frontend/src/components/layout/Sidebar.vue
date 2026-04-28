@@ -83,7 +83,7 @@ const userInitial = computed(() =>
 );
 
 const isActive    = (path: string) => route.path.startsWith(path);
-const handleLogout = () => { authStore.logout(); router.push('/login'); };
+const handleLogout = () => { authStore.logout(); router.push('/'); };
 </script>
 
 <style scoped>

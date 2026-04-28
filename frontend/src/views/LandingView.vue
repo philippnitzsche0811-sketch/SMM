@@ -5,11 +5,11 @@
     <nav class="nav">
       <div class="nav-inner">
         <div class="nav-logo">
-          <i class="pi pi-video"></i>
+          <img :src="logoUrl" alt="SocialHub" class="nav-logo-img" />
           <span>SocialHub</span>
         </div>
         <div class="nav-links">
-          <Button label="Sign In" outlined class="p-button-sm" @click="router.push('/login')" />
+          <Button label="Sign In" text class="p-button-sm" @click="router.push('/login')" />
           <Button label="Get Started" class="p-button-sm" @click="router.push('/register')" />
         </div>
       </div>
@@ -19,9 +19,9 @@
     <section class="hero">
       <div class="hero-inner">
         <div class="hero-badges">
-          <span class="badge badge--youtube">YouTube</span>
-          <span class="badge badge--tiktok">TikTok</span>
-          <span class="badge badge--instagram">Instagram</span>
+          <span class="badge badge--youtube"><i class="pi pi-youtube"></i> YouTube</span>
+          <span class="badge badge--tiktok"><i class="pi pi-video"></i> TikTok</span>
+          <span class="badge badge--instagram"><i class="pi pi-instagram"></i> Instagram</span>
         </div>
         <h1>Upload once.<br>Post everywhere.</h1>
         <p class="hero-sub">
@@ -29,14 +29,14 @@
           from a single dashboard. One login, all your platforms.
         </p>
         <div class="hero-cta">
-          <Button label="Create free account" icon="pi pi-user-plus" class="p-button-lg" @click="router.push('/register')" />
-          <Button label="Sign in" icon="pi pi-sign-in" outlined class="p-button-lg" @click="router.push('/login')" />
+          <Button label="Create free account" icon="pi pi-user-plus" class="p-button-lg cta-primary" @click="router.push('/register')" />
+          <Button label="Sign in" icon="pi pi-sign-in" outlined class="p-button-lg cta-secondary" @click="router.push('/login')" />
         </div>
       </div>
     </section>
 
     <!-- How it works -->
-    <section class="section section--light">
+    <section class="section section--gray">
       <div class="section-inner">
         <h2 class="section-title">How it works</h2>
         <p class="section-sub">Three steps to publish your video on all platforms at once.</p>
@@ -72,32 +72,32 @@
         <p class="section-sub">Built for creators who publish regularly across multiple platforms.</p>
         <div class="features-grid">
           <div class="feature-card">
-            <i class="pi pi-share-alt feature-icon"></i>
+            <div class="feature-icon-wrap"><i class="pi pi-share-alt"></i></div>
             <h3>Multi-platform publishing</h3>
             <p>Post to YouTube, TikTok, and Instagram Reels simultaneously from one interface.</p>
           </div>
           <div class="feature-card">
-            <i class="pi pi-hashtag feature-icon"></i>
+            <div class="feature-icon-wrap"><i class="pi pi-hashtag"></i></div>
             <h3>Metadata management</h3>
             <p>Set titles, descriptions, and hashtags. Optimise each upload for discoverability.</p>
           </div>
           <div class="feature-card">
-            <i class="pi pi-eye feature-icon"></i>
+            <div class="feature-icon-wrap"><i class="pi pi-eye"></i></div>
             <h3>Privacy control</h3>
             <p>Choose public, unlisted, or private per platform before publishing.</p>
           </div>
           <div class="feature-card">
-            <i class="pi pi-shield feature-icon"></i>
+            <div class="feature-icon-wrap"><i class="pi pi-shield"></i></div>
             <h3>Secure by design</h3>
             <p>OAuth 2.0 authentication only. Tokens are encrypted at rest. No passwords ever stored.</p>
           </div>
           <div class="feature-card">
-            <i class="pi pi-history feature-icon"></i>
+            <div class="feature-icon-wrap"><i class="pi pi-history"></i></div>
             <h3>Upload history</h3>
             <p>Track every upload with status, platform results, and error details all in one place.</p>
           </div>
           <div class="feature-card">
-            <i class="pi pi-bolt feature-icon"></i>
+            <div class="feature-icon-wrap"><i class="pi pi-bolt"></i></div>
             <h3>Background processing</h3>
             <p>Uploads run in the background — close the tab and your video will still be published.</p>
           </div>
@@ -106,22 +106,22 @@
     </section>
 
     <!-- Platforms -->
-    <section class="section section--light">
+    <section class="section section--gray">
       <div class="section-inner">
         <h2 class="section-title">Supported platforms</h2>
         <div class="platforms-grid">
           <div class="platform-card">
-            <div class="platform-logo platform-logo--youtube">▶</div>
+            <div class="platform-logo platform-logo--youtube"><i class="pi pi-youtube"></i></div>
             <h3>YouTube</h3>
             <p>Upload videos directly to your YouTube channel. Supports public, unlisted, and private videos. Automatic token refresh keeps your connection alive.</p>
           </div>
           <div class="platform-card">
-            <div class="platform-logo platform-logo--tiktok">♪</div>
+            <div class="platform-logo platform-logo--tiktok"><i class="pi pi-video"></i></div>
             <h3>TikTok</h3>
             <p>Post videos to TikTok via the official Content Posting API. Control duet, stitch, and comment settings per upload.</p>
           </div>
           <div class="platform-card">
-            <div class="platform-logo platform-logo--instagram">◎</div>
+            <div class="platform-logo platform-logo--instagram"><i class="pi pi-instagram"></i></div>
             <h3>Instagram</h3>
             <p>Publish Reels to your Instagram account via the Meta Graph API. Connects to your Instagram Business or Creator account.</p>
           </div>
@@ -130,7 +130,7 @@
     </section>
 
     <!-- Final CTA -->
-    <section class="section section--cta">
+    <section class="section section--dark">
       <div class="section-inner cta-inner">
         <h2>Ready to save time?</h2>
         <p>Create a free account and connect your first platform in under 2 minutes.</p>
@@ -138,7 +138,7 @@
           label="Get started for free"
           icon="pi pi-arrow-right"
           iconPos="right"
-          class="p-button-lg cta-btn"
+          class="p-button-lg cta-dark-btn"
           @click="router.push('/register')"
         />
       </div>
@@ -152,12 +152,12 @@
 import { useRouter } from 'vue-router';
 import Button from 'primevue/button';
 import LegalFooter from '@/components/layout/LegalFooter.vue';
+import logoUrl from '@/assets/images/logo.png';
 
 const router = useRouter();
 </script>
 
 <style scoped>
-/* ── Base ─────────────────────────────────────────── */
 .landing {
   min-height: 100vh;
   display: flex;
@@ -166,12 +166,12 @@ const router = useRouter();
   color: #1e293b;
 }
 
-/* ── Nav ──────────────────────────────────────────── */
+/* ── Nav ── */
 .nav {
   position: sticky;
   top: 0;
   z-index: 100;
-  background: rgba(255, 255, 255, 0.95);
+  background: rgba(255,255,255,0.97);
   backdrop-filter: blur(8px);
   border-bottom: 1px solid #e2e8f0;
 }
@@ -179,7 +179,7 @@ const router = useRouter();
 .nav-inner {
   max-width: 1100px;
   margin: 0 auto;
-  padding: 0.9rem 2rem;
+  padding: 0.875rem 2rem;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -189,27 +189,31 @@ const router = useRouter();
   display: flex;
   align-items: center;
   gap: 0.6rem;
-  font-size: 1.25rem;
+  font-size: 1.15rem;
   font-weight: 700;
-  color: #667eea;
+  color: #0f172a;
+  text-decoration: none;
 }
 
-.nav-logo i {
-  font-size: 1.4rem;
+.nav-logo-img {
+  width: 30px;
+  height: 30px;
+  border-radius: 6px;
+  object-fit: contain;
 }
 
 .nav-links {
   display: flex;
-  gap: 0.75rem;
+  gap: 0.5rem;
   align-items: center;
 }
 
-/* ── Hero ─────────────────────────────────────────── */
+/* ── Hero ── */
 .hero {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  padding: 5rem 2rem;
+  background: #fff;
+  padding: 6rem 2rem 5rem;
   text-align: center;
-  color: white;
+  border-bottom: 1px solid #f1f5f9;
 }
 
 .hero-inner {
@@ -220,52 +224,67 @@ const router = useRouter();
 .hero-badges {
   display: flex;
   justify-content: center;
-  gap: 0.6rem;
-  margin-bottom: 1.75rem;
+  gap: 0.5rem;
+  margin-bottom: 2rem;
   flex-wrap: wrap;
 }
 
 .badge {
-  padding: 0.3rem 0.9rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.3rem 0.8rem;
   border-radius: 20px;
-  font-size: 0.8rem;
+  font-size: 0.78rem;
   font-weight: 600;
-  color: white;
+  border: 1px solid transparent;
 }
 
-.badge--youtube   { background: rgba(255,0,0,0.85); }
-.badge--tiktok    { background: rgba(0,0,0,0.55); border: 1px solid rgba(255,255,255,0.3); }
-.badge--instagram { background: linear-gradient(45deg, #f09433, #dc2743, #bc1888); }
+.badge--youtube   { background: #fff5f5; color: #dc2626; border-color: #fecaca; }
+.badge--tiktok    { background: #f8fafc; color: #1e293b; border-color: #e2e8f0; }
+.badge--instagram { background: #fdf4ff; color: #9333ea; border-color: #e9d5ff; }
 
 .hero h1 {
-  font-size: clamp(2.4rem, 5vw, 3.5rem);
+  font-size: clamp(2.4rem, 5vw, 3.75rem);
   font-weight: 800;
-  line-height: 1.15;
+  line-height: 1.1;
+  letter-spacing: -0.03em;
   margin: 0 0 1.25rem 0;
-  color: white;
+  color: #0f172a;
 }
 
 .hero-sub {
-  font-size: 1.15rem;
-  line-height: 1.7;
-  color: rgba(255, 255, 255, 0.85);
-  margin: 0 0 2.25rem 0;
+  font-size: 1.125rem;
+  line-height: 1.75;
+  color: #64748b;
+  margin: 0 0 2.5rem 0;
 }
 
 .hero-cta {
   display: flex;
   justify-content: center;
-  gap: 1rem;
+  gap: 0.875rem;
   flex-wrap: wrap;
 }
 
-/* ── Generic section ──────────────────────────────── */
-.section {
-  padding: 5rem 2rem;
+.cta-primary {
+  background: #0f172a !important;
+  border-color: #0f172a !important;
+  color: #fff !important;
 }
+.cta-primary:hover { background: #1e293b !important; border-color: #1e293b !important; }
 
-.section--light  { background: #f8fafc; }
-.section--white  { background: white; }
+.cta-secondary {
+  border-color: #e2e8f0 !important;
+  color: #1e293b !important;
+}
+.cta-secondary:hover { background: #f8fafc !important; }
+
+/* ── Sections ── */
+.section { padding: 5rem 2rem; }
+.section--gray  { background: #f8fafc; }
+.section--white { background: #fff; }
+.section--dark  { background: #0f172a; color: #fff; text-align: center; }
 
 .section-inner {
   max-width: 1100px;
@@ -275,6 +294,7 @@ const router = useRouter();
 .section-title {
   font-size: clamp(1.75rem, 3vw, 2.25rem);
   font-weight: 700;
+  letter-spacing: -0.02em;
   text-align: center;
   margin: 0 0 0.75rem 0;
 }
@@ -282,11 +302,11 @@ const router = useRouter();
 .section-sub {
   text-align: center;
   color: #64748b;
-  font-size: 1.05rem;
+  font-size: 1rem;
   margin: 0 0 3rem 0;
 }
 
-/* ── Steps ────────────────────────────────────────── */
+/* ── Steps ── */
 .steps {
   display: flex;
   align-items: flex-start;
@@ -304,85 +324,71 @@ const router = useRouter();
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
+  width: 28px;
+  height: 28px;
   border-radius: 50%;
-  background: #667eea;
+  background: #0f172a;
   color: white;
-  font-size: 0.9rem;
+  font-size: 0.8rem;
   font-weight: 700;
   margin-bottom: 1rem;
 }
 
 .step-icon {
-  font-size: 2rem;
-  color: #667eea;
+  font-size: 1.75rem;
+  color: #6366f1;
   margin-bottom: 0.75rem;
 }
 
-.step h3 {
-  font-size: 1.1rem;
-  font-weight: 600;
-  margin: 0 0 0.6rem 0;
-}
-
-.step p {
-  font-size: 0.95rem;
-  color: #64748b;
-  line-height: 1.6;
-  margin: 0;
-}
+.step h3 { font-size: 1rem; font-weight: 600; margin: 0 0 0.5rem 0; }
+.step p  { font-size: 0.9rem; color: #64748b; line-height: 1.6; margin: 0; }
 
 .step-arrow {
   color: #cbd5e1;
-  font-size: 1.25rem;
+  font-size: 1.1rem;
   padding-top: 3.5rem;
   flex-shrink: 0;
 }
 
-/* ── Features grid ────────────────────────────────── */
+/* ── Features ── */
 .features-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: 1.5rem;
+  gap: 1.25rem;
 }
 
 .feature-card {
   background: #f8fafc;
   border-radius: 12px;
-  padding: 1.75rem;
+  padding: 1.5rem;
   border: 1px solid #e2e8f0;
 }
 
-.feature-icon {
-  font-size: 1.75rem;
-  color: #667eea;
+.feature-icon-wrap {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: #eef2ff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   margin-bottom: 1rem;
-  display: block;
+  font-size: 1.1rem;
+  color: #6366f1;
 }
 
-.feature-card h3 {
-  font-size: 1rem;
-  font-weight: 600;
-  margin: 0 0 0.5rem 0;
-}
+.feature-card h3 { font-size: 0.9375rem; font-weight: 600; margin: 0 0 0.4rem 0; }
+.feature-card p  { font-size: 0.875rem; color: #64748b; line-height: 1.6; margin: 0; }
 
-.feature-card p {
-  font-size: 0.9rem;
-  color: #64748b;
-  line-height: 1.6;
-  margin: 0;
-}
-
-/* ── Platforms ────────────────────────────────────── */
+/* ── Platforms ── */
 .platforms-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-  gap: 1.5rem;
+  gap: 1.25rem;
 }
 
 .platform-card {
-  background: white;
+  background: #fff;
   border: 1px solid #e2e8f0;
   border-radius: 12px;
   padding: 2rem;
@@ -390,65 +396,56 @@ const router = useRouter();
 }
 
 .platform-logo {
-  width: 56px;
-  height: 56px;
+  width: 52px;
+  height: 52px;
   border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.5rem;
+  font-size: 1.375rem;
   color: white;
   margin: 0 auto 1.25rem;
-  font-weight: 700;
 }
 
-.platform-logo--youtube   { background: #FF0000; }
-.platform-logo--tiktok    { background: #000000; }
-.platform-logo--instagram { background: linear-gradient(45deg, #f09433, #dc2743, #bc1888); }
+.platform-logo--youtube   { background: #ef4444; }
+.platform-logo--tiktok    { background: #1e293b; }
+.platform-logo--instagram { background: #9333ea; }
 
-.platform-card h3 {
-  font-size: 1.1rem;
-  font-weight: 600;
-  margin: 0 0 0.6rem 0;
-}
+.platform-card h3 { font-size: 1rem; font-weight: 600; margin: 0 0 0.5rem 0; }
+.platform-card p  { font-size: 0.875rem; color: #64748b; line-height: 1.6; margin: 0; }
 
-.platform-card p {
-  font-size: 0.9rem;
-  color: #64748b;
-  line-height: 1.6;
-  margin: 0;
-}
-
-/* ── CTA section ──────────────────────────────────── */
-.section--cta {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-  text-align: center;
-}
-
+/* ── Dark CTA ── */
 .cta-inner h2 {
   font-size: clamp(1.75rem, 3vw, 2.25rem);
   font-weight: 700;
+  letter-spacing: -0.02em;
   margin: 0 0 0.75rem 0;
-  color: white;
+  color: #fff;
 }
 
 .cta-inner p {
-  color: rgba(255, 255, 255, 0.85);
-  font-size: 1.05rem;
+  color: #94a3b8;
+  font-size: 1rem;
   margin: 0 0 2rem 0;
 }
 
-/* ── Legal footer ─────────────────────────────────── */
+.cta-dark-btn {
+  background: #fff !important;
+  border-color: #fff !important;
+  color: #0f172a !important;
+  font-weight: 600 !important;
+}
+.cta-dark-btn:hover { background: #f1f5f9 !important; }
+
+/* ── Legal footer ── */
 :deep(.legal-footer) {
-  background: #f8fafc;
-  border-top: 1px solid #e2e8f0;
-  padding: 1.25rem 2rem;
+  background: #0f172a;
+  border-top: 1px solid #1e293b;
 }
 
-/* ── Responsive ───────────────────────────────────── */
+/* ── Responsive ── */
 @media (max-width: 768px) {
-  .hero { padding: 3.5rem 1.25rem; }
+  .hero    { padding: 4rem 1.25rem 3rem; }
   .section { padding: 3.5rem 1.25rem; }
 
   .steps {
@@ -456,9 +453,8 @@ const router = useRouter();
     align-items: center;
   }
 
-  .step { max-width: 100%; }
+  .step      { max-width: 100%; }
   .step-arrow { display: none; }
-
   .nav-inner { padding: 0.75rem 1.25rem; }
 }
 </style>

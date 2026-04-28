@@ -1,17 +1,15 @@
 <template>
-  <div class="login-view">
-    <Card class="login-card">
-      <template #header>
-        <div class="card-header">
-          <div class="logo">
-            <i class="pi pi-video" style="font-size: 3rem; color: #667eea;"></i>
-          </div>
-          <h1>SocialHub</h1>
-          <p>Melde dich an</p>
-        </div>
-      </template>
+  <div class="login-page">
+    <div class="login-wrap">
 
-      <template #content>
+      <!-- Card -->
+      <div class="login-card">
+        <div class="login-header">
+          <img :src="logoUrl" alt="SocialHub" class="login-logo" />
+          <h1>SocialHub</h1>
+          <p>Sign in to your account</p>
+        </div>
+
         <form @submit.prevent="handleLogin" class="login-form">
           <div class="form-field">
             <label for="email">Email</label>
@@ -19,57 +17,51 @@
               id="email"
               v-model="email"
               type="email"
-              placeholder="email@example.com"
+              placeholder="you@example.com"
               :class="{ 'p-invalid': errors.email }"
+              class="w-full"
             />
-            <small v-if="errors.email" class="p-error">{{ errors.email }}</small>
+            <small v-if="errors.email" class="field-error">{{ errors.email }}</small>
           </div>
 
           <div class="form-field">
-            <label for="password">Passwort</label>
+            <label for="password">Password</label>
             <Password
               id="password"
               v-model="password"
-              placeholder="Passwort"
+              placeholder="Your password"
               :feedback="false"
               toggleMask
+              class="w-full"
+              inputClass="w-full"
             />
-          </div>
-
-          <div class="form-footer-links">
-            <router-link to="/forgot-password" class="forgot-link">
-              Passwort vergessen?
-            </router-link>
+            <div class="forgot-row">
+              <router-link to="/forgot-password" class="forgot-link">Forgot password?</router-link>
+            </div>
           </div>
 
           <Button
             type="submit"
-            label="Anmelden"
+            label="Sign in"
             icon="pi pi-sign-in"
             :loading="loading"
-            class="p-button-lg w-full"
+            class="w-full submit-btn"
           />
 
-          <Message v-if="errorMessage" severity="error" :closable="false">
+          <Message v-if="errorMessage" severity="error" :closable="false" class="error-msg">
             {{ errorMessage }}
           </Message>
         </form>
 
-        <div class="register-section">
-          <Divider />
-          <p>Noch kein Account?</p>
-          <Button
-            label="Registrieren"
-            icon="pi pi-user-plus"
-            outlined
-            class="w-full"
-            @click="$router.push('/register')"
-          />
+        <div class="divider-row">
+          <span>Don't have an account?</span>
+          <router-link to="/register" class="register-link">Create one</router-link>
         </div>
-      </template>
-    </Card>
-    <Toast />
-    <LegalFooter />
+      </div>
+
+      <!-- Legal links below the card -->
+      <LegalFooter dark />
+    </div>
   </div>
 </template>
 
@@ -79,103 +71,183 @@ import { useRouter } from 'vue-router';
 import LegalFooter from '@/components/layout/LegalFooter.vue';
 import { useAuthStore } from '@/stores/authStore';
 import { useToast } from 'primevue/usetoast';
-import Card from 'primevue/card';
 import InputText from 'primevue/inputtext';
 import Password from 'primevue/password';
 import Button from 'primevue/button';
 import Message from 'primevue/message';
-import Divider from 'primevue/divider';
 import Toast from 'primevue/toast';
+import logoUrl from '@/assets/images/logo.png';
 
-const router = useRouter();
+const router    = useRouter();
 const authStore = useAuthStore();
-const toast = useToast();
+const toast     = useToast();
 
-const email = ref('');
-const password = ref('');
-const loading = ref(false);
+const email        = ref('');
+const password     = ref('');
+const loading      = ref(false);
 const errorMessage = ref('');
-const errors = ref<{ email?: string }>({});
+const errors       = ref<{ email?: string }>({});
 
 const handleLogin = async () => {
-  errors.value = {};
+  errors.value       = {};
   errorMessage.value = '';
-  
+
   if (!email.value) {
-    errors.value.email = 'Email erforderlich';
+    errors.value.email = 'Email is required';
     return;
   }
 
   loading.value = true;
-
   try {
-    console.log('🔐 Attempting login...', email.value)
-    
     await authStore.login(email.value, password.value);
-    
-    console.log('✅ Login successful')
-    console.log('Token:', authStore.token?.substring(0, 20) + '...')
-    console.log('User:', authStore.user)
-    console.log('isAuthenticated:', authStore.isAuthenticated)
-    
-    toast.add({ 
-      severity: 'success', 
-      summary: 'Login erfolgreich', 
-      life: 3000 
-    });
-    
-    console.log('🚀 Redirecting to /dashboard...')
-    
-    // ✅ Small delay to ensure state is updated
-    await new Promise(resolve => setTimeout(resolve, 100))
-    
+    await new Promise(resolve => setTimeout(resolve, 100));
     await router.push('/dashboard');
-    
-    console.log('✅ Redirect complete')
-    
   } catch (err: any) {
-    console.error('❌ Login failed:', err)
     const status = err.response?.status;
     const detail = err.response?.data?.detail;
 
-    if (status === 401) {
-      errorMessage.value = 'Ungültige Email oder Passwort';
-    } else if (status === 403) {
-      errorMessage.value = detail || 'Email nicht verifiziert';
-    } else {
-      errorMessage.value = detail || 'Login fehlgeschlagen';
-    }
+    if (status === 401)      errorMessage.value = 'Invalid email or password';
+    else if (status === 403) errorMessage.value = detail || 'Email not verified';
+    else                     errorMessage.value = detail || 'Login failed';
   } finally {
     loading.value = false;
   }
 };
-
 </script>
 
 <style scoped>
-.login-view {
+.login-page {
   min-height: 100vh;
+  background: #f8fafc;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  padding: 2rem;
+  padding: 2rem 1rem;
 }
-.login-card { width: 100%; max-width: 450px; }
-.card-header { text-align: center; padding: 2rem 2rem 1rem; }
-.logo { margin-bottom: 1rem; }
-.card-header h1 { margin: 0 0 0.5rem 0; font-size: 2rem; color: #1e293b; }
-.card-header p { margin: 0; color: #64748b; }
-.login-form { display: flex; flex-direction: column; gap: 1.5rem; }
-.form-field { display: flex; flex-direction: column; gap: 0.5rem; }
-.form-field label { font-weight: 500; color: #1e293b; }
-.form-footer-links { display: flex; justify-content: flex-end; margin-top: -0.5rem; }
-.forgot-link { color: #667eea; text-decoration: none; font-size: 0.875rem; }
+
+.login-wrap {
+  width: 100%;
+  max-width: 420px;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0;
+}
+
+.login-card {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  padding: 2.25rem 2rem 2rem;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+}
+
+.login-header {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.login-logo {
+  width: 52px;
+  height: 52px;
+  border-radius: 12px;
+  object-fit: contain;
+  margin-bottom: 1rem;
+}
+
+.login-header h1 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0 0 0.25rem;
+  letter-spacing: -0.02em;
+}
+
+.login-header p {
+  color: #64748b;
+  font-size: 0.875rem;
+  margin: 0;
+}
+
+.login-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+
+.form-field label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #374151;
+}
+
+.forgot-row {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 0.25rem;
+}
+
+.forgot-link {
+  font-size: 0.8125rem;
+  color: #6366f1;
+  text-decoration: none;
+}
 .forgot-link:hover { text-decoration: underline; }
+
+.field-error {
+  color: #dc2626;
+  font-size: 0.78rem;
+}
+
+.submit-btn {
+  background: #0f172a !important;
+  border-color: #0f172a !important;
+  color: #fff !important;
+  font-weight: 600 !important;
+  height: 2.75rem;
+}
+.submit-btn:hover:not(:disabled) {
+  background: #1e293b !important;
+  border-color: #1e293b !important;
+}
+
+.error-msg { margin-top: 0.25rem; }
+
+.divider-row {
+  margin-top: 1.5rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid #f1f5f9;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  font-size: 0.875rem;
+  color: #64748b;
+}
+
+.register-link {
+  color: #6366f1;
+  font-weight: 500;
+  text-decoration: none;
+}
+.register-link:hover { text-decoration: underline; }
+
 .w-full { width: 100%; }
-.register-section { margin-top: 1.5rem; text-align: center; }
-.register-section p { margin: 1rem 0; color: #64748b; font-size: 0.875rem; }
+
+/* Legal footer sits flush below the card with no gap */
+:deep(.legal-footer) {
+  background: transparent;
+  border-top: none;
+  padding: 1rem 0 0;
+}
+
+:deep(.legal-footer a)   { color: #94a3b8; }
+:deep(.legal-footer a:hover) { color: #475569; }
+:deep(.legal-footer .dot)    { color: #cbd5e1; }
 </style>
-
-
-
