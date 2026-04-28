@@ -74,28 +74,22 @@ class UserService:
     
     def remove_platform_credentials(self, user_id: str, platform: str):
         """
-        Entfernt Platform-Credentials für einen User
-        
-        Args:
-            user_id: User-ID
-            platform: Platform-Name
-            
-        Raises:
-            ValueError: Wenn User oder Platform nicht existiert
+        Entfernt Platform-Credentials für einen User aus dem In-Memory-Cache.
+        Kein Fehler wenn nicht vorhanden (Cache kann leer sein nach Restart/Worker-Wechsel).
         """
         if user_id not in self._users:
-            raise ValueError(f"User {user_id} nicht gefunden")
-        
+            logger.debug(f"remove_platform_credentials: {user_id} nicht im Cache (kein Problem)")
+            return
+
         if platform not in self._users[user_id]:
-            raise ValueError(f"Platform {platform} nicht verbunden")
-        
+            logger.debug(f"remove_platform_credentials: {platform} nicht im Cache für {user_id} (kein Problem)")
+            return
+
         del self._users[user_id][platform]
         logger.info(f"🗑️ {platform}-Credentials entfernt (User: {user_id})")
-        
-        # User komplett löschen wenn keine Platforms mehr
+
         if not self._users[user_id]:
             del self._users[user_id]
-            logger.info(f"🗑️ User {user_id} komplett entfernt (keine Platforms)")
     
     def set_temp_data(self, user_id: str, key: str, value: Any):
         """
