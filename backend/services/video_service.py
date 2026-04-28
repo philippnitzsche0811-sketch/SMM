@@ -1,6 +1,7 @@
 import logging
 from typing import List, Optional
-from datetime import datetime
+from datetime import datetime, timezone
+from sqlalchemy import text
 from sqlalchemy.orm import Session
 from models.database import VideoModel
 from models.video import VideoStatus
@@ -88,6 +89,31 @@ class VideoService:
             db.commit()
 
     @staticmethod
+    def track_upload(db: Session, user_id: str, platform: str, status: str = "uploaded"):
+        """Record a successful platform upload for later time-optimization."""
+        now = datetime.now(timezone.utc)
+        try:
+            db.execute(
+                text("""
+                    INSERT INTO upload_performance
+                        (user_id, platform, uploaded_at, day_of_week, hour_of_day, status)
+                    VALUES
+                        (:uid, :platform, :uploaded_at, :dow, :hod, :status)
+                """),
+                {
+                    "uid": user_id,
+                    "platform": platform,
+                    "uploaded_at": now,
+                    "dow": now.weekday(),
+                    "hod": now.hour,
+                    "status": status,
+                },
+            )
+            db.commit()
+        except Exception as exc:
+            logger.warning(f"Could not record upload_performance for {platform}: {exc}")
+
+    @staticmethod
     def delete_video(db: Session, video_id: str):
         video = db.query(VideoModel).filter(VideoModel.id == video_id).first()
         if video:
@@ -125,6 +151,7 @@ class VideoService:
                         video.privacy_status
                     )
                     VideoService.add_upload_result(db, video_id, "youtube", result)
+                    VideoService.track_upload(db, video.user_id, "youtube")
                     successful.append("youtube")
                     logger.info(f"✅ YouTube Upload erfolgreich: {video_id}")
                 except Exception as e:
@@ -142,6 +169,7 @@ class VideoService:
                         video.tags or []
                     )
                     VideoService.add_upload_result(db, video_id, "tiktok", result)
+                    VideoService.track_upload(db, video.user_id, "tiktok")
                     successful.append("tiktok")
                     logger.info(f"✅ TikTok Upload erfolgreich: {video_id}")
                 except Exception as e:
@@ -157,6 +185,7 @@ class VideoService:
                         video.title
                     )
                     VideoService.add_upload_result(db, video_id, "instagram", result)
+                    VideoService.track_upload(db, video.user_id, "instagram")
                     successful.append("instagram")
                     logger.info(f"✅ Instagram Upload erfolgreich: {video_id}")
                 except Exception as e:

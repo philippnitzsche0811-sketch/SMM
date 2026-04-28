@@ -4,7 +4,7 @@ export interface PlatformSuggestion {
   title: string
   description: string
   tags: string[]
-  upload_times: string[] // ISO 8601 strings
+  upload_times: string[] // ISO 8601 UTC strings
 }
 
 export interface OptimizerSuggestions {
@@ -19,7 +19,7 @@ export interface OptimizerResponse {
 }
 
 export interface OptimizeRequest {
-  user_id: number
+  user_id: string
   title_draft: string
   description_draft: string
   category: string

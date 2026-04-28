@@ -68,11 +68,12 @@
 
           <!-- Video Metadata -->
           <div v-show="currentStep === 2">
-            <VideoMetaForm 
+            <VideoMetaForm
               v-model:title="videoMeta.title"
               v-model:description="videoMeta.description"
               v-model:tags="videoMeta.tags"
               v-model:privacyStatus="videoMeta.privacyStatus"
+              v-model:category="videoMeta.category"
             />
             <div class="button-group">
               <Button label="Zurück" severity="secondary" @click="currentStep = 1" />
@@ -163,7 +164,8 @@ const videoMeta = ref<VideoMetadata>({
   title: '',
   description: '',
   tags: [],
-  privacyStatus: 'private'
+  privacyStatus: 'private',
+  category: 'default',
 });
 const selectedPlatforms = ref<string[]>([]);
 
@@ -198,7 +200,8 @@ const resetUpload = () => {
     title: '',
     description: '',
     tags: [],
-    privacyStatus: 'private'
+    privacyStatus: 'private',
+    category: 'default',
   };
   selectedPlatforms.value = [];
   currentStep.value = 1;

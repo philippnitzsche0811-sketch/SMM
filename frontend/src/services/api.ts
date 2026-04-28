@@ -151,6 +151,22 @@ export const refreshPlatformToken = async (userId: string, platform: string) => 
 };
 
 // ==========================================
+// Optimizer API
+// ==========================================
+
+export const optimizeSuggest = async (data: {
+  user_id: string;
+  title_draft: string;
+  description_draft: string;
+  category: string;
+  platforms: string[];
+  video_duration?: number;
+}) => {
+  const response = await api.post('/api/optimizer/suggest', data);
+  return response.data;
+};
+
+// ==========================================
 // Health Check
 // ==========================================
 
