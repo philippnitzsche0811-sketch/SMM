@@ -33,11 +33,12 @@ app.mount("/api/videos/temp", StaticFiles(directory=settings.TEMP_DIR), name="te
 # CORS Middleware - dynamisch aus ENV
 allowed_origins = [
     settings.FRONTEND_URL,
-    "http://localhost:5173",  # Development fallback
-    "http://localhost:3000",  # Production port
+    "https://app.decodu-smm.com",
+    "https://decodu-smm.com",
+    "http://localhost:5173",
+    "http://localhost:3000",
 ]
 
-# Nur in Development: Wildcard erlauben
 if settings.DEBUG:
     allowed_origins.append("*")
 
