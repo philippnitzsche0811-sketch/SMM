@@ -9,8 +9,9 @@ from config import settings
 from services.user_service import UserService
 from services.file_service import FileService
 from services.token_storage import TokenStorage
-from models.database import get_db  # âœ… NEU: Import get_db
+from models.database import get_db
 from google.oauth2.credentials import Credentials
+from routers.auth import get_current_user
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="", tags=["YouTube"])
@@ -23,13 +24,17 @@ token_storage = TokenStorage()
 @router.post("/connect")
 async def connect_youtube(
     user_id: str = Form(...),
-    client_secrets_file: UploadFile = File(...)
+    client_secrets_file: UploadFile = File(...),
+    current_user: dict = Depends(get_current_user),
 ):
     """
     Generiert YouTube OAuth URL fÃ¼r User
     """
+    if str(current_user[“id”]) != str(user_id):
+        raise HTTPException(status_code=403, detail=”Not authorized”)
+
     try:
-        logger.info(f"ðŸ“¥ YouTube Connect Request fÃ¼r User: {user_id}")
+        logger.info(f”ðŸ”¥ YouTube Connect Request fÃ¼r User: {user_id}”)
         logger.info(f"ðŸ“„ Dateiname: {client_secrets_file.filename}")
         logger.info(f"ðŸ“¦ Content-Type: {client_secrets_file.content_type}")
         

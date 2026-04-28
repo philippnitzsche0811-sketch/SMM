@@ -1,5 +1,5 @@
 ﻿# instagram_router.py
-from fastapi import APIRouter, Request as FastAPIRequest, HTTPException
+from fastapi import APIRouter, Request as FastAPIRequest, HTTPException, Depends
 from fastapi.responses import RedirectResponse
 from pydantic import BaseModel
 import logging
@@ -10,6 +10,7 @@ from config import settings
 from services.instagram_service import instagram_upload_video
 from services.user_service import UserService
 from services.token_storage import TokenStorage
+from routers.auth import get_current_user
 
 
 logger = logging.getLogger(__name__)
@@ -38,11 +39,17 @@ class RefreshRequest(BaseModel):
 # ==========================================
 
 @router.post("/connect")
-async def connect_instagram(request: ConnectRequest):
+async def connect_instagram(
+    request: ConnectRequest,
+    current_user: dict = Depends(get_current_user),
+):
     """
     Generates Instagram OAuth URL for user.
     Uses new Instagram Graph API with Instagram Login.
     """
+    if str(current_user["id"]) != str(request.user_id):
+        raise HTTPException(status_code=403, detail="Not authorized")
+
     try:
         logger.info(f"Generating Instagram auth URL for user {request.user_id}")
 
@@ -284,7 +291,13 @@ async def refresh_instagram_token(request: RefreshRequest):
 
 
 @router.post("/disconnect")
-async def disconnect_instagram(request: DisconnectRequest):
+async def disconnect_instagram(
+    request: DisconnectRequest,
+    current_user: dict = Depends(get_current_user),
+):
+    if str(current_user["id"]) != str(request.user_id):
+        raise HTTPException(status_code=403, detail="Not authorized")
+
     try:
         token_storage.delete_instagram_credentials(request.user_id)
         

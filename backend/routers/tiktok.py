@@ -1,4 +1,4 @@
-﻿from fastapi import APIRouter, Request as FastAPIRequest, HTTPException
+﻿from fastapi import APIRouter, Request as FastAPIRequest, HTTPException, Depends
 from fastapi.responses import RedirectResponse
 from pydantic import BaseModel
 import logging
@@ -13,6 +13,7 @@ from services.tiktok_service import tiktok_upload_video
 from utils.utils import build_tiktok_caption
 from services.user_service import UserService
 from services.token_storage import TokenStorage
+from routers.auth import get_current_user
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="", tags=["TikTok"])
@@ -58,7 +59,10 @@ class RefreshRequest(BaseModel):
 # ==========================================
 
 @router.post("/connect")
-async def connect_tiktok(request: ConnectRequest):
+async def connect_tiktok(
+    request: ConnectRequest,
+    current_user: dict = Depends(get_current_user),
+):
     """
     Generiert TikTok OAuth URL mit PKCE
     
@@ -70,9 +74,12 @@ async def connect_tiktok(request: ConnectRequest):
     Returns:
         OAuth URL zum Weiterleiten des Users
     """
+    if str(current_user["id"]) != str(request.user_id):
+        raise HTTPException(status_code=403, detail="Not authorized")
+
     try:
         logger.info(f"TikTok Auth-URL wird fÃ¼r User {request.user_id} generiert...")
-        
+
         client_key = settings.TIKTOK_CLIENT_KEY
         
         if not client_key:
@@ -283,7 +290,10 @@ async def refresh_tiktok_token(request: RefreshRequest):
 
 
 @router.post("/disconnect")
-async def disconnect_tiktok(request: DisconnectRequest):
+async def disconnect_tiktok(
+    request: DisconnectRequest,
+    current_user: dict = Depends(get_current_user),
+):
     """
     Trennt TikTok Verbindung
     
@@ -292,6 +302,9 @@ async def disconnect_tiktok(request: DisconnectRequest):
             "user_id": "user_xxx"
         }
     """
+    if str(current_user["id"]) != str(request.user_id):
+        raise HTTPException(status_code=403, detail="Not authorized")
+
     try:
         # Delete tokens
         token_storage.delete_tiktok_credentials(request.user_id)
