@@ -29,7 +29,7 @@ def instagram_upload_video(
             logger.warning("Caption zu lang, wird gekuerzt")
             caption = caption[:2197] + "..."
 
-        video_url = f"{settings.BACKEND_URL}/api/videos/temp/{video_file.name}"
+        video_url = f"{settings.FRONTEND_URL}/temp/{video_file.name}"
         logger.info(f"Instagram Reel-Upload startet (video_url={video_url})")
 
         container_id = _create_reel_container(
