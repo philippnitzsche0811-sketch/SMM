@@ -199,27 +199,55 @@ class TokenStorage:
     # YouTube
     # ==========================================
 
-    def save_youtube_credentials(self, user_id: str, credentials,channel_title: str = None, channel_id: str = None):
+    def save_youtube_credentials(self, user_id: str, credentials, channel_title: str = None, channel_id: str = None):
         """credentials = Google OAuth Credentials Objekt"""
         full_token_json = json.dumps({
-        "token": credentials.token,
-        "refresh_token": credentials.refresh_token,
-        "token_uri": credentials.token_uri,
-        "client_id": credentials.client_id,
-        "client_secret": credentials.client_secret,
-        "scopes": list(credentials.scopes) if credentials.scopes else [],
+            "token": credentials.token,
+            "refresh_token": credentials.refresh_token,
+            "token_uri": credentials.token_uri,
+            "client_id": credentials.client_id,
+            "client_secret": credentials.client_secret,
+            "scopes": list(credentials.scopes) if credentials.scopes else [],
         })
-
-        self._save_credentials(
-            user_id=user_id,
-            platform="youtube",
-            data={
-                "access_token": full_token_json,      # ← kompletter JSON
-                "refresh_token": credentials.refresh_token,
-            },
-            username=channel_title,
-            channel_id=channel_id
-        )
+        db = self._get_db()
+        try:
+            existing = db.query(PlatformConnection).filter(
+                PlatformConnection.user_id == user_id,
+                PlatformConnection.platform == "youtube"
+            ).first()
+            if existing:
+                existing.access_token = full_token_json
+                existing.refresh_token = credentials.refresh_token
+                existing.token_expiry = credentials.expiry
+                existing.connected = True
+                existing.updated_at = datetime.now()
+                if channel_title:
+                    existing.username = channel_title
+                if channel_id:
+                    existing.channel_id = channel_id
+            else:
+                import secrets as _sec
+                db.add(PlatformConnection(
+                    id=f"plat_{_sec.token_hex(8)}",
+                    user_id=user_id,
+                    platform="youtube",
+                    connected=True,
+                    access_token=full_token_json,
+                    refresh_token=credentials.refresh_token,
+                    token_expiry=credentials.expiry,
+                    username=channel_title,
+                    channel_id=channel_id,
+                    created_at=datetime.now(),
+                    updated_at=datetime.now()
+                ))
+            db.commit()
+            logger.info(f"YouTube credentials saved (User: {user_id})")
+        except Exception as e:
+            db.rollback()
+            logger.error(f"Failed to save YouTube credentials: {str(e)}")
+            raise
+        finally:
+            db.close()
 
 
     def load_youtube_credentials(self, user_id: str) -> Optional[dict]:

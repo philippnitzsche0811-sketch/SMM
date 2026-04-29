@@ -110,7 +110,7 @@ def _wait_for_container_ready(
 ) -> bool:
     url = f"https://graph.instagram.com/v21.0/{container_id}"
     params = {
-        "fields": "status_code",
+        "fields": "status_code,error_message",
         "access_token": access_token
     }
 
@@ -133,7 +133,8 @@ def _wait_for_container_ready(
                 logger.info("✅ Container ist bereit")
                 return True
             elif status == "ERROR":
-                error_msg = result.get("error", {})
+                error_msg = result.get("error_message") or result.get("error", "unknown error")
+                logger.error(f"Instagram container error detail: {result}")
                 raise Exception(f"Container-Verarbeitung fehlgeschlagen: {error_msg}")
 
             time.sleep(5)

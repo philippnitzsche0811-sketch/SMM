@@ -140,43 +140,7 @@ async def youtube_oauth_callback(request: FastAPIRequest, db: Session = Depends(
             credentials=credentials
         )
 
-        logger.info("Credentials saved to file")
-
-        from models.database import PlatformConnection
-        import secrets as secret_gen
-        from datetime import datetime
-
-        logger.info("Saving to database...")
-
-        existing_platform = db.query(PlatformConnection).filter(
-            PlatformConnection.user_id == user_id,
-            PlatformConnection.platform == "youtube"
-        ).first()
-
-        if existing_platform:
-            logger.info(f"Updating existing YouTube connection")
-            existing_platform.connected = True
-            existing_platform.access_token = credentials.token
-            existing_platform.refresh_token = credentials.refresh_token
-            existing_platform.token_expiry = credentials.expiry
-            existing_platform.updated_at = datetime.now()
-        else:
-            logger.info(f"Creating new YouTube connection")
-            new_platform = PlatformConnection(
-                id=f"plat_{secret_gen.token_hex(8)}",
-                user_id=user_id,
-                platform="youtube",
-                connected=True,
-                access_token=credentials.token,
-                refresh_token=credentials.refresh_token,
-                token_expiry=credentials.expiry,
-                created_at=datetime.now(),
-                updated_at=datetime.now()
-            )
-            db.add(new_platform)
-
-        db.commit()
-        logger.info("Database commit successful!")
+        logger.info("Credentials saved successfully")
 
         file_service.delete_file(client_secrets_path)
         token_storage._delete_credentials(user_id, "youtube_temp")
