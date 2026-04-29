@@ -95,6 +95,18 @@ def _init_resumable_upload(
 
     if not response.ok:
         logger.error(f"Init {response.status_code}: {response.text}")
+        token_error = False
+        try:
+            err = response.json().get("error", {})
+            if err.get("code") == 190:
+                token_error = True
+        except Exception:
+            pass
+        if token_error:
+            raise ValueError(
+                "Instagram-Token abgelaufen oder widerrufen. "
+                "Bitte Instagram in den Plattform-Einstellungen trennen und neu verbinden."
+            )
         response.raise_for_status()
 
     result = response.json()
