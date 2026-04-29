@@ -77,6 +77,8 @@ services:
       - .env
     environment:
       VITE_API_URL: ${VITE_API_URL}
+    volumes:
+      - backend_temp:/usr/share/nginx/html/temp:ro
     restart: unless-stopped
     networks:
       - smm-net

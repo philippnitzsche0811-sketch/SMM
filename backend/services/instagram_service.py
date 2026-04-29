@@ -31,8 +31,7 @@ def instagram_upload_video(
 
         from config import settings
         filename = video_file.name
-        # Use frontend URL — its nginx proxy passes /api/ to backend without bot blocking
-        video_url = f"{settings.FRONTEND_URL}/api/videos/temp/{filename}"
+        video_url = f"{settings.FRONTEND_URL}/temp/{filename}"
         logger.info(f"Video URL: {video_url}")
 
         # Step 1: create media container
