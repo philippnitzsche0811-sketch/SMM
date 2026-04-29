@@ -1,7 +1,6 @@
 """
 Instagram Upload Service (Reels via Graph API — resumable binary upload)
 """
-import os
 import requests
 import logging
 from pathlib import Path
@@ -28,24 +27,23 @@ def instagram_upload_video(
             logger.warning("Caption zu lang, wird gekuerzt")
             caption = caption[:2197] + "..."
 
-        logger.info("Instagram Reel-Upload startet (resumable binary upload)...")
+        logger.info("Instagram Reel-Upload startet...")
 
-        # Step 1: initialize upload session
-        container_id, upload_uri = _init_upload_session(
+        from config import settings
+        filename = video_file.name
+        # Use frontend URL — its nginx proxy passes /api/ to backend without bot blocking
+        video_url = f"{settings.FRONTEND_URL}/api/videos/temp/{filename}"
+        logger.info(f"Video URL: {video_url}")
+
+        # Step 1: create media container
+        container_id = _create_reel_container(
             ig_user_id=ig_user_id,
             access_token=access_token,
+            video_url=video_url,
             caption=caption,
             share_to_feed=share_to_feed,
         )
-        logger.info(f"Upload session erstellt (container: {container_id})")
-
-        # Step 2: upload video bytes directly
-        _upload_video_bytes(
-            upload_uri=upload_uri,
-            access_token=access_token,
-            video_path=str(video_file),
-        )
-        logger.info("Video bytes hochgeladen")
+        logger.info(f"Container erstellt (ID: {container_id})")
 
         # Step 3: wait for processing
         _wait_for_container_ready(ig_user_id, access_token, container_id)
@@ -74,21 +72,17 @@ def instagram_upload_video(
         raise
 
 
-def _init_upload_session(
+def _create_reel_container(
     ig_user_id: str,
     access_token: str,
+    video_url: str,
     caption: str,
     share_to_feed: bool,
-) -> tuple[str, str]:
-    """
-    POST /{ig-user-id}/media with upload_type=resumable.
-    Returns (container_id, upload_uri).
-    """
+) -> str:
     url = f"{GRAPH_BASE}/{ig_user_id}/media"
-    # share_to_feed is deprecated and not valid with upload_type=resumable
     data = {
         "media_type": "REELS",
-        "upload_type": "resumable",
+        "video_url": video_url,
         "caption": caption,
         "access_token": access_token,
     }
@@ -96,50 +90,16 @@ def _init_upload_session(
     response = requests.post(url, data=data, timeout=30)
 
     if not response.ok:
-        logger.error(f"Instagram init session {response.status_code}: {response.text}")
+        logger.error(f"Instagram container {response.status_code}: {response.text}")
         response.raise_for_status()
 
     result = response.json()
-    logger.info(f"Init upload session response: {result}")
+    logger.info(f"Container Response: {result}")
 
-    container_id = result.get("id")
-    upload_uri = result.get("uri")
+    if "id" not in result:
+        raise ValueError(f"Ungueltige Instagram API Response: {result}")
 
-    if not container_id or not upload_uri:
-        raise ValueError(f"Ungueltige Instagram API Response (kein id/uri): {result}")
-
-    return container_id, upload_uri
-
-
-def _upload_video_bytes(upload_uri: str, access_token: str, video_path: str) -> None:
-    """
-    POST the video file directly to the resumable upload URI.
-    """
-    file_size = os.path.getsize(video_path)
-    logger.info(f"Uploading {file_size} bytes to {upload_uri}")
-
-    with open(video_path, "rb") as f:
-        response = requests.post(
-            upload_uri,
-            headers={
-                "Authorization": f"OAuth {access_token}",
-                "offset": "0",
-                "file_size": str(file_size),
-                "Content-Type": "video/mp4",
-            },
-            data=f,
-            timeout=300,
-        )
-
-    if not response.ok:
-        logger.error(f"Instagram binary upload {response.status_code}: {response.text}")
-        response.raise_for_status()
-
-    result = response.json()
-    logger.info(f"Upload response: {result}")
-
-    if not result.get("success"):
-        raise ValueError(f"Video upload fehlgeschlagen: {result}")
+    return result["id"]
 
 
 def _wait_for_container_ready(
