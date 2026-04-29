@@ -1,11 +1,11 @@
 ﻿import os
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse, PlainTextResponse
 import logging
 from config import settings
 from models.database import init_db,SessionLocal, UserModel
 from routers import youtube, tiktok, instagram, upload, user, static_pages, auth
-from fastapi.staticfiles import StaticFiles
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from datetime import datetime, timedelta
 from routers.optimizer import router as optimizer_router
@@ -28,7 +28,28 @@ app = FastAPI(
 )
 
 os.makedirs(settings.TEMP_DIR, exist_ok=True)
-app.mount("/api/videos/temp", StaticFiles(directory=settings.TEMP_DIR), name="temp_videos")
+
+
+@app.get("/robots.txt", include_in_schema=False)
+async def robots_txt():
+    return PlainTextResponse("User-agent: *\nAllow: /\n")
+
+
+@app.get("/api/videos/temp/{filename}", include_in_schema=False)
+async def serve_temp_video(filename: str):
+    # Prevent path traversal
+    safe_name = os.path.basename(filename)
+    file_path = os.path.join(settings.TEMP_DIR, safe_name)
+    if not os.path.isfile(file_path):
+        raise HTTPException(status_code=404, detail="File not found")
+    return FileResponse(
+        path=file_path,
+        media_type="video/mp4",
+        headers={
+            "Cache-Control": "public, max-age=3600",
+            "Access-Control-Allow-Origin": "*",
+        },
+    )
 
 # CORS Middleware - dynamisch aus ENV
 allowed_origins = [
