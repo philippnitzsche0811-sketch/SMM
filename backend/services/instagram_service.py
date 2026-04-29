@@ -31,7 +31,7 @@ def instagram_upload_video(
 
         from config import settings
         filename = video_file.name
-        video_url = f"{settings.FRONTEND_URL}/temp/{filename}"
+        video_url = f"{settings.BACKEND_URL}/api/videos/temp/{filename}"
         logger.info(f"Video URL: {video_url}")
 
         # Step 1: create media container
