@@ -1,6 +1,7 @@
 from fastapi import APIRouter, UploadFile, File, Form, Request as FastAPIRequest, HTTPException, Depends
 from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
+from pydantic import BaseModel
 import logging
 import json
 
@@ -197,6 +198,40 @@ async def youtube_oauth_callback(request: FastAPIRequest, db: Session = Depends(
             url=f"{settings.FRONTEND_URL}/platforms?error=youtube&message={str(e)}",
             status_code=302
         )
+
+
+class DisconnectRequest(BaseModel):
+    user_id: str
+
+
+@router.post("/disconnect")
+async def disconnect_youtube(
+    request: DisconnectRequest,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
+    if str(current_user["id"]) != str(request.user_id):
+        raise HTTPException(status_code=403, detail="Not authorized")
+
+    try:
+        from models.database import PlatformConnection
+        conn = db.query(PlatformConnection).filter(
+            PlatformConnection.user_id == request.user_id,
+            PlatformConnection.platform == "youtube"
+        ).first()
+        if conn:
+            db.delete(conn)
+            db.commit()
+
+        token_storage.delete_youtube_credentials(request.user_id)
+        user_service.remove_platform_credentials(request.user_id, "youtube")
+
+        logger.info(f"YouTube disconnected for user {request.user_id}")
+        return {"status": "success", "message": "YouTube disconnected"}
+
+    except Exception as e:
+        logger.error(f"YouTube disconnect failed: {str(e)}")
+        raise HTTPException(500, f"Disconnect failed: {str(e)}")
 
 
 def upload_to_youtube(user_id: str, video_path: str, title: str,
