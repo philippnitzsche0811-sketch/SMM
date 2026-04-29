@@ -1,5 +1,5 @@
 """
-Instagram Upload Service (Reels via Graph API — resumable binary upload)
+Instagram Upload Service (Reels via Graph API - resumable binary upload)
 """
 import requests
 import logging
@@ -8,7 +8,8 @@ import time
 
 logger = logging.getLogger(__name__)
 
-GRAPH_BASE = "https://graph.instagram.com/v21.0"
+GRAPH_BASE = "https://graph.facebook.com/v21.0"
+UPLOAD_URL = "https://rupload.facebook.com/ig-api-upload"
 
 
 def instagram_upload_video(
@@ -27,27 +28,29 @@ def instagram_upload_video(
             logger.warning("Caption zu lang, wird gekuerzt")
             caption = caption[:2197] + "..."
 
-        logger.info("Instagram Reel-Upload startet...")
+        logger.info("Instagram Reel-Upload startet (resumable binary)...")
 
-        from config import settings
-        filename = video_file.name
-        video_url = f"{settings.BACKEND_URL}/api/videos/temp/{filename}"
-        logger.info(f"Video URL: {video_url}")
-
-        # Step 1: create media container
-        container_id = _create_reel_container(
+        upload_id = _init_resumable_upload(
             ig_user_id=ig_user_id,
             access_token=access_token,
-            video_url=video_url,
+            video_file=video_file,
             caption=caption,
             share_to_feed=share_to_feed,
         )
+        logger.info(f"Resumable Upload initialisiert (ID: {upload_id})")
+
+        _upload_binary(upload_id, video_file)
+        logger.info("Binary-Upload abgeschlossen")
+
+        container_id = _create_reel_container_from_upload(
+            ig_user_id=ig_user_id,
+            access_token=access_token,
+            upload_id=upload_id,
+        )
         logger.info(f"Container erstellt (ID: {container_id})")
 
-        # Step 3: wait for processing
         _wait_for_container_ready(ig_user_id, access_token, container_id)
 
-        # Step 4: publish
         media_id = _publish_reel_container(
             ig_user_id=ig_user_id,
             access_token=access_token,
@@ -71,34 +74,84 @@ def instagram_upload_video(
         raise
 
 
-def _create_reel_container(
+def _init_resumable_upload(
     ig_user_id: str,
     access_token: str,
-    video_url: str,
+    video_file: Path,
     caption: str,
     share_to_feed: bool,
 ) -> str:
     url = f"{GRAPH_BASE}/{ig_user_id}/media"
+    data = {
+        "media_type": "REELS",
+        "upload_type": "resumable",
+        "share_to_feed": "true" if share_to_feed else "false",
+    }
+    if caption:
+        data["caption"] = caption
+
+    headers = {
+        "Authorization": f"OAuth {access_token}",
+    }
+
+    response = requests.post(url, data=data, headers=headers, timeout=30)
+
+    if not response.ok:
+        logger.error(f"Init {response.status_code}: {response.text}")
+        response.raise_for_status()
+
+    result = response.json()
+    logger.info(f"Init Response: {result}")
+
+    if "upload_id" not in result:
+        raise ValueError(f"Ungueltige Init-Response: {result}")
+
+    return result["upload_id"]
+
+
+def _upload_binary(upload_id: str, video_file: Path) -> None:
+    url = f"{UPLOAD_URL}/v21.0/{upload_id}"
     
-    # FIX: params= statt data= – verhindert URL-Encoding-Probleme
+    file_size = video_file.stat().st_size
+    video_data = video_file.read_bytes()
+
+    headers = {
+        "Offset": "0",
+        "Content-Length": str(file_size),
+        "Content-Type": "application/octet-stream",
+    }
+
+    response = requests.post(url, data=video_data, headers=headers, timeout=120)
+
+    if not response.ok:
+        logger.error(f"Binary upload {response.status_code}: {response.text}")
+        response.raise_for_status()
+
+
+def _create_reel_container_from_upload(
+    ig_user_id: str,
+    access_token: str,
+    upload_id: str,
+) -> str:
+    url = f"{GRAPH_BASE}/{ig_user_id}/media"
     params = {
         "media_type": "REELS",
-        "video_url": video_url,
-        "caption": caption,
+        "upload_type": "resumable",
+        "upload_id": upload_id,
         "access_token": access_token,
     }
 
-    response = requests.post(url, params=params, timeout=30)  # ← params statt data
+    response = requests.post(url, params=params, timeout=30)
 
     if not response.ok:
-        logger.error(f"Instagram container {response.status_code}: {response.text}")
+        logger.error(f"Container {response.status_code}: {response.text}")
         response.raise_for_status()
 
     result = response.json()
     logger.info(f"Container Response: {result}")
 
     if "id" not in result:
-        raise ValueError(f"Ungueltige Instagram API Response: {result}")
+        raise ValueError(f"Ungueltige Container-Response: {result}")
 
     return result["id"]
 
@@ -151,12 +204,12 @@ def _publish_reel_container(
     creation_id: str,
 ) -> str:
     url = f"{GRAPH_BASE}/{ig_user_id}/media_publish"
-    data = {
+    params = {
         "creation_id": creation_id,
         "access_token": access_token,
     }
 
-    response = requests.post(url, data=data, timeout=30)
+    response = requests.post(url, params=params, timeout=30)
     response.raise_for_status()
     result = response.json()
 
@@ -164,19 +217,3 @@ def _publish_reel_container(
         raise ValueError(f"Ungueltige Publish-Response: {result}")
 
     return result["id"]
-
-
-def get_media_insights(media_id: str, access_token: str) -> dict:
-    url = f"{GRAPH_BASE}/{media_id}/insights"
-    params = {
-        "metric": "plays,likes,comments,shares,saved",
-        "access_token": access_token,
-    }
-
-    try:
-        response = requests.get(url, params=params, timeout=10)
-        response.raise_for_status()
-        return response.json()
-    except Exception as e:
-        logger.error(f"Insights-Abfrage fehlgeschlagen: {e}")
-        raise
