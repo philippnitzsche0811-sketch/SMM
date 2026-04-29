@@ -45,41 +45,44 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, onMounted } from 'vue';
-import { usePlatformStore } from '@/stores/platformStore';
+import { ref, computed, watch, onMounted } from 'vue';
+import { useAuthStore } from '@/stores/authStore';
 
 const props = defineProps<{ modelValue: string[] }>();
 const emit  = defineEmits<{ 'update:modelValue': [value: string[]] }>();
 
-const platformStore  = usePlatformStore();
-const localSelected  = ref<string[]>([...props.modelValue]);
+const authStore     = useAuthStore();
+const localSelected = ref<string[]>([...props.modelValue]);
 
-const platforms = [
-  {
-    id:          'youtube',
-    name:        'YouTube',
-    icon:        'pi pi-youtube',
-    color:       '#FF0000',
-    description: 'Reach millions on the world\'s largest video platform',
-    connected:   platformStore.isConnected('youtube'),
-  },
-  {
-    id:          'tiktok',
-    name:        'TikTok',
-    icon:        'pi pi-video',
-    color:       '#010101',
-    description: 'Share short-form content with a global audience',
-    connected:   platformStore.isConnected('tiktok'),
-  },
-  {
-    id:          'instagram',
-    name:        'Instagram',
-    icon:        'pi pi-instagram',
-    color:       '#E4405F',
-    description: 'Publish Reels and grow your following',
-    connected:   platformStore.isConnected('instagram'),
-  },
-];
+const platforms = computed(() => {
+  const connected = authStore.user?.connectedPlatforms || [];
+  return [
+    {
+      id:          'youtube',
+      name:        'YouTube',
+      icon:        'pi pi-youtube',
+      color:       '#FF0000',
+      description: 'Reach millions on the world\'s largest video platform',
+      connected:   connected.some((p: any) => p.platform === 'youtube'),
+    },
+    {
+      id:          'tiktok',
+      name:        'TikTok',
+      icon:        'pi pi-video',
+      color:       '#010101',
+      description: 'Share short-form content with a global audience',
+      connected:   connected.some((p: any) => p.platform === 'tiktok'),
+    },
+    {
+      id:          'instagram',
+      name:        'Instagram',
+      icon:        'pi pi-instagram',
+      color:       '#E4405F',
+      description: 'Publish Reels and grow your following',
+      connected:   connected.some((p: any) => p.platform === 'instagram'),
+    },
+  ];
+});
 
 const isSelected = (id: string) => localSelected.value.includes(id);
 
@@ -100,7 +103,7 @@ watch(() => props.modelValue, (newVal) => {
 
 onMounted(() => {
   if (localSelected.value.length === 0) {
-    const preselect = platforms.filter(p => p.connected).map(p => p.id);
+    const preselect = platforms.value.filter(p => p.connected).map(p => p.id);
     if (preselect.length > 0) localSelected.value = preselect;
   }
 });
