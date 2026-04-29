@@ -85,18 +85,22 @@ def _init_upload_session(
     Returns (container_id, upload_uri).
     """
     url = f"{GRAPH_BASE}/{ig_user_id}/media"
+    # share_to_feed is deprecated and not valid with upload_type=resumable
     data = {
         "media_type": "REELS",
         "upload_type": "resumable",
         "caption": caption,
-        "share_to_feed": str(share_to_feed).lower(),
         "access_token": access_token,
     }
 
     response = requests.post(url, data=data, timeout=30)
+
+    if not response.ok:
+        logger.error(f"Instagram init session {response.status_code}: {response.text}")
+        response.raise_for_status()
+
     result = response.json()
     logger.info(f"Init upload session response: {result}")
-    response.raise_for_status()
 
     container_id = result.get("id")
     upload_uri = result.get("uri")
@@ -127,9 +131,12 @@ def _upload_video_bytes(upload_uri: str, access_token: str, video_path: str) -> 
             timeout=300,
         )
 
+    if not response.ok:
+        logger.error(f"Instagram binary upload {response.status_code}: {response.text}")
+        response.raise_for_status()
+
     result = response.json()
     logger.info(f"Upload response: {result}")
-    response.raise_for_status()
 
     if not result.get("success"):
         raise ValueError(f"Video upload fehlgeschlagen: {result}")
