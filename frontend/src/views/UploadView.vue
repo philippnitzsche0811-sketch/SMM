@@ -97,7 +97,7 @@ import { useUpload } from '@/composables/useUpload';
 import { capitalizeFirst } from '@/utils/formatters';
 import type { VideoMetadata } from '@/types/video.types';
 
-const { upload, isUploading, uploadProgress, uploadResults, reset } = useUpload();
+const { uploadVideo, isUploading, uploadProgress, uploadResults, resetUpload: resetUploadState } = useUpload();
 
 const steps = ['Select Video', 'Video Details', 'Platforms'];
 const currentStep = ref(1);
@@ -123,7 +123,7 @@ const handleFileSelect = (file: File) => {
 const handleUpload = async () => {
   if (!canUpload.value || !videoFile.value) return;
   try {
-    await upload(videoFile.value, videoMeta.value, selectedPlatforms.value);
+    await uploadVideo(videoFile.value, videoMeta.value, selectedPlatforms.value);
   } catch (error) {
     console.error('Upload error:', error);
   }
@@ -134,7 +134,7 @@ const resetUpload = () => {
   videoMeta.value = { title: '', description: '', tags: [], privacyStatus: 'private', category: 'default' };
   selectedPlatforms.value = [];
   currentStep.value = 1;
-  reset();
+  resetUploadState();
 };
 </script>
 

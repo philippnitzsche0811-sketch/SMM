@@ -1,92 +1,66 @@
 import { ref } from 'vue';
-import axios from 'axios';
 import { useToast } from 'primevue/usetoast';
+import { useAuthStore } from '@/stores/authStore';
+import api from '@/services/api';
 import type { VideoMetadata, VideoUploadResponse, UploadResult } from '@/types/video.types';
 
 export function useUpload() {
-  const toast = useToast();
-  const isUploading = ref(false);
+  const toast     = useToast();
+  const authStore = useAuthStore();
+
+  const isUploading   = ref(false);
   const uploadProgress = ref(0);
-  const uploadResults = ref<UploadResult[]>([]);
+  const uploadResults  = ref<UploadResult[]>([]);
 
   const uploadVideo = async (
     file: File,
     metadata: VideoMetadata,
     platforms: string[]
   ): Promise<VideoUploadResponse | null> => {
-    isUploading.value = true;
+    const userId = authStore.user?.id;
+    if (!userId) {
+      toast.add({ severity: 'error', summary: 'Error', detail: 'Not logged in', life: 4000 });
+      return null;
+    }
+
+    isUploading.value   = true;
     uploadProgress.value = 0;
-    uploadResults.value = [];
+    uploadResults.value  = [];
 
     try {
       const formData = new FormData();
-      formData.append('file', file);
+      formData.append('user_id', userId);
+      formData.append('video', file);
       formData.append('title', metadata.title);
-      
-      if (metadata.description) {
-        formData.append('description', metadata.description);
-      }
-      
-      if (metadata.tags && metadata.tags.length > 0) {
-        formData.append('tags', metadata.tags.join(','));
-      }
-      
-      if (metadata.privacyStatus) {
-        formData.append('privacy', metadata.privacyStatus);
-      }
-      
-      if (metadata.category) {
-        formData.append('category', metadata.category);
-      }
-      
-      formData.append('platforms', JSON.stringify(platforms));
+      if (metadata.description) formData.append('description', metadata.description);
+      if (metadata.tags?.length)  formData.append('tags', metadata.tags.join(','));
+      if (metadata.privacyStatus) formData.append('privacy_status', metadata.privacyStatus);
+      formData.append('platforms', platforms.join(','));
 
-      const response = await axios.post<VideoUploadResponse>('/upload', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-        onUploadProgress: (progressEvent) => {
-          if (progressEvent.total) {
-            uploadProgress.value = Math.round(
-              (progressEvent.loaded * 100) / progressEvent.total
-            );
-          }
+      const response = await api.post<VideoUploadResponse>('/api/upload/upload_video', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+        onUploadProgress: (e) => {
+          if (e.total) uploadProgress.value = Math.round((e.loaded * 100) / e.total);
         },
       });
 
-      if (response.data.results) {
-        uploadResults.value = response.data.results;
-      }
+      if (response.data.results) uploadResults.value = response.data.results;
 
-      toast.add({
-        severity: 'success',
-        summary: 'Upload erfolgreich',
-        detail: response.data.message || 'Dein Video wurde hochgeladen',
-        life: 3000,
-      });
-
+      toast.add({ severity: 'success', summary: 'Upload started', detail: `"${metadata.title}" is being uploaded`, life: 4000 });
       return response.data;
     } catch (error: any) {
-      const errorMessage = error.response?.data?.detail || 'Upload fehlgeschlagen';
-      
-      toast.add({
-        severity: 'error',
-        summary: 'Upload fehlgeschlagen',
-        detail: errorMessage,
-        life: 5000,
-      });
-      
+      toast.add({ severity: 'error', summary: 'Upload failed', detail: error.response?.data?.detail || 'Upload failed', life: 5000 });
       return null;
     } finally {
-      isUploading.value = false;
+      isUploading.value   = false;
       uploadProgress.value = 0;
     }
   };
 
   const resetUpload = () => {
-    isUploading.value = false;
+    isUploading.value   = false;
     uploadProgress.value = 0;
-    uploadResults.value = [];
+    uploadResults.value  = [];
   };
 
   return {
