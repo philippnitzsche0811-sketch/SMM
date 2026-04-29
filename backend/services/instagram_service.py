@@ -8,7 +8,7 @@ import time
 
 logger = logging.getLogger(__name__)
 
-GRAPH_BASE = "https://graph.facebook.com/v21.0"
+GRAPH_BASE = "https://graph.instagram.com/v21.0"
 UPLOAD_URL = "https://rupload.facebook.com/ig-api-upload"
 
 
