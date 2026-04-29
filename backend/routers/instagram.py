@@ -138,9 +138,12 @@ async def instagram_oauth_callback(request: FastAPIRequest):
 
         # Exchange code for short-lived token
         access_token, ig_user_id = await exchange_instagram_code_for_token(code)
+        logger.info(f"Short-lived token obtained, ig_user_id={ig_user_id}, token_prefix={access_token[:20] if access_token else 'EMPTY'}")
 
         # Convert to long-lived token (60 days)
         long_lived_token = await get_long_lived_token(access_token)
+        is_long = long_lived_token != access_token
+        logger.info(f"Token after long-lived exchange: is_long_lived={is_long}, prefix={long_lived_token[:20] if long_lived_token else 'EMPTY'}")
 
         # Save to token storage
         token_storage.save_instagram_credentials(user_id, long_lived_token, ig_user_id)
