@@ -1,15 +1,16 @@
 """
-Instagram Upload Service (Reels via Graph API - resumable binary upload)
+Instagram Upload Service (Reels via Graph API - URL-based)
 """
 import requests
 import logging
 from pathlib import Path
 import time
 
+from config import settings
+
 logger = logging.getLogger(__name__)
 
 GRAPH_BASE = "https://graph.instagram.com/v21.0"
-UPLOAD_URL = "https://rupload.facebook.com/ig-api-upload"
 
 
 def instagram_upload_video(
@@ -28,24 +29,15 @@ def instagram_upload_video(
             logger.warning("Caption zu lang, wird gekuerzt")
             caption = caption[:2197] + "..."
 
-        logger.info("Instagram Reel-Upload startet (resumable binary)...")
+        video_url = f"{settings.BACKEND_URL}/api/videos/temp/{video_file.name}"
+        logger.info(f"Instagram Reel-Upload startet (video_url={video_url})")
 
-        upload_id = _init_resumable_upload(
+        container_id = _create_reel_container(
             ig_user_id=ig_user_id,
             access_token=access_token,
-            video_file=video_file,
+            video_url=video_url,
             caption=caption,
             share_to_feed=share_to_feed,
-        )
-        logger.info(f"Resumable Upload initialisiert (ID: {upload_id})")
-
-        _upload_binary(upload_id, video_file)
-        logger.info("Binary-Upload abgeschlossen")
-
-        container_id = _create_reel_container_from_upload(
-            ig_user_id=ig_user_id,
-            access_token=access_token,
-            upload_id=upload_id,
         )
         logger.info(f"Container erstellt (ID: {container_id})")
 
@@ -74,17 +66,17 @@ def instagram_upload_video(
         raise
 
 
-def _init_resumable_upload(
+def _create_reel_container(
     ig_user_id: str,
     access_token: str,
-    video_file: Path,
+    video_url: str,
     caption: str,
     share_to_feed: bool,
 ) -> str:
     url = f"{GRAPH_BASE}/{ig_user_id}/media"
     params = {
         "media_type": "REELS",
-        "upload_type": "resumable",
+        "video_url": video_url,
         "share_to_feed": "true" if share_to_feed else "false",
         "access_token": access_token,
     }
@@ -94,66 +86,8 @@ def _init_resumable_upload(
     response = requests.post(url, params=params, timeout=30)
 
     if not response.ok:
-        logger.error(f"Init {response.status_code}: {response.text}")
-        token_error = False
-        try:
-            err = response.json().get("error", {})
-            if err.get("code") == 190:
-                token_error = True
-        except Exception:
-            pass
-        if token_error:
-            raise ValueError(
-                "Instagram-Token abgelaufen oder widerrufen. "
-                "Bitte Instagram in den Plattform-Einstellungen trennen und neu verbinden."
-            )
-        response.raise_for_status()
-
-    result = response.json()
-    logger.info(f"Init Response: {result}")
-
-    if "upload_id" not in result:
-        raise ValueError(f"Ungueltige Init-Response: {result}")
-
-    return result["upload_id"]
-
-
-def _upload_binary(upload_id: str, video_file: Path) -> None:
-    url = f"{UPLOAD_URL}/v21.0/{upload_id}"
-    
-    file_size = video_file.stat().st_size
-    video_data = video_file.read_bytes()
-
-    headers = {
-        "Offset": "0",
-        "Content-Length": str(file_size),
-        "Content-Type": "application/octet-stream",
-    }
-
-    response = requests.post(url, data=video_data, headers=headers, timeout=120)
-
-    if not response.ok:
-        logger.error(f"Binary upload {response.status_code}: {response.text}")
-        response.raise_for_status()
-
-
-def _create_reel_container_from_upload(
-    ig_user_id: str,
-    access_token: str,
-    upload_id: str,
-) -> str:
-    url = f"{GRAPH_BASE}/{ig_user_id}/media"
-    params = {
-        "media_type": "REELS",
-        "upload_type": "resumable",
-        "upload_id": upload_id,
-        "access_token": access_token,
-    }
-
-    response = requests.post(url, params=params, timeout=30)
-
-    if not response.ok:
         logger.error(f"Container {response.status_code}: {response.text}")
+        _check_token_error(response)
         response.raise_for_status()
 
     result = response.json()
@@ -226,3 +160,18 @@ def _publish_reel_container(
         raise ValueError(f"Ungueltige Publish-Response: {result}")
 
     return result["id"]
+
+
+def _check_token_error(response: requests.Response) -> None:
+    token_error = False
+    try:
+        err = response.json().get("error", {})
+        if err.get("code") == 190:
+            token_error = True
+    except Exception:
+        pass
+    if token_error:
+        raise ValueError(
+            "Instagram-Token abgelaufen oder widerrufen. "
+            "Bitte Instagram in den Plattform-Einstellungen trennen und neu verbinden."
+        )
