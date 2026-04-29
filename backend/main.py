@@ -1,7 +1,7 @@
 ﻿import os
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.responses import FileResponse, PlainTextResponse, Response
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, PlainTextResponse
 import logging
 from config import settings
 from models.database import init_db,SessionLocal, UserModel
@@ -35,13 +35,27 @@ async def robots_txt():
     return PlainTextResponse("User-agent: *\nAllow: /\n")
 
 
-@app.get("/api/videos/temp/{filename}", include_in_schema=False)
-async def serve_temp_video(filename: str):
-    # Prevent path traversal
+@app.api_route("/api/videos/temp/{filename}", methods=["GET", "HEAD"], include_in_schema=False)
+async def serve_temp_video(filename: str, request: Request):
     safe_name = os.path.basename(filename)
     file_path = os.path.join(settings.TEMP_DIR, safe_name)
+
     if not os.path.isfile(file_path):
         raise HTTPException(status_code=404, detail="File not found")
+
+    # HEAD: nur Headers zurückgeben (kein Body) – für Instagram/Meta-Crawler
+    if request.method == "HEAD":
+        file_size = os.path.getsize(file_path)
+        return Response(
+            headers={
+                "content-type": "video/mp4",
+                "content-length": str(file_size),
+                "accept-ranges": "bytes",
+                "cache-control": "public, max-age=3600",
+                "access-control-allow-origin": "*",
+            }
+        )
+
     return FileResponse(
         path=file_path,
         media_type="video/mp4",
