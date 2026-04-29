@@ -82,19 +82,16 @@ def _init_resumable_upload(
     share_to_feed: bool,
 ) -> str:
     url = f"{GRAPH_BASE}/{ig_user_id}/media"
-    data = {
+    params = {
         "media_type": "REELS",
         "upload_type": "resumable",
         "share_to_feed": "true" if share_to_feed else "false",
+        "access_token": access_token,
     }
     if caption:
-        data["caption"] = caption
+        params["caption"] = caption
 
-    headers = {
-        "Authorization": f"OAuth {access_token}",
-    }
-
-    response = requests.post(url, data=data, headers=headers, timeout=30)
+    response = requests.post(url, params=params, timeout=30)
 
     if not response.ok:
         logger.error(f"Init {response.status_code}: {response.text}")
