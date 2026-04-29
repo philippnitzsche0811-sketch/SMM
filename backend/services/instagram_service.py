@@ -79,14 +79,16 @@ def _create_reel_container(
     share_to_feed: bool,
 ) -> str:
     url = f"{GRAPH_BASE}/{ig_user_id}/media"
-    data = {
+    
+    # FIX: params= statt data= – verhindert URL-Encoding-Probleme
+    params = {
         "media_type": "REELS",
         "video_url": video_url,
         "caption": caption,
         "access_token": access_token,
     }
 
-    response = requests.post(url, data=data, timeout=30)
+    response = requests.post(url, params=params, timeout=30)  # ← params statt data
 
     if not response.ok:
         logger.error(f"Instagram container {response.status_code}: {response.text}")
