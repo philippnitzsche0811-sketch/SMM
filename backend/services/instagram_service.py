@@ -86,9 +86,13 @@ def _upload_to_r2(video_path: str, filename: str) -> tuple[str, str]:
         r2_key,
         ExtraArgs={"ContentType": "video/mp4"},
     )
-    public_url = f"{settings.R2_PUBLIC_URL.rstrip('/')}/{r2_key}"
+    presigned_url = s3.generate_presigned_url(
+        "get_object",
+        Params={"Bucket": settings.R2_BUCKET_NAME, "Key": r2_key},
+        ExpiresIn=3600,
+    )
     logger.info(f"Video auf R2 hochgeladen: {r2_key}")
-    return public_url, r2_key
+    return presigned_url, r2_key
 
 
 def _delete_from_r2(r2_key: str) -> None:
