@@ -49,6 +49,13 @@ class Settings:
     YOUTUBE_DATA_API_KEY: str = os.getenv("youtube_data_api", "")
     AI_MOCK_MODE: bool = os.getenv("AI_MOCK_MODE", "false").lower() == "true"
     
+    # Cloudflare R2
+    R2_ACCOUNT_ID: str = os.getenv("R2_ACCOUNT_ID", "")
+    R2_ACCESS_KEY_ID: str = os.getenv("R2_ACCESS_KEY_ID", "")
+    R2_SECRET_ACCESS_KEY: str = os.getenv("R2_SECRET_ACCESS_KEY", "")
+    R2_BUCKET_NAME: str = os.getenv("R2_BUCKET_NAME", "")
+    R2_PUBLIC_URL: str = os.getenv("R2_PUBLIC_URL", "")
+
     # Encryption
     ENCRYPTION_KEY: str = os.getenv("ENCRYPTION_KEY")
     

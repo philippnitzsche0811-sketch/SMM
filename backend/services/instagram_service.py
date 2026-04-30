@@ -1,6 +1,7 @@
 """
-Instagram Upload Service (Reels via Graph API - URL-based)
+Instagram Upload Service (Reels via Graph API - R2 temp storage)
 """
+import boto3
 import requests
 import logging
 from pathlib import Path
@@ -20,16 +21,17 @@ def instagram_upload_video(
     caption: str = "",
     share_to_feed: bool = True
 ) -> dict:
+    video_file = Path(video_path)
+    if not video_file.exists():
+        raise FileNotFoundError(f"Video nicht gefunden: {video_path}")
+
+    if len(caption) > 2200:
+        logger.warning("Caption zu lang, wird gekuerzt")
+        caption = caption[:2197] + "..."
+
+    r2_key = None
     try:
-        video_file = Path(video_path)
-        if not video_file.exists():
-            raise FileNotFoundError(f"Video nicht gefunden: {video_path}")
-
-        if len(caption) > 2200:
-            logger.warning("Caption zu lang, wird gekuerzt")
-            caption = caption[:2197] + "..."
-
-        video_url = f"{settings.FRONTEND_URL}/temp/{video_file.name}"
+        video_url, r2_key = _upload_to_r2(video_path, video_file.name)
         logger.info(f"Instagram Reel-Upload startet (video_url={video_url})")
 
         container_id = _create_reel_container(
@@ -64,6 +66,44 @@ def instagram_upload_video(
     except Exception as e:
         logger.error(f"Instagram Upload fehlgeschlagen: {e}")
         raise
+    finally:
+        if r2_key:
+            _delete_from_r2(r2_key)
+
+
+def _upload_to_r2(video_path: str, filename: str) -> tuple[str, str]:
+    s3 = boto3.client(
+        "s3",
+        endpoint_url=f"https://{settings.R2_ACCOUNT_ID}.r2.cloudflarestorage.com",
+        aws_access_key_id=settings.R2_ACCESS_KEY_ID,
+        aws_secret_access_key=settings.R2_SECRET_ACCESS_KEY,
+        region_name="auto",
+    )
+    r2_key = f"instagram-temp/{filename}"
+    s3.upload_file(
+        video_path,
+        settings.R2_BUCKET_NAME,
+        r2_key,
+        ExtraArgs={"ContentType": "video/mp4"},
+    )
+    public_url = f"{settings.R2_PUBLIC_URL.rstrip('/')}/{r2_key}"
+    logger.info(f"Video auf R2 hochgeladen: {r2_key}")
+    return public_url, r2_key
+
+
+def _delete_from_r2(r2_key: str) -> None:
+    try:
+        s3 = boto3.client(
+            "s3",
+            endpoint_url=f"https://{settings.R2_ACCOUNT_ID}.r2.cloudflarestorage.com",
+            aws_access_key_id=settings.R2_ACCESS_KEY_ID,
+            aws_secret_access_key=settings.R2_SECRET_ACCESS_KEY,
+            region_name="auto",
+        )
+        s3.delete_object(Bucket=settings.R2_BUCKET_NAME, Key=r2_key)
+        logger.info(f"R2 Datei geloescht: {r2_key}")
+    except Exception as e:
+        logger.warning(f"R2 Loeschen fehlgeschlagen (nicht kritisch): {e}")
 
 
 def _create_reel_container(
@@ -131,7 +171,7 @@ def _wait_for_container_ready(
                 return
             elif status == "ERROR":
                 error_msg = result.get("error_message") or "unknown error"
-                logger.error(f"Instagram container error detail: {result}")
+                logger.error(f"Instagram container error: {result}")
                 raise Exception(f"Container-Verarbeitung fehlgeschlagen: {error_msg}")
 
             time.sleep(5)
