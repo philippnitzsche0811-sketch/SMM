@@ -32,8 +32,8 @@
               placeholder="Your password"
               :feedback="false"
               toggleMask
-              maskIcon="pi pi-eye-slash"
-              unmaskIcon="pi pi-eye"
+              hideIcon="pi pi-eye"
+              showIcon="pi pi-eye-slash"
               class="w-full"
               inputClass="w-full"
             />
@@ -120,7 +120,7 @@ const handleLogin = async () => {
 <style scoped>
 .login-page {
   min-height: 100vh;
-  background: #f8fafc;
+  background: #0b0b0f;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -137,11 +137,12 @@ const handleLogin = async () => {
 }
 
 .login-card {
-  background: #fff;
-  border: 1px solid #e2e8f0;
-  border-radius: 16px;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 18px;
   padding: 2.25rem 2rem 2rem;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+  box-shadow: 0 4px 24px rgba(0,0,0,0.5);
+  backdrop-filter: blur(8px);
 }
 
 .login-header {
@@ -158,9 +159,10 @@ const handleLogin = async () => {
 }
 
 .login-header h1 {
+  font-family: 'Poppins', sans-serif;
   font-size: 1.5rem;
   font-weight: 700;
-  color: #0f172a;
+  color: #f1f5f9;
   margin: 0 0 0.25rem;
   letter-spacing: -0.02em;
 }
@@ -186,7 +188,7 @@ const handleLogin = async () => {
 .form-field label {
   font-size: 0.875rem;
   font-weight: 500;
-  color: #374151;
+  color: #94a3b8;
 }
 
 .forgot-row {
@@ -197,26 +199,28 @@ const handleLogin = async () => {
 
 .forgot-link {
   font-size: 0.8125rem;
-  color: #6366f1;
+  color: #4f7fff;
   text-decoration: none;
 }
 .forgot-link:hover { text-decoration: underline; }
 
 .field-error {
-  color: #dc2626;
+  color: #f87171;
   font-size: 0.78rem;
 }
 
 .submit-btn {
-  background: #0f172a !important;
-  border-color: #0f172a !important;
+  background: #4f7fff !important;
+  border-color: #4f7fff !important;
   color: #fff !important;
   font-weight: 600 !important;
   height: 2.75rem;
+  transition: background 0.2s, box-shadow 0.2s !important;
 }
 .submit-btn:hover:not(:disabled) {
-  background: #1e293b !important;
-  border-color: #1e293b !important;
+  background: #3b6ee8 !important;
+  border-color: #3b6ee8 !important;
+  box-shadow: 0 0 18px rgba(79,127,255,0.35) !important;
 }
 
 .error-msg { margin-top: 0.25rem; }
@@ -224,7 +228,7 @@ const handleLogin = async () => {
 .divider-row {
   margin-top: 1.5rem;
   padding-top: 1.25rem;
-  border-top: 1px solid #f1f5f9;
+  border-top: 1px solid rgba(255,255,255,0.06);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -234,7 +238,7 @@ const handleLogin = async () => {
 }
 
 .register-link {
-  color: #6366f1;
+  color: #4f7fff;
   font-weight: 500;
   text-decoration: none;
 }
@@ -242,25 +246,12 @@ const handleLogin = async () => {
 
 .w-full { width: 100%; }
 
-/* Legal footer sits flush below the card with no gap */
 :deep(.legal-footer) {
   background: transparent;
   border-top: none;
   padding: 1rem 0 0;
 }
-
-:deep(.legal-footer a)       { color: #94a3b8; }
-:deep(.legal-footer a:hover) { color: #475569; }
-:deep(.legal-footer .dot)    { color: #cbd5e1; }
-
-:deep(.p-password) { width: 100%; position: relative; }
-:deep(.p-password input) { width: 100%; padding-right: 2.5rem; }
-:deep(.p-password-toggle-mask-icon) {
-  position: absolute;
-  right: 0.75rem;
-  top: 50%;
-  transform: translateY(-50%);
-  cursor: pointer;
-  color: #94a3b8;
-}
+:deep(.legal-footer a)       { color: #334155; }
+:deep(.legal-footer a:hover) { color: #64748b; }
+:deep(.legal-footer .dot)    { color: #1e293b; }
 </style>

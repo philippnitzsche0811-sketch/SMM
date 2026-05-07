@@ -40,7 +40,7 @@ const pageTitle = computed(() => titles[route.name as string] || 'Decodu-SMM');
 .topbar {
   height: 64px;
   min-height: 64px;
-  background: #ffffff;
+  background: var(--bg-primary);
   border-bottom: 1px solid var(--border-color);
   display: flex;
   align-items: center;
@@ -75,10 +75,12 @@ const pageTitle = computed(() => titles[route.name as string] || 'Decodu-SMM');
 }
 
 .page-title {
+  font-family: 'Poppins', sans-serif;
   font-size: 1.0625rem;
   font-weight: 600;
   color: var(--text-primary);
   margin: 0;
+  letter-spacing: -0.01em;
 }
 
 .topbar-right {

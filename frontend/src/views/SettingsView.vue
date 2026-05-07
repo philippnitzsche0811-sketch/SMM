@@ -28,15 +28,15 @@
         <h3 class="settings-card-title"><i class="pi pi-lock"></i> Change Password</h3>
         <div class="form-field">
           <span class="form-label">Current Password</span>
-          <Password v-model="passwords.current" :feedback="false" toggleMask maskIcon="pi pi-eye-slash" unmaskIcon="pi pi-eye" class="w-full" inputClass="w-full" />
+          <Password v-model="passwords.current" :feedback="false" toggleMask hideIcon="pi pi-eye" showIcon="pi pi-eye-slash" class="w-full" inputClass="w-full" />
         </div>
         <div class="form-field">
           <span class="form-label">New Password</span>
-          <Password v-model="passwords.new" toggleMask maskIcon="pi pi-eye-slash" unmaskIcon="pi pi-eye" class="w-full" inputClass="w-full" />
+          <Password v-model="passwords.new" toggleMask hideIcon="pi pi-eye" showIcon="pi pi-eye-slash" class="w-full" inputClass="w-full" />
         </div>
         <div class="form-field">
           <span class="form-label">Confirm New Password</span>
-          <Password v-model="passwords.confirm" :feedback="false" toggleMask maskIcon="pi pi-eye-slash" unmaskIcon="pi pi-eye" class="w-full" inputClass="w-full" />
+          <Password v-model="passwords.confirm" :feedback="false" toggleMask hideIcon="pi pi-eye" showIcon="pi pi-eye-slash" class="w-full" inputClass="w-full" />
           <small v-if="passwordMismatch" class="field-error">Passwords do not match</small>
         </div>
         <div class="card-footer">
@@ -196,7 +196,14 @@ const confirmDeleteAccount = () => {
 .settings-view { max-width: 900px; margin: 0 auto; }
 
 .page-header { margin-bottom: 1.75rem; }
-.page-header h1 { font-size: 1.625rem; font-weight: 700; color: var(--text-primary); margin: 0 0 0.2rem; }
+.page-header h1 {
+  font-family: 'Poppins', sans-serif;
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0 0 0.2rem;
+  letter-spacing: -0.025em;
+}
 .subtitle { color: var(--text-secondary); font-size: 0.875rem; margin: 0; }
 
 .settings-grid {
@@ -206,7 +213,7 @@ const confirmDeleteAccount = () => {
 }
 
 .settings-card {
-  background: white;
+  background: rgba(255,255,255,0.03);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-lg);
   padding: 1.5rem;
@@ -217,7 +224,9 @@ const confirmDeleteAccount = () => {
 
 .settings-card-title {
   display: flex; align-items: center; gap: 0.5rem;
+  font-family: 'Poppins', sans-serif;
   font-size: 0.9375rem; font-weight: 600; color: var(--text-primary); margin: 0;
+  letter-spacing: -0.01em;
 }
 .settings-card-title.danger { color: var(--danger-color); }
 
@@ -250,7 +259,7 @@ const confirmDeleteAccount = () => {
 .legal-link:hover { background: var(--bg-secondary); color: var(--text-primary); }
 .ml-auto { margin-left: auto; }
 
-.data-card { border-color: #bfdbfe; }
+.data-card { border-color: rgba(59,130,246,0.25); }
 .data-text { font-size: 0.875rem; color: var(--text-secondary); margin: 0; line-height: 1.6; }
 .data-list { display: flex; flex-direction: column; gap: 0.4rem; }
 .data-list-item {
@@ -261,7 +270,7 @@ const confirmDeleteAccount = () => {
 .data-email { color: var(--primary-color); }
 .data-email:hover { text-decoration: underline; }
 
-.danger-card { border-color: #fecaca; }
+.danger-card { border-color: rgba(239,68,68,0.25); }
 .danger-text { font-size: 0.875rem; color: var(--text-secondary); margin: 0; }
 
 @media (max-width: 768px) {

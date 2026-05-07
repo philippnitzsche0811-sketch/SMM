@@ -129,8 +129,8 @@ const openFilePicker = () => fileInput.value?.click();
 
 .drop-zone.has-file {
   border-style: solid;
-  border-color: #10b981;
-  background: white;
+  border-color: rgba(16,185,129,0.4);
+  background: rgba(16,185,129,0.04);
   padding: 1.5rem;
   align-items: stretch;
 }

@@ -6,14 +6,13 @@
         <h1>My Videos</h1>
         <p class="subtitle">{{ videos.length }} video{{ videos.length !== 1 ? 's' : '' }} total</p>
       </div>
-      <Button label="Upload Video" icon="pi pi-upload" @click="router.push('/upload')" />
     </div>
 
     <!-- Stats -->
     <div class="stats-row">
       <div class="stat-card">
-        <div class="stat-icon-wrap" style="background:#eef2ff">
-          <i class="pi pi-video" style="color:#6366f1"></i>
+        <div class="stat-icon-wrap" style="background:rgba(79,127,255,0.12);border:1px solid rgba(79,127,255,0.2)">
+          <i class="pi pi-video" style="color:#4f7fff"></i>
         </div>
         <div>
           <div class="stat-value">{{ videos.length }}</div>
@@ -21,7 +20,7 @@
         </div>
       </div>
       <div class="stat-card">
-        <div class="stat-icon-wrap" style="background:#ecfdf5">
+        <div class="stat-icon-wrap" style="background:rgba(16,185,129,0.12);border:1px solid rgba(16,185,129,0.2)">
           <i class="pi pi-share-alt" style="color:#10b981"></i>
         </div>
         <div>
@@ -30,7 +29,7 @@
         </div>
       </div>
       <div class="stat-card">
-        <div class="stat-icon-wrap" style="background:#eff6ff">
+        <div class="stat-icon-wrap" style="background:rgba(59,130,246,0.12);border:1px solid rgba(59,130,246,0.2)">
           <i class="pi pi-check-circle" style="color:#3b82f6"></i>
         </div>
         <div>
@@ -39,7 +38,7 @@
         </div>
       </div>
       <div class="stat-card">
-        <div class="stat-icon-wrap" style="background:#fffbeb">
+        <div class="stat-icon-wrap" style="background:rgba(245,158,11,0.12);border:1px solid rgba(245,158,11,0.2)">
           <i class="pi pi-clock" style="color:#f59e0b"></i>
         </div>
         <div>
@@ -321,7 +320,14 @@ onMounted(async () => {
   align-items: flex-start;
   margin-bottom: 1.5rem;
 }
-.dashboard-header h1 { font-size: 1.625rem; font-weight: 700; color: var(--text-primary); margin: 0 0 0.2rem; }
+.dashboard-header h1 {
+  font-family: 'Poppins', sans-serif;
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0 0 0.2rem;
+  letter-spacing: -0.025em;
+}
 .subtitle { color: var(--text-secondary); font-size: 0.875rem; margin: 0; }
 
 /* Stats */
@@ -333,14 +339,33 @@ onMounted(async () => {
 }
 
 .stat-card {
-  background: white;
+  background: rgba(255,255,255,0.03);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-lg);
   padding: 1.125rem 1.25rem;
   display: flex;
   align-items: center;
   gap: 0.875rem;
+  transition: border-color 0.2s, box-shadow 0.2s, transform 0.2s;
+  position: relative;
+  overflow: hidden;
 }
+/* Subtle gradient shimmer at the top of each card */
+.stat-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(79,127,255,0.35), transparent);
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+.stat-card:hover {
+  border-color: rgba(79,127,255,0.3);
+  box-shadow: 0 4px 24px rgba(79,127,255,0.09);
+  transform: translateY(-2px);
+}
+.stat-card:hover::before { opacity: 1; }
 
 .stat-icon-wrap {
   width: 44px;
@@ -358,7 +383,7 @@ onMounted(async () => {
 
 /* Video card */
 .videos-card {
-  background: white;
+  background: rgba(255,255,255,0.03);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-lg);
   overflow: hidden;
@@ -372,7 +397,13 @@ onMounted(async () => {
   border-bottom: 1px solid var(--border-color);
 }
 
-.videos-title { font-size: 0.9375rem; font-weight: 600; color: var(--text-primary); }
+.videos-title {
+  font-family: 'Poppins', sans-serif;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  letter-spacing: -0.01em;
+}
 .search-input { width: 220px; }
 
 /* Table */
@@ -392,9 +423,9 @@ onMounted(async () => {
   font-size: 0.72rem; font-weight: 600; text-transform: capitalize;
   background: var(--bg-tertiary); color: var(--text-secondary);
 }
-.platform-badge.youtube   { background: #fff5f5; color: #ef4444; }
-.platform-badge.tiktok    { background: #f8fafc; color: #334155; }
-.platform-badge.instagram { background: #fdf2f8; color: #ec4899; }
+.platform-badge.youtube   { background: rgba(239,68,68,0.12);  color: #f87171; }
+.platform-badge.tiktok    { background: rgba(255,255,255,0.07); color: #cbd5e1; }
+.platform-badge.instagram { background: rgba(236,72,153,0.12); color: #f9a8d4; }
 
 .privacy-badge { display: flex; align-items: center; gap: 0.35rem; font-size: 0.875rem; color: var(--text-secondary); }
 .action-buttons { display: flex; gap: 0.2rem; }

@@ -265,7 +265,14 @@ onMounted(async () => {
 .platforms-view { max-width: 1100px; margin: 0 auto; }
 
 .page-header { margin-bottom: 1.75rem; }
-.page-header h1 { font-size: 1.625rem; font-weight: 700; color: var(--text-primary); margin: 0 0 0.2rem; }
+.page-header h1 {
+  font-family: 'Poppins', sans-serif;
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0 0 0.2rem;
+  letter-spacing: -0.025em;
+}
 .subtitle { color: var(--text-secondary); font-size: 0.875rem; margin: 0; }
 
 .loading-state { display: flex; justify-content: center; padding: 4rem; }
@@ -277,7 +284,7 @@ onMounted(async () => {
 }
 
 .platform-card {
-  background: white;
+  background: rgba(255,255,255,0.03);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-xl);
   padding: 1.5rem;
@@ -288,8 +295,8 @@ onMounted(async () => {
 }
 
 .platform-card.connected {
-  border-color: #bbf7d0;
-  box-shadow: 0 0 0 3px #f0fdf4;
+  border-color: rgba(16,185,129,0.35);
+  box-shadow: 0 0 20px rgba(16,185,129,0.08);
 }
 
 .platform-card-header {
@@ -303,12 +310,12 @@ onMounted(async () => {
   display: flex; align-items: center; justify-content: center;
   font-size: 1.375rem; flex-shrink: 0;
 }
-.platform-brand.youtube   { background: #fff5f5; color: #ef4444; }
-.platform-brand.tiktok    { background: #f8fafc; color: #1e293b; }
-.platform-brand.instagram { background: #fdf2f8; color: #ec4899; }
+.platform-brand.youtube   { background: rgba(239,68,68,0.12);  color: #f87171; border: 1px solid rgba(239,68,68,0.2); }
+.platform-brand.tiktok    { background: rgba(255,255,255,0.07); color: #e2e8f0; border: 1px solid rgba(255,255,255,0.12); }
+.platform-brand.instagram { background: rgba(236,72,153,0.12); color: #f9a8d4; border: 1px solid rgba(236,72,153,0.2); }
 
 .platform-info { flex: 1; }
-.platform-info h3 { margin: 0 0 0.2rem; font-size: 1rem; font-weight: 600; color: var(--text-primary); }
+.platform-info h3 { margin: 0 0 0.2rem; font-family: 'Poppins', sans-serif; font-size: 1rem; font-weight: 600; color: var(--text-primary); }
 .platform-info p  { margin: 0; font-size: 0.8125rem; color: var(--text-secondary); }
 
 .platform-status {
@@ -316,8 +323,8 @@ onMounted(async () => {
   font-size: 0.78rem; font-weight: 600; white-space: nowrap;
   padding: 0.25rem 0.6rem; border-radius: 99px;
 }
-.status-connected    { background: #dcfce7; color: #16a34a; }
-.status-disconnected { background: var(--bg-tertiary); color: var(--text-disabled); }
+.status-connected    { background: rgba(16,185,129,0.12); color: #6ee7b7; border: 1px solid rgba(16,185,129,0.25); }
+.status-disconnected { background: rgba(255,255,255,0.05); color: var(--text-disabled); border: 1px solid var(--border-color); }
 
 .platform-account-info {
   display: flex; align-items: center; gap: 0.5rem;
@@ -337,8 +344,8 @@ onMounted(async () => {
   display: flex; flex-direction: column; align-items: center; gap: 0.5rem;
   color: var(--text-disabled); transition: all 0.2s;
 }
-.file-zone:hover { border-color: var(--primary-400); background: var(--primary-50); }
-.file-zone.has-file { border-color: #10b981; background: #f0fdf4; color: #15803d; }
+.file-zone:hover { border-color: var(--primary-400); background: rgba(79,127,255,0.05); }
+.file-zone.has-file { border-color: rgba(16,185,129,0.4); background: rgba(16,185,129,0.06); color: #6ee7b7; }
 
 @media (max-width: 768px) {
   .platforms-grid { grid-template-columns: 1fr; }

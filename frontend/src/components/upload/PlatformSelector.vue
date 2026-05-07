@@ -132,7 +132,7 @@ onMounted(() => {
   padding: 1.25rem;
   cursor: pointer;
   transition: border-color 0.15s, box-shadow 0.15s, transform 0.15s;
-  background: white;
+  background: rgba(255,255,255,0.03);
   overflow: hidden;
 }
 
@@ -200,19 +200,19 @@ onMounted(() => {
 }
 
 .badge.connected {
-  background: #dcfce7;
-  color: #15803d;
+  background: rgba(16,185,129,0.12);
+  color: #6ee7b7;
 }
 
 .badge.not-connected {
-  background: #fef3c7;
-  color: #b45309;
+  background: rgba(245,158,11,0.12);
+  color: #fcd34d;
 }
 
 .lock-overlay {
   position: absolute;
   inset: 0;
-  background: rgba(255,255,255,0.82);
+  background: rgba(13,13,18,0.88);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -222,7 +222,7 @@ onMounted(() => {
   font-size: 0.875rem;
   color: var(--text-secondary);
   border-radius: calc(var(--radius-lg) - 2px);
-  backdrop-filter: blur(1px);
+  backdrop-filter: blur(2px);
 }
 
 .lock-overlay i { font-size: 1.375rem; }
@@ -238,15 +238,15 @@ onMounted(() => {
 }
 
 .selection-hint.warn {
-  background: #fefce8;
-  border: 1px solid #fde68a;
-  color: #b45309;
+  background: rgba(245,158,11,0.08);
+  border: 1px solid rgba(245,158,11,0.25);
+  color: #fcd34d;
 }
 
 .selection-hint.success {
-  background: #f0fdf4;
-  border: 1px solid #bbf7d0;
-  color: #15803d;
+  background: rgba(16,185,129,0.08);
+  border: 1px solid rgba(16,185,129,0.25);
+  color: #6ee7b7;
 }
 
 @media (max-width: 600px) {

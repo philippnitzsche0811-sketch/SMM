@@ -145,7 +145,7 @@ const resetUpload = () => {
 }
 
 .upload-card {
-  background: white;
+  background: rgba(255,255,255,0.03);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-xl);
   padding: 2rem;
@@ -175,7 +175,7 @@ const resetUpload = () => {
   height: 36px;
   border-radius: 50%;
   border: 2px solid var(--border-color);
-  background: white;
+  background: var(--bg-tertiary);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -188,9 +188,10 @@ const resetUpload = () => {
 }
 
 .step-item.current .step-dot {
-  border-color: var(--primary-500);
-  background: var(--primary-500);
+  border-color: #4f7fff;
+  background: #4f7fff;
   color: white;
+  box-shadow: 0 0 14px rgba(79,127,255,0.4);
 }
 
 .step-item.active .step-dot {
@@ -200,6 +201,7 @@ const resetUpload = () => {
 }
 
 .step-label {
+  font-family: 'Poppins', sans-serif;
   font-size: 0.78rem;
   font-weight: 500;
   color: var(--text-secondary);
@@ -295,15 +297,15 @@ const resetUpload = () => {
 }
 
 .result-item.success {
-  background: #f0fdf4;
-  border: 1px solid #bbf7d0;
-  color: #15803d;
+  background: rgba(16,185,129,0.08);
+  border: 1px solid rgba(16,185,129,0.25);
+  color: #6ee7b7;
 }
 
 .result-item.error {
-  background: #fef2f2;
-  border: 1px solid #fecaca;
-  color: #dc2626;
+  background: rgba(239,68,68,0.08);
+  border: 1px solid rgba(239,68,68,0.25);
+  color: #fca5a5;
 }
 
 .result-item i { font-size: 1.125rem; margin-top: 1px; }
