@@ -81,6 +81,26 @@ const router = createRouter({
           component: () => import('@/views/UploadView.vue'),
         },
         {
+          path: 'upload/simple',
+          name: 'upload-simple',
+          component: () => import('@/views/SimpleUploadView.vue'),
+        },
+        {
+          path: 'upload/smart',
+          name: 'upload-smart',
+          component: () => import('@/views/SmartUploadView.vue'),
+        },
+        {
+          path: 'upload/groups',
+          name: 'upload-groups',
+          component: () => import('@/views/UploadGroupsView.vue'),
+        },
+        {
+          path: 'upload/groups/:id',
+          name: 'upload-group-detail',
+          component: () => import('@/views/UploadGroupsView.vue'),
+        },
+        {
           path: 'uploads',
           name: 'uploads',
           component: () => import('@/views/UploadsView.vue'),

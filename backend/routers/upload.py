@@ -2,13 +2,13 @@
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 from datetime import datetime
-from typing import Optional
+from typing import Optional, List
 import logging
 
 from services.file_service import FileService
 from services.video_service import VideoService
-from models.database import get_db
-from models.video import Video
+from models.database import get_db, VideoModel
+from models.video import Video, VideoStatus
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["Upload"])
@@ -31,6 +31,18 @@ class UpdateVideoRequest(BaseModel):
     description: Optional[str] = None
     tags: Optional[str] = None
     privacy_status: Optional[str] = None
+
+
+class SimpleUploadFinalizeRequest(BaseModel):
+    user_id: str
+    title: str
+    description: str = ""
+    tags: List[str] = []
+    platforms: List[str]
+    privacy_status: str = "private"
+    schedule_type: str = "now"       # "now" | "datetime" | "group"
+    scheduled_at: Optional[str] = None
+    group_id: Optional[str] = None
 
 
 # ================================================================================
@@ -233,6 +245,136 @@ async def update_video(
 # ================================================================================
 # Delete (lokal + Plattformen)
 # ================================================================================
+
+@router.post("/simple")
+async def simple_upload(
+    background_tasks: BackgroundTasks,
+    user_id: str = Form(...),
+    video: UploadFile = File(...),
+    title: str = Form(...),
+    description: str = Form(""),
+    tags: str = Form(""),
+    platforms: str = Form(...),
+    privacy_status: str = Form("private"),
+    schedule_type: str = Form("now"),
+    scheduled_at: str = Form(""),
+    group_id: str = Form(""),
+    upload_mode: str = Form("simple"),
+    db: Session = Depends(get_db),
+):
+    content_type = video.content_type or ""
+    filename = video.filename or ""
+    is_video = content_type.startswith("video/") or any(
+        filename.lower().endswith(ext) for ext in [".mp4", ".mov", ".avi", ".mkv", ".webm"]
+    )
+    if not is_video:
+        raise HTTPException(status_code=400, detail="File is not a video")
+
+    platform_list = [p.strip().lower() for p in platforms.split(",") if p.strip()]
+    tags_list = [t.strip() for t in tags.split(",") if t.strip()]
+    temp_path = await file_service.save_temp_file(video)
+
+    scheduled_dt = None
+    if scheduled_at:
+        try:
+            scheduled_dt = datetime.fromisoformat(scheduled_at)
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Invalid scheduled_at format")
+
+    video_record = video_service.create_video(
+        db=db,
+        user_id=user_id,
+        title=title,
+        description=description,
+        tags=tags_list,
+        platforms=platform_list,
+        privacy_status=privacy_status,
+        file_path=temp_path,
+    )
+    db_video = db.query(VideoModel).filter(VideoModel.id == video_record.id).first()
+    if db_video:
+        db_video.upload_mode = upload_mode
+        db_video.scheduled_at = scheduled_dt
+        db.commit()
+
+    if schedule_type == "now":
+        background_tasks.add_task(
+            video_service.process_video_upload,
+            video_record.id,
+            temp_path,
+        )
+        return {"video_id": video_record.id, "status": "uploading", "schedule_type": "now"}
+
+    if schedule_type == "datetime" and scheduled_dt:
+        return {
+            "video_id": video_record.id,
+            "status": "scheduled",
+            "scheduled_at": scheduled_dt.isoformat(),
+        }
+
+    if schedule_type == "group" and group_id:
+        from services.upload_group_service import add_video_to_group
+        gv = add_video_to_group(db, group_id=group_id, video_id=video_record.id)
+        return {
+            "video_id": video_record.id,
+            "group_video_id": gv.id,
+            "status": "queued",
+            "scheduled_at": gv.scheduled_at.isoformat() if gv.scheduled_at else None,
+        }
+
+    raise HTTPException(status_code=400, detail="Invalid schedule_type or missing parameters")
+
+
+@router.post("/finalize/{video_id}")
+async def finalize_upload(
+    video_id: str,
+    request: SimpleUploadFinalizeRequest,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db),
+):
+    video = db.query(VideoModel).filter(VideoModel.id == video_id).first()
+    if not video:
+        raise HTTPException(status_code=404, detail="Video not found")
+    if video.user_id != request.user_id:
+        raise HTTPException(status_code=403, detail="Not authorized")
+
+    video.title = request.title
+    video.description = request.description
+    video.tags = request.tags
+    video.platforms = request.platforms
+    video.privacy_status = request.privacy_status
+    video.updated_at = datetime.now()
+    db.commit()
+
+    if request.schedule_type == "now":
+        background_tasks.add_task(
+            video_service.process_video_upload,
+            video_id,
+            video.file_path,
+        )
+        return {"video_id": video_id, "status": "uploading"}
+
+    if request.schedule_type == "datetime" and request.scheduled_at:
+        try:
+            scheduled_dt = datetime.fromisoformat(request.scheduled_at)
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Invalid scheduled_at format")
+        video.scheduled_at = scheduled_dt
+        db.commit()
+        return {"video_id": video_id, "status": "scheduled", "scheduled_at": scheduled_dt.isoformat()}
+
+    if request.schedule_type == "group" and request.group_id:
+        from services.upload_group_service import add_video_to_group
+        gv = add_video_to_group(db, group_id=request.group_id, video_id=video_id)
+        return {
+            "video_id": video_id,
+            "group_video_id": gv.id,
+            "status": "queued",
+            "scheduled_at": gv.scheduled_at.isoformat() if gv.scheduled_at else None,
+        }
+
+    raise HTTPException(status_code=400, detail="Invalid schedule_type")
+
 
 @router.delete("/video/{video_id}")
 async def delete_video(

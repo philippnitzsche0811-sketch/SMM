@@ -6,8 +6,10 @@ import logging
 from config import settings
 from models.database import init_db,SessionLocal, UserModel
 from routers import youtube, tiktok, instagram, upload, user, static_pages, auth
+from routers.upload_groups import router as upload_groups_router
+from routers.smart_upload import router as smart_upload_router
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from routers.optimizer import router as optimizer_router
 
 
@@ -107,7 +109,9 @@ app.include_router(instagram.router, prefix="/api/instagram")
 app.include_router(upload.router, prefix="/api/upload")
 app.include_router(user.router, prefix="/api/user")
 app.include_router(static_pages.router)
-app.include_router(optimizer_router) 
+app.include_router(optimizer_router)
+app.include_router(upload_groups_router, prefix="/api/upload-groups")
+app.include_router(smart_upload_router, prefix="/api/smart-upload")
 # Health Check
 @app.get("/health")
 async def health_check():
@@ -128,6 +132,62 @@ async def root():
         "health": "/health",
         "environment": settings.ENVIRONMENT
     }
+@scheduler.scheduled_job("interval", minutes=5)
+async def process_scheduled_videos_job():
+    """Upload videos that have a scheduled_at in the past and are still pending."""
+    from models.database import VideoModel
+    from services.video_service import VideoService
+    db = SessionLocal()
+    try:
+        now = datetime.now(timezone.utc)
+        due = (
+            db.query(VideoModel)
+            .filter(
+                VideoModel.status == "pending",
+                VideoModel.scheduled_at != None,
+                VideoModel.scheduled_at <= now,
+                VideoModel.file_path != None,
+            )
+            .all()
+        )
+        for v in due:
+            logger.info(f"⏰ Scheduled upload: {v.id}")
+            await VideoService.process_scheduled_video(v.id, v.file_path)
+    except Exception as e:
+        logger.error(f"❌ process_scheduled_videos_job failed: {e}")
+    finally:
+        db.close()
+
+
+@scheduler.scheduled_job("interval", minutes=30)
+async def process_upload_groups_job():
+    """Process due group videos."""
+    from services.upload_group_service import get_due_group_videos, mark_video_uploading, mark_video_uploaded, mark_video_failed
+    from services.video_service import VideoService
+    from models.database import VideoModel
+    db = SessionLocal()
+    try:
+        due = get_due_group_videos(db)
+        for gv in due:
+            video = db.query(VideoModel).filter(VideoModel.id == gv.video_id).first()
+            if not video or not video.file_path:
+                logger.warning(f"⚠️ Group video {gv.id} has no file_path – skipping")
+                mark_video_failed(db, gv.id)
+                continue
+            logger.info(f"⏰ Group upload: video={gv.video_id} group={gv.group_id}")
+            mark_video_uploading(db, gv.id)
+            try:
+                await VideoService.process_scheduled_video(gv.video_id, video.file_path)
+                mark_video_uploaded(db, gv.id)
+            except Exception as e:
+                logger.error(f"❌ Group video {gv.id} upload failed: {e}")
+                mark_video_failed(db, gv.id)
+    except Exception as e:
+        logger.error(f"❌ process_upload_groups_job failed: {e}")
+    finally:
+        db.close()
+
+
 @scheduler.scheduled_job("interval", hours=1)
 def cleanup_unverified_accounts():
     db = SessionLocal()

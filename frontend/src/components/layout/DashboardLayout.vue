@@ -21,7 +21,12 @@ import LegalFooter from './LegalFooter.vue';
 
 const sidebarOpen = ref(false);
 const route = useRoute();
-const routeName = computed(() => String(route.name || 'dashboard').toLowerCase());
+const routeName = computed(() => {
+  const name = String(route.name || 'dashboard').toLowerCase();
+  // Map sub-upload routes to their parent for gradient purposes
+  if (name.startsWith('upload')) return 'upload';
+  return name;
+});
 </script>
 
 <style scoped>

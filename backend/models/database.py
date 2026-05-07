@@ -1,5 +1,5 @@
 # models/database.py
-from sqlalchemy import create_engine, Column, String, Boolean, DateTime, JSON, Text, ForeignKey
+from sqlalchemy import create_engine, Column, String, Boolean, DateTime, JSON, Text, ForeignKey, Integer
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from datetime import datetime
@@ -40,7 +40,7 @@ class UserModel(Base):
 
 class VideoModel(Base):
     __tablename__ = "videos"
-    
+
     id = Column(String, primary_key=True, index=True)
     user_id = Column(String, index=True, nullable=False)
     title = Column(String, nullable=False)
@@ -52,6 +52,49 @@ class VideoModel(Base):
     file_path = Column(String, nullable=True)
     upload_results = Column(JSON, nullable=True)
     errors = Column(JSON, nullable=True)
+    scheduled_at = Column(DateTime, nullable=True)
+    upload_mode = Column(String, nullable=True)  # "simple" | "smart" | "group"
+    created_at = Column(DateTime, default=datetime.now)
+    updated_at = Column(DateTime, nullable=True)
+
+
+class UploadGroupModel(Base):
+    __tablename__ = "upload_groups"
+
+    id = Column(String, primary_key=True, index=True)
+    user_id = Column(String, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    name = Column(String, nullable=False)
+    platforms = Column(JSON, nullable=False)
+    privacy_status = Column(String, default="private")
+    category = Column(String, default="entertainment")
+    status = Column(String, default="active")  # active | paused | completed
+    created_at = Column(DateTime, default=datetime.now)
+    updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
+
+
+class GroupVideoModel(Base):
+    __tablename__ = "group_videos"
+
+    id = Column(String, primary_key=True, index=True)
+    group_id = Column(String, ForeignKey("upload_groups.id", ondelete="CASCADE"), nullable=False, index=True)
+    video_id = Column(String, ForeignKey("videos.id", ondelete="CASCADE"), nullable=False)
+    position = Column(Integer, default=0)
+    scheduled_at = Column(DateTime, nullable=True)
+    uploaded_at = Column(DateTime, nullable=True)
+    status = Column(String, default="queued")  # queued | uploading | done | failed
+    ai_context = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=datetime.now)
+
+
+class VideoAnalysisModel(Base):
+    __tablename__ = "video_analyses"
+
+    id = Column(String, primary_key=True, index=True)
+    video_id = Column(String, ForeignKey("videos.id", ondelete="CASCADE"), nullable=False, unique=True)
+    user_id = Column(String, nullable=False, index=True)
+    frames_extracted = Column(Integer, default=0)
+    analysis_result = Column(JSON, nullable=True)
+    status = Column(String, default="pending")  # pending | processing | done | failed
     created_at = Column(DateTime, default=datetime.now)
     updated_at = Column(DateTime, nullable=True)
 

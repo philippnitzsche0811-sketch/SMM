@@ -167,6 +167,130 @@ export const optimizeSuggest = async (data: {
 };
 
 // ==========================================
+// Simple Upload
+// ==========================================
+
+export const simpleUpload = async (formData: FormData, onProgress?: (percent: number) => void) => {
+  const response = await api.post('/api/upload/simple', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+    onUploadProgress: (e) => {
+      if (e.total && onProgress) onProgress(Math.round((e.loaded * 100) / e.total));
+    },
+  });
+  return response.data;
+};
+
+export const finalizeUpload = async (videoId: string, data: {
+  user_id: string;
+  title: string;
+  description: string;
+  tags: string[];
+  platforms: string[];
+  privacy_status: string;
+  schedule_type: string;
+  scheduled_at?: string;
+  group_id?: string;
+}) => {
+  const response = await api.post(`/api/upload/finalize/${videoId}`, data);
+  return response.data;
+};
+
+// ==========================================
+// Smart Upload
+// ==========================================
+
+export const startSmartAnalysis = async (formData: FormData, onProgress?: (percent: number) => void) => {
+  const response = await api.post('/api/smart-upload/analyze', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+    onUploadProgress: (e) => {
+      if (e.total && onProgress) onProgress(Math.round((e.loaded * 100) / e.total));
+    },
+  });
+  return response.data;
+};
+
+export const getSmartAnalysis = async (videoId: string) => {
+  const response = await api.get(`/api/smart-upload/analysis/${videoId}`);
+  return response.data;
+};
+
+export const scheduleSmartUpload = async (videoId: string, data: {
+  user_id: string;
+  platforms: string[];
+  privacy_status: string;
+  schedule_type: string;
+  scheduled_at?: string;
+  group_id?: string;
+  ai_context?: string;
+}) => {
+  const response = await api.post(`/api/smart-upload/schedule/${videoId}`, data);
+  return response.data;
+};
+
+// ==========================================
+// Upload Groups
+// ==========================================
+
+export const createUploadGroup = async (data: {
+  user_id: string;
+  name: string;
+  platforms: string[];
+  privacy_status?: string;
+  category?: string;
+}) => {
+  const response = await api.post('/api/upload-groups/', data);
+  return response.data;
+};
+
+export const listUploadGroups = async (userId: string) => {
+  const response = await api.get('/api/upload-groups/', { params: { user_id: userId } });
+  return response.data;
+};
+
+export const getUploadGroup = async (groupId: string) => {
+  const response = await api.get(`/api/upload-groups/${groupId}`);
+  return response.data;
+};
+
+export const addVideoToGroup = async (groupId: string, formData: FormData, onProgress?: (percent: number) => void) => {
+  const response = await api.post(`/api/upload-groups/${groupId}/videos`, formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+    onUploadProgress: (e) => {
+      if (e.total && onProgress) onProgress(Math.round((e.loaded * 100) / e.total));
+    },
+  });
+  return response.data;
+};
+
+export const removeVideoFromGroup = async (groupId: string, gvId: string, userId: string) => {
+  const response = await api.delete(`/api/upload-groups/${groupId}/videos/${gvId}`, {
+    params: { user_id: userId },
+  });
+  return response.data;
+};
+
+export const patchUploadGroup = async (groupId: string, data: {
+  user_id: string;
+  name?: string;
+  status?: string;
+}) => {
+  const response = await api.patch(`/api/upload-groups/${groupId}`, data);
+  return response.data;
+};
+
+export const deleteUploadGroup = async (groupId: string, userId: string) => {
+  const response = await api.delete(`/api/upload-groups/${groupId}`, {
+    data: { user_id: userId },
+  });
+  return response.data;
+};
+
+export const getGroupSchedulePreview = async (groupId: string) => {
+  const response = await api.get(`/api/upload-groups/${groupId}/schedule-preview`);
+  return response.data;
+};
+
+// ==========================================
 // Health Check
 // ==========================================
 

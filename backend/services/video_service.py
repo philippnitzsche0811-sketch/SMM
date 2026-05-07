@@ -114,6 +114,44 @@ class VideoService:
             logger.warning(f"Could not record upload_performance for {platform}: {exc}")
 
     @staticmethod
+    def create_video_for_group(
+        db: Session,
+        user_id: str,
+        title: str,
+        description: str,
+        tags: List[str],
+        platforms: List[str],
+        privacy_status: str,
+        file_path: Optional[str] = None,
+        scheduled_at=None,
+    ) -> VideoModel:
+        video_id = f"video_{int(datetime.now().timestamp() * 1000)}"
+        db_video = VideoModel(
+            id=video_id,
+            user_id=user_id,
+            title=title,
+            description=description,
+            tags=tags,
+            platforms=platforms,
+            privacy_status=privacy_status,
+            status=VideoStatus.PENDING.value,
+            file_path=file_path,
+            upload_mode="group",
+            scheduled_at=scheduled_at,
+            created_at=datetime.now(),
+        )
+        db.add(db_video)
+        db.commit()
+        db.refresh(db_video)
+        logger.info(f"✅ Group video created: {video_id}")
+        return db_video
+
+    @staticmethod
+    async def process_scheduled_video(video_id: str, file_path: str):
+        """Called by APScheduler to upload a scheduled/group video."""
+        await VideoService.process_video_upload(video_id, file_path)
+
+    @staticmethod
     def delete_video(db: Session, video_id: str):
         video = db.query(VideoModel).filter(VideoModel.id == video_id).first()
         if video:
