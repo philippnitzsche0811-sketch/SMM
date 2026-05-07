@@ -4,6 +4,9 @@
 Central hub for uploading videos to YouTube, TikTok, and Instagram from one interface.
 Users connect their accounts via OAuth, then upload once and the app posts to all selected platforms.
 
+> **Roadmap & geplante Features** → [`ROADMAP.md`](./ROADMAP.md)
+> Neue Features nach einer Planungssession dort eintragen. Format: `[ ]` geplant · `[~]` in Arbeit · `[x]` fertig.
+
 ---
 
 ## Tech Stack
