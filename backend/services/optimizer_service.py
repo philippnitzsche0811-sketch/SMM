@@ -291,7 +291,7 @@ def _get_user_upload_history(db: Session, user_id: str) -> list[dict]:
                 SELECT platform, day_of_week, hour_of_day, status
                 FROM upload_performance
                 WHERE user_id = :uid
-                ORDER BY created_at DESC
+                ORDER BY uploaded_at DESC
                 LIMIT 100
             """),
             {"uid": user_id},
@@ -330,6 +330,10 @@ def _get_user_upload_history(db: Session, user_id: str) -> list[dict]:
 
     except Exception as exc:
         logger.error(f"Error fetching upload history for user {user_id}: {exc}")
+        try:
+            db.rollback()
+        except Exception:
+            pass
         return []
 
 
