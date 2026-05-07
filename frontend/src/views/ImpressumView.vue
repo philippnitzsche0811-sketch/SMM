@@ -23,7 +23,7 @@
       <section>
         <h2>Hinweise zur Website</h2>
         <p>
-          SocialHub ist ein privat betriebenes Tool zur Verwaltung von Social-Media-Uploads.
+          Decodu-SMM ist ein privat betriebenes Tool zur Verwaltung von Social-Media-Uploads.
           Diese Website steht in keiner offiziellen Verbindung mit YouTube (Google LLC),
           TikTok (ByteDance Ltd.) oder Instagram (Meta Platforms, Inc.).
         </p>

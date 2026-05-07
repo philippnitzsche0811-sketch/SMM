@@ -5,8 +5,8 @@
       <!-- Card -->
       <div class="login-card">
         <div class="login-header">
-          <img :src="logoUrl" alt="SocialHub" class="login-logo" />
-          <h1>SocialHub</h1>
+          <img :src="logoUrl" alt="Decodu-SMM" class="login-logo" />
+          <h1>Decodu-SMM</h1>
           <p>Sign in to your account</p>
         </div>
 

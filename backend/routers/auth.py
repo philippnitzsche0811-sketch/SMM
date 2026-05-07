@@ -273,6 +273,78 @@ async def resend_verification(request: ForgotPasswordRequest, db: Session = Depe
 
 
 # ==========================================
+# Dev-only: sofortige Verifikation ohne Email
+# ==========================================
+
+class DevVerifyRequest(BaseModel):
+    email: EmailStr
+
+@router.post("/dev-verify")
+async def dev_verify(request: DevVerifyRequest, db: Session = Depends(get_db)):
+    if not settings.DEBUG:
+        raise HTTPException(403, "Nur im DEBUG-Modus verfügbar")
+
+    user = db.query(UserModel).filter(UserModel.email == request.email).first()
+    if not user:
+        raise HTTPException(404, "User nicht gefunden")
+    if user.is_verified:
+        return {"status": "success", "message": "Account war bereits verifiziert"}
+
+    user.is_verified = True
+    user.verification_token = None
+    user.verification_token_expires = None
+    user.updated_at = datetime.now()
+    db.commit()
+
+    logger.info(f"🛠️  [DEV] Account manuell verifiziert: {user.email}")
+    return {"status": "success", "message": f"{user.email} ist jetzt verifiziert"}
+
+
+class DevConnectRequest(BaseModel):
+    email: EmailStr
+    platform: str  # youtube | tiktok | instagram
+    username: str = "dev_test_account"
+
+@router.post("/dev-connect")
+async def dev_connect(request: DevConnectRequest, db: Session = Depends(get_db)):
+    if not settings.DEBUG:
+        raise HTTPException(403, "Nur im DEBUG-Modus verfügbar")
+
+    valid_platforms = {"youtube", "tiktok", "instagram"}
+    if request.platform not in valid_platforms:
+        raise HTTPException(400, f"Platform muss einer von {valid_platforms} sein")
+
+    user = db.query(UserModel).filter(UserModel.email == request.email).first()
+    if not user:
+        raise HTTPException(404, "User nicht gefunden")
+
+    existing = db.query(PlatformConnection).filter(
+        PlatformConnection.user_id == user.id,
+        PlatformConnection.platform == request.platform
+    ).first()
+
+    if existing:
+        existing.connected = True
+        existing.username = request.username
+        existing.access_token = "dev_mock_token"
+        existing.updated_at = datetime.now()
+    else:
+        conn = PlatformConnection(
+            id=f"conn_{secrets.token_hex(8)}",
+            user_id=user.id,
+            platform=request.platform,
+            connected=True,
+            access_token="dev_mock_token",
+            username=request.username,
+        )
+        db.add(conn)
+
+    db.commit()
+    logger.info(f"🛠️  [DEV] Platform verbunden: {request.platform} für {user.email}")
+    return {"status": "success", "message": f"{request.platform} als '{request.username}' verbunden"}
+
+
+# ==========================================
 # Login
 # ==========================================
 
@@ -313,7 +385,7 @@ async def login(request: LoginRequest, db: Session = Depends(get_db)):
             platforms = db.query(PlatformConnection).filter(
                 PlatformConnection.user_id == user.id,
                 PlatformConnection.connected == True,
-                PlatformConnection.platform != "tiktok_pkce"  # ← NEU
+                PlatformConnection.platform.notin_(["tiktok_pkce", "youtube_temp"])
             ).all()
 
             
@@ -487,7 +559,7 @@ async def get_current_user(
             platforms = db.query(PlatformConnection).filter(
                 PlatformConnection.user_id == user_id,
                 PlatformConnection.connected == True,
-                PlatformConnection.platform != "tiktok_pkce"  # ← NEU
+                PlatformConnection.platform.notin_(["tiktok_pkce", "youtube_temp"])
             ).all()
 
             

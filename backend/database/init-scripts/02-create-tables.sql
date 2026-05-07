@@ -82,4 +82,18 @@ CREATE TRIGGER update_platform_connections_timestamp
     FOR EACH ROW
     EXECUTE FUNCTION update_timestamp();
 
+-- Upload performance tracking (for time optimizer)
+CREATE TABLE IF NOT EXISTS upload_performance (
+    id SERIAL PRIMARY KEY,
+    user_id VARCHAR(255) NOT NULL,
+    platform VARCHAR(50) NOT NULL,
+    uploaded_at TIMESTAMP NOT NULL,
+    day_of_week INTEGER NOT NULL,
+    hour_of_day INTEGER NOT NULL,
+    status VARCHAR(50) DEFAULT 'uploaded'
+);
+
+CREATE INDEX IF NOT EXISTS idx_upload_perf_user ON upload_performance(user_id);
+CREATE INDEX IF NOT EXISTS idx_upload_perf_platform ON upload_performance(platform);
+
 SELECT 'Database schema created successfully' AS status;

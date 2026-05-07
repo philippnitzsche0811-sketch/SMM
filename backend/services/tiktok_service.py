@@ -6,6 +6,8 @@ import logging
 from pathlib import Path
 from typing import Optional
 
+from config import settings
+
 logger = logging.getLogger(__name__)
 
 TIKTOK_API_BASE = "https://open.tiktokapis.com"
@@ -18,19 +20,22 @@ def tiktok_upload_video(
     caption: str = "",
     privacy_level: str = "SELF_ONLY"  # SELF_ONLY, MUTUAL_FOLLOW_FRIENDS, PUBLIC_TO_EVERYONE
 ) -> dict:
-    """
-    Lädt ein Video auf TikTok hoch
-    
-    Args:
-        access_token: TikTok Access Token
-        open_id: TikTok Open ID des Users
-        video_path: Pfad zur Video-Datei
-        caption: Video-Caption (max 2200 Zeichen)
-        privacy_level: Privacy-Einstellung
-    
-    Returns:
-        dict: Upload-Response
-    """
+    if settings.UPLOAD_MOCK_MODE:
+        filesize = Path(video_path).stat().st_size if Path(video_path).exists() else 0
+        logger.info("=" * 60)
+        logger.info("[MOCK] TikTok Upload simuliert (UPLOAD_MOCK_MODE=true)")
+        logger.info(f"[MOCK] Caption: {caption[:80]}{'...' if len(caption) > 80 else ''}")
+        logger.info(f"[MOCK] Datei:   {Path(video_path).name} ({filesize:,} bytes)")
+        logger.info(f"[MOCK] Privacy: {privacy_level}")
+        logger.info("[MOCK] ✅ TikTok Upload erfolgreich (kein echter API-Call)")
+        logger.info("=" * 60)
+        return {
+            "publish_id": "mock_tiktok_publish_12345",
+            "status": "uploaded",
+            "message": "[MOCK] Video simuliert verarbeitet",
+            "mock": True,
+        }
+
     try:
         # Validierung
         if not Path(video_path).exists():

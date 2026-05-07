@@ -9,31 +9,37 @@ User types: `/logs backend` or `/logs frontend` or `/logs` (all)
 
 **All services:**
 ```powershell
-docker compose -f docker compose.yml -f docker compose.local.yml logs -f
+docker compose --env-file .env.local -f docker-compose.yml -f docker-compose.local.yml logs -f
 ```
 
-**Backend only (most useful for debugging API errors):**
+**Backend only (most useful — shows upload mock output, API errors, auth issues):**
 ```powershell
-docker compose -f docker compose.yml -f docker compose.local.yml logs -f backend
+docker compose --env-file .env.local -f docker-compose.yml -f docker-compose.local.yml logs -f backend
 ```
 
 **Frontend:**
 ```powershell
-docker compose -f docker compose.yml -f docker compose.local.yml logs -f frontend
+docker compose --env-file .env.local -f docker-compose.yml -f docker-compose.local.yml logs -f frontend
 ```
 
-**Database (service is named 'postgres', not 'db'):**
+**Database:**
 ```powershell
-docker compose -f docker compose.yml -f docker compose.local.yml logs -f postgres
+docker compose --env-file .env.local -f docker-compose.yml -f docker-compose.local.yml logs -f postgres
 ```
 
-**Last 50 lines only (useful for quick check):**
+**Last 50 lines:**
 ```powershell
-docker compose -f docker compose.yml -f docker compose.local.yml logs --tail=50 backend
+docker compose --env-file .env.local -f docker-compose.yml -f docker-compose.local.yml logs --tail=50 backend
 ```
 
 ## What to look for
-- `❌` or `ERROR` lines indicate failures
-- `✅` lines confirm successful operations  
-- TikTok upload errors often show the full API response body
-- JWT errors appear as `401 Unauthorized` in backend logs
+- `[MOCK] ✅` — upload mock ran successfully (UPLOAD_MOCK_MODE=true)
+- `❌` or `ERROR` — something failed
+- `✅` — successful real operation
+- `[MOCK]` lines — mock mode active, no real API calls were made
+- `401 Unauthorized` — JWT or OAuth token issue
+- `422 Unprocessable` — request validation error (check frontend payload)
+
+## Local URLs
+- Backend Swagger: http://localhost:8001/docs
+- Frontend: http://localhost:8080

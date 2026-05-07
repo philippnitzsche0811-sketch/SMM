@@ -48,6 +48,7 @@ class Settings:
     ANTHROPIC_API_KEY: str = os.getenv("anthropic_key", "")
     YOUTUBE_DATA_API_KEY: str = os.getenv("youtube_data_api", "")
     AI_MOCK_MODE: bool = os.getenv("AI_MOCK_MODE", "false").lower() == "true"
+    UPLOAD_MOCK_MODE: bool = os.getenv("UPLOAD_MOCK_MODE", "false").lower() == "true"
     
     # Cloudflare R2
     R2_ACCOUNT_ID: str = os.getenv("R2_ACCOUNT_ID", "")

@@ -2,8 +2,8 @@
   <div class="legal-page">
     <div class="legal-container">
       <div class="app-brand">
-        <img :src="logoUrl" alt="SocialHub" class="brand-logo" />
-        <span class="brand-name">SocialHub</span>
+        <img :src="logoUrl" alt="Decodu-SMM" class="brand-logo" />
+        <span class="brand-name">Decodu-SMM</span>
       </div>
 
       <h1>Terms of Service</h1>
@@ -11,8 +11,8 @@
       <section>
         <h2>1. Acceptance of Terms</h2>
         <p>
-          By accessing and using SocialHub ("Service"), you accept and agree to be bound by these terms.
-          If you do not agree, please do not use SocialHub.
+          By accessing and using Decodu-SMM ("Service"), you accept and agree to be bound by these terms.
+          If you do not agree, please do not use Decodu-SMM.
         </p>
       </section>
 

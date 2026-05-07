@@ -12,9 +12,9 @@
     <!-- Logo -->
     <div class="sidebar-logo">
       <div class="logo-mark">
-        <img :src="logoUrl" alt="SocialHub" class="logo-img" />
+        <img :src="logoUrl" alt="Decodu-SMM" class="logo-img" />
       </div>
-      <span class="logo-name" v-show="!isCollapsed">SocialHub</span>
+      <span class="logo-name" v-show="!isCollapsed">Decodu-SMM</span>
       <button
         class="collapse-btn"
         @click="isCollapsed = !isCollapsed"

@@ -33,7 +33,7 @@ const titles: Record<string, string> = {
   settings:  'Settings',
 };
 
-const pageTitle = computed(() => titles[route.name as string] || 'SocialHub');
+const pageTitle = computed(() => titles[route.name as string] || 'Decodu-SMM');
 </script>
 
 <style scoped>

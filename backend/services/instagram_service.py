@@ -21,6 +21,27 @@ def instagram_upload_video(
     caption: str = "",
     share_to_feed: bool = True
 ) -> dict:
+    if settings.UPLOAD_MOCK_MODE:
+        video_file = Path(video_path)
+        filesize = video_file.stat().st_size if video_file.exists() else 0
+        logger.info("=" * 60)
+        logger.info("[MOCK] Instagram Upload simuliert (UPLOAD_MOCK_MODE=true)")
+        logger.info(f"[MOCK] Caption:       {caption[:80]}{'...' if len(caption) > 80 else ''}")
+        logger.info(f"[MOCK] Datei:         {video_file.name} ({filesize:,} bytes)")
+        logger.info(f"[MOCK] share_to_feed: {share_to_feed}")
+        logger.info("[MOCK] Schritt 1/3: R2-Upload übersprungen")
+        logger.info("[MOCK] Schritt 2/3: Container-Erstellung übersprungen")
+        logger.info("[MOCK] Schritt 3/3: Publish übersprungen")
+        logger.info("[MOCK] ✅ Instagram Reel erfolgreich (kein echter API-Call)")
+        logger.info("=" * 60)
+        return {
+            "media_id": "mock_instagram_media_67890",
+            "container_id": "mock_container_11111",
+            "status": "published",
+            "message": "[MOCK] Reel simuliert veroeffentlicht",
+            "mock": True,
+        }
+
     video_file = Path(video_path)
     if not video_file.exists():
         raise FileNotFoundError(f"Video nicht gefunden: {video_path}")

@@ -2,15 +2,15 @@
   <div class="legal-page">
     <div class="legal-container">
       <div class="app-brand">
-        <img :src="logoUrl" alt="SocialHub" class="brand-logo" />
-        <span class="brand-name">SocialHub</span>
+        <img :src="logoUrl" alt="Decodu-SMM" class="brand-logo" />
+        <span class="brand-name">Decodu-SMM</span>
       </div>
 
       <h1>Privacy Policy</h1>
 
       <section>
         <h2>1. Information We Collect</h2>
-        <p>When you use SocialHub, we collect:</p>
+        <p>When you use Decodu-SMM, we collect:</p>
         <ul>
           <li><strong>Account Information:</strong> Email address (for authentication)</li>
           <li><strong>Platform Tokens:</strong> OAuth tokens for YouTube, TikTok, Instagram</li>

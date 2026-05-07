@@ -7,8 +7,16 @@
       "Bash(git add*)",
       "Bash(git commit*)",
       "Bash(git push*)",
-      "Bash(docker-compose*logs*)",
-      "Bash(npm run *)"
+      "Bash(git branch*)",
+      "Bash(git checkout*)",
+      "Bash(docker compose*)",
+      "Bash(docker-compose*)",
+      "Bash(docker ps*)",
+      "Bash(docker logs*)",
+      "Bash(npm run *)",
+      "Bash(pip install*)",
+      "Bash(python -m pytest*)",
+      "Bash(curl http://localhost:8001*)"
     ]
   }
 }

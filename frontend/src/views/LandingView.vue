@@ -5,8 +5,8 @@
     <nav class="nav">
       <div class="nav-inner">
         <div class="nav-logo">
-          <img :src="logoUrl" alt="SocialHub" class="nav-logo-img" />
-          <span>SocialHub</span>
+          <img :src="logoUrl" alt="Decodu-SMM" class="nav-logo-img" />
+          <span>Decodu-SMM</span>
         </div>
         <div class="nav-links">
           <Button label="Sign In" text class="p-button-sm" @click="router.push('/login')" />
@@ -25,7 +25,7 @@
         </div>
         <h1>Upload once.<br>Post everywhere.</h1>
         <p class="hero-sub">
-          SocialHub lets you manage your video uploads to YouTube, TikTok, and Instagram
+          Decodu-SMM lets you manage your video uploads to YouTube, TikTok, and Instagram
           from a single dashboard. One login, all your platforms.
         </p>
         <div class="hero-cta">
@@ -59,7 +59,7 @@
             <div class="step-number">3</div>
             <div class="step-icon"><i class="pi pi-send"></i></div>
             <h3>Publish everywhere</h3>
-            <p>Select which platforms to post to and hit upload. SocialHub handles the rest — simultaneously publishing to all selected platforms.</p>
+            <p>Select which platforms to post to and hit upload. Decodu-SMM handles the rest — simultaneously publishing to all selected platforms.</p>
           </div>
         </div>
       </div>

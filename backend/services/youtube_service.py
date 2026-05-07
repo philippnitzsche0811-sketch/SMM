@@ -102,20 +102,23 @@ def upload_video_to_youtube(
     tags: list = None,
     privacy_status: str = "private"
 ) -> dict:
-    """
-    LÃ¤dt ein Video auf YouTube hoch
-    
-    Args:
-        credentials: Google OAuth2 Credentials (nicht YouTube Service!)
-        video_path: Pfad zur Video-Datei
-        title: Video-Titel
-        description: Video-Beschreibung
-        tags: Liste von Tags
-        privacy_status: Privacy Status (public/private/unlisted)
-        
-    Returns:
-        Upload-Ergebnis mit Video-ID
-    """
+    if settings.UPLOAD_MOCK_MODE:
+        logger.info("=" * 60)
+        logger.info("[MOCK] YouTube Upload simuliert (UPLOAD_MOCK_MODE=true)")
+        logger.info(f"[MOCK] Titel:   {title}")
+        logger.info(f"[MOCK] Datei:   {video_path}")
+        logger.info(f"[MOCK] Tags:    {tags or []}")
+        logger.info(f"[MOCK] Privacy: {privacy_status}")
+        logger.info("[MOCK] ✅ YouTube Upload erfolgreich (kein echter API-Call)")
+        logger.info("=" * 60)
+        return {
+            "video_id": "mock_youtube_abc123XYZ",
+            "url": "https://www.youtube.com/watch?v=mock_abc123XYZ",
+            "title": title,
+            "privacy_status": privacy_status,
+            "mock": True,
+        }
+
     try:
         logger.info(f"ðŸ“¤ YouTube-Upload startet: {title}")
         
