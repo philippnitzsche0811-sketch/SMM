@@ -27,6 +27,9 @@ class ScheduleSmartRequest(BaseModel):
     scheduled_at: Optional[str] = None
     group_id: Optional[str] = None
     ai_context: Optional[str] = None
+    title: Optional[str] = None
+    description: Optional[str] = None
+    tags: Optional[List[str]] = None
 
 
 # ── Endpoints ─────────────────────────────────────────────────────────────────
@@ -108,9 +111,15 @@ async def schedule_smart_upload(
     if video.user_id != request.user_id:
         raise HTTPException(status_code=403, detail="Not authorized")
 
-    # Update platforms and privacy now that user chose them
+    # Update platforms, privacy, and user-edited metadata
     video.platforms = request.platforms
     video.privacy_status = request.privacy_status
+    if request.title is not None:
+        video.title = request.title
+    if request.description is not None:
+        video.description = request.description
+    if request.tags is not None:
+        video.tags = request.tags
     db.commit()
 
     if request.schedule_type == "now":

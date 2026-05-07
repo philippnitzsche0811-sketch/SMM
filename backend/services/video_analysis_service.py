@@ -151,21 +151,36 @@ async def _call_claude_vision(frames_b64: List[str]) -> dict:
     content.append({
         "type": "text",
         "text": (
-            "Analyze these video frames and return ONLY valid JSON with this structure:\n"
-            '{"overall_score": <1-10 int>, "summary": "<2-3 sentence overview>", '
-            '"pacing_suggestions": ["<suggestion>", ...], '
-            '"content_quality": ["<observation>", ...], '
-            '"cut_suggestions": ["<suggestion>", ...], '
-            '"sound_recommendations": ["<recommendation>", ...]}'
+            "Analyze these video frames and return ONLY valid JSON with this exact structure:\n"
+            "{\n"
+            '  "overall_score": <1-10 int>,\n'
+            '  "summary": "<2-3 sentence overview of what is shown in the video>",\n'
+            '  "pacing_suggestions": ["<actionable suggestion>", ...],\n'
+            '  "content_quality": ["<observation>", ...],\n'
+            '  "cut_suggestions": ["<suggestion>", ...],\n'
+            '  "sound_recommendations": ["<recommendation>", ...],\n'
+            '  "metadata_suggestions": {\n'
+            '    "title_options": [\n'
+            '      "<HOOK: starts with emotion or surprising statement>",\n'
+            '      "<SEO: main keyword early, clear, optimized for search>",\n'
+            '      "<CURIOSITY: creates intrigue or FOMO>"\n'
+            '    ],\n'
+            '    "description": "<SEO-optimized description based on visual content, 150-300 chars>",\n'
+            '    "hashtags": ["<tag1>", "<tag2>", ...]\n'
+            '  }\n'
+            "}\n\n"
+            "The metadata_suggestions must be based on what you ACTUALLY SEE in the frames, "
+            "not generic placeholders."
         ),
     })
 
     response = await _claude.messages.create(
         model="claude-sonnet-4-6",
-        max_tokens=1024,
+        max_tokens=1500,
         system=(
-            "You are a professional video editor and social media content strategist. "
-            "Analyze video frames and give actionable feedback to improve engagement. "
+            "You are a professional video editor AND viral content strategist. "
+            "Analyze video frames: give actionable editing feedback AND generate "
+            "high-CTR metadata (titles, description, hashtags) based on the visual content. "
             "Respond ONLY with valid JSON — no markdown, no explanation."
         ),
         messages=[{"role": "user", "content": content}],
@@ -173,6 +188,7 @@ async def _call_claude_vision(frames_b64: List[str]) -> dict:
 
     raw = response.content[0].text
     result = json.loads(raw)
+    meta = result.get("metadata_suggestions", {})
     return {
         "overall_score": int(result.get("overall_score", 7)),
         "summary": str(result.get("summary", "")),
@@ -180,6 +196,11 @@ async def _call_claude_vision(frames_b64: List[str]) -> dict:
         "content_quality": list(result.get("content_quality", [])),
         "cut_suggestions": list(result.get("cut_suggestions", [])),
         "sound_recommendations": list(result.get("sound_recommendations", [])),
+        "metadata_suggestions": {
+            "title_options": [str(t) for t in meta.get("title_options", [])][:3],
+            "description": str(meta.get("description", "")),
+            "hashtags": [str(h) for h in meta.get("hashtags", [])][:20],
+        },
     }
 
 
@@ -215,6 +236,22 @@ def _mock_analysis_response() -> dict:
             "Consider adding sound effects to emphasize key moments",
             "Normalize audio levels to avoid volume spikes",
         ],
+        "metadata_suggestions": {
+            "title_options": [
+                "I Tried This and It Changed Everything (You Need to See This)",
+                "Complete Guide: How to Get Results Fast in 2025",
+                "Nobody Talks About This Method — Here's Why It Works",
+            ],
+            "description": (
+                "In this video we walk through the complete process step by step. "
+                "Whether you're a beginner or experienced, this breakdown has something for everyone. "
+                "Watch until the end for the key insight most people miss."
+            ),
+            "hashtags": [
+                "tutorial", "howto", "tips", "viral", "trending",
+                "guide", "learn", "content", "socialmedia", "growth",
+            ],
+        },
     }
 
 

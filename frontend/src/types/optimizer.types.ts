@@ -2,6 +2,7 @@
 
 export interface PlatformSuggestion {
   title: string
+  title_options?: string[]  // [hook, seo, curiosity]
   description: string
   tags: string[]
   upload_times: string[] // ISO 8601 UTC strings

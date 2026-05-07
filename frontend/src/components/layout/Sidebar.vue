@@ -83,7 +83,14 @@ const userInitial = computed(() =>
   (authStore.userName || authStore.userEmail || 'U').charAt(0).toUpperCase()
 );
 
-const isActive    = (path: string) => route.path.startsWith(path);
+const isActive = (path: string) => {
+  if (!route.path.startsWith(path)) return false;
+  return !navItems.some(
+    item => item.path !== path &&
+            item.path.startsWith(path + '/') &&
+            route.path.startsWith(item.path),
+  );
+};
 const handleLogout = () => { authStore.logout(); router.push('/'); };
 </script>
 

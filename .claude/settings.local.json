@@ -2,7 +2,15 @@
   "permissions": {
     "allow": [
       "PowerShell(docker compose *)",
-      "Bash(docker exec *)"
+      "Bash(docker exec *)",
+      "PowerShell(Get-ChildItem -Path \"C:\\\\Users\\\\Philipp\\\\SMM\" -Directory | ForEach-Object { $_.FullName })",
+      "PowerShell(Get-ChildItem -Path \"C:\\\\Users\\\\Philipp\\\\SMM\\\\backend\" -Recurse -File | Select-Object -ExpandProperty FullName | ForEach-Object { $_.Replace\\(\"C:\\\\Users\\\\Philipp\\\\SMM\\\\\", \"\"\\) })",
+      "PowerShell(head *)",
+      "PowerShell(Get-ChildItem -Path \"C:\\\\Users\\\\Philipp\\\\SMM\\\\frontend\" -Recurse -File | Select-Object -ExpandProperty FullName | ForEach-Object { $_.Replace\\(\"C:\\\\Users\\\\Philipp\\\\SMM\\\\\", \"\"\\) } | Select-Object -First 60)",
+      "Bash(curl -s http://localhost:8001/docs)",
+      "Bash(curl -s http://localhost:8001/api/upload-groups/?user_id=test)",
+      "Bash(curl *)",
+      "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); paths=[p for p in d['paths'] if 'upload' in p or 'group' in p]; print\\('\\\\n'.join\\(sorted\\(paths\\)\\)\\)\")"
     ]
   }
 }

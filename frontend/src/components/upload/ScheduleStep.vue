@@ -41,7 +41,8 @@
       <label>Select upload group</label>
       <div v-if="groups.length === 0" class="no-groups">
         <i class="pi pi-info-circle"></i>
-        No groups yet. <router-link to="/upload/groups">Create a group</router-link> first.
+        No groups yet.
+        <button class="create-group-link" @click="$emit('create-group')">Create one</button>
       </div>
       <Dropdown
         v-else
@@ -83,6 +84,7 @@ const emit = defineEmits<{
   'update:scheduleType': [value: string];
   'update:scheduledAt': [value: string | null];
   'update:selectedGroupId': [value: string | null];
+  'create-group': [];
 }>();
 
 const minDate = new Date();
@@ -192,7 +194,15 @@ function onDateSelect(date: Date | null) {
   color: var(--text-secondary);
   padding: 0.75rem 0;
 }
-.no-groups a { color: #4f7fff; }
+.create-group-link {
+  background: none;
+  border: none;
+  color: #4f7fff;
+  cursor: pointer;
+  padding: 0;
+  font-size: inherit;
+  text-decoration: underline;
+}
 .no-groups i { color: var(--text-disabled); }
 
 .group-option {

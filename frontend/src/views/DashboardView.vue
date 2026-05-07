@@ -163,7 +163,24 @@
       </template>
     </Dialog>
 
-    <ConfirmDialog />
+    <!-- Delete confirmation dialog -->
+    <Dialog
+      v-model:visible="showDeleteDialog"
+      header="Delete Video"
+      :modal="true"
+      :style="{ width: '420px' }"
+      :closable="!deleting"
+    >
+      <div class="delete-confirm-body">
+        <i class="pi pi-exclamation-triangle delete-warn-icon"></i>
+        <p>Delete <strong>"{{ deleteTarget?.title }}"</strong>? This will also remove it from all connected platforms.</p>
+      </div>
+      <template #footer>
+        <Button label="Cancel" class="p-button-text" @click="showDeleteDialog = false" :disabled="deleting" />
+        <Button label="Delete" icon="pi pi-trash" severity="danger" :loading="deleting" @click="handleDeleteConfirmed" />
+      </template>
+    </Dialog>
+
     <Toast />
   </div>
 </template>
@@ -173,7 +190,6 @@ import { ref, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAuthStore } from '@/stores/authStore';
 import { useToast } from 'primevue/usetoast';
-import { useConfirm } from 'primevue/useconfirm';
 import Button from 'primevue/button';
 import InputText from 'primevue/inputtext';
 import Textarea from 'primevue/textarea';
@@ -183,14 +199,12 @@ import Column from 'primevue/column';
 import Tag from 'primevue/tag';
 import Dialog from 'primevue/dialog';
 import ProgressSpinner from 'primevue/progressspinner';
-import ConfirmDialog from 'primevue/confirmdialog';
 import Toast from 'primevue/toast';
 import api from '@/services/api';
 
 const router    = useRouter();
 const authStore = useAuthStore();
 const toast     = useToast();
-const confirm   = useConfirm();
 
 const videos      = ref<any[]>([]);
 const loading     = ref(true);
@@ -198,6 +212,9 @@ const showDialog  = ref(false);
 const editingVideo = ref<any>(null);
 const saving      = ref(false);
 const searchQuery = ref('');
+const showDeleteDialog = ref(false);
+const deleteTarget     = ref<any>(null);
+const deleting         = ref(false);
 
 const form = ref({
   title: '',
@@ -272,26 +289,25 @@ const handleSave = async () => {
 };
 
 const confirmDelete = (video: any) => {
-  confirm.require({
-    message: `Delete "${video.title}"? This will also remove it from all connected platforms.`,
-    header: 'Delete Video',
-    icon: 'pi pi-exclamation-triangle',
-    acceptLabel: 'Delete',
-    rejectLabel: 'Cancel',
-    acceptClass: 'p-button-danger',
-    accept: () => deleteVideo(video),
-  });
+  deleteTarget.value = video;
+  showDeleteDialog.value = true;
 };
 
-const deleteVideo = async (video: any) => {
+const handleDeleteConfirmed = async () => {
+  const video = deleteTarget.value;
   const userId = authStore.user?.id;
-  if (!userId) return;
+  if (!video || !userId) return;
+  deleting.value = true;
   try {
     await api.delete(`/api/upload/video/${video.id}`, { data: { user_id: userId } });
     videos.value = videos.value.filter(v => v.id !== video.id);
     toast.add({ severity: 'success', summary: 'Deleted', detail: `"${video.title}" was deleted`, life: 3000 });
+    showDeleteDialog.value = false;
+    deleteTarget.value = null;
   } catch (err: any) {
     toast.add({ severity: 'error', summary: 'Error', detail: err.response?.data?.detail || 'Delete failed', life: 5000 });
+  } finally {
+    deleting.value = false;
   }
 };
 
@@ -449,6 +465,15 @@ onMounted(async () => {
 .dialog-form { display: flex; flex-direction: column; gap: 1.125rem; }
 .form-field { display: flex; flex-direction: column; gap: 0.35rem; }
 .form-field label { font-size: 0.875rem; font-weight: 500; color: var(--text-primary); }
+
+.delete-confirm-body {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.875rem;
+  padding: 0.25rem 0;
+}
+.delete-warn-icon { font-size: 1.5rem; color: #f59e0b; flex-shrink: 0; margin-top: 2px; }
+.delete-confirm-body p { margin: 0; color: var(--text-secondary); line-height: 1.5; font-size: 0.9rem; }
 
 @media (max-width: 900px) {
   .stats-row { grid-template-columns: repeat(2, 1fr); }

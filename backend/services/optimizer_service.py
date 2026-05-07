@@ -70,6 +70,7 @@ async def generate_suggestions(
                     trending_tags=trending_tags,
                 )
                 title = ai["title"]
+                title_options = ai.get("title_options", [title])
                 description = ai["description"]
                 tags = ai["hashtags"]
             except Exception as exc:
@@ -77,16 +78,19 @@ async def generate_suggestions(
                 fallback = _template_fallback(platform, title_draft, description_draft, constraints)
                 title, description = fallback["title"], fallback["description"]
                 tags = _static_hashtags(platform, category)
+                title_options = [title]
         else:
             fallback = _template_fallback(platform, title_draft, description_draft, constraints)
             title, description = fallback["title"], fallback["description"]
             tags = _static_hashtags(platform, category)
+            title_options = [title]
 
         upload_times = _best_upload_times(platform, category, user_history)
         all_upload_times.extend(upload_times)
 
         suggestions[platform] = {
             "title": title,
+            "title_options": title_options,
             "description": description,
             "tags": tags,
             "upload_times": upload_times,
@@ -122,39 +126,45 @@ async def _optimize_with_claude(
         if trending_tags else ""
     )
 
-    user_prompt = f"""Optimiere die folgenden Video-Metadaten für {platform.upper()}.
+    user_prompt = f"""Erstelle viralitäts-optimierte Video-Metadaten für {platform.upper()}.
 
 Kategorie: {category}
 {duration_line}
 Plattform-Hinweis: {desc_note}
-Titel-Limit: {title_limit} Zeichen
+Titel-Limit: {title_limit} Zeichen (alle Varianten einhalten)
 Beschreibungs-Limit: {desc_limit} Zeichen
 Max. Hashtags: {tags_max}
 {trending_line}
 
-Originaler Titel: {title_draft}
-Originale Beschreibung: {description_draft}
+Kontext / Original-Titel: {title_draft}
+Kontext / Original-Beschreibung: {description_draft}
 
 Antworte NUR mit dieser JSON-Struktur:
 {{
-  "title": "optimierter Titel",
+  "title": "stärkste der drei Varianten",
+  "title_options": [
+    "HOOK: Titel der mit Emotion oder überraschender Aussage startet",
+    "SEO: Titel mit Hauptkeyword früh, klar, für Suchalgorithmus optimiert",
+    "CURIOSITY: Titel der Neugier oder FOMO erzeugt"
+  ],
   "description": "optimierte Beschreibung",
   "hashtags": ["hashtag1", "hashtag2"]
 }}
 
 Anforderungen:
-- Titel: überzeugend, keyword-reich, innerhalb des Zeichenlimits
-- Beschreibung: natürliche Keywords, plattformgerechte Formatierung, innerhalb des Zeichenlimits
-- Hashtags: {tags_max} relevante Tags ohne #-Zeichen, Mix aus trending und nischenspezifisch
+- Alle 3 Titel-Varianten innerhalb des Zeichenlimits ({title_limit} Zeichen)
+- "title" = die stärkste der drei Optionen (wähle selbst)
+- Beschreibung: plattformgerechte Formatierung, natürliche Keywords, CTA einbauen
+- Hashtags: {tags_max} Tags ohne #-Zeichen, Mix aus trending und nischen-spezifisch
 - Sprache des Originals beibehalten (deutsch oder englisch)
-- Kernbotschaft des Originals erhalten"""
+- Aggressiv auf Klickrate und Reichweite optimieren"""
 
     response = await _claude.messages.create(
         model="claude-sonnet-4-6",
-        max_tokens=1024,
+        max_tokens=1500,
         system=(
-            "Du bist ein Experte für Social-Media-Content-Optimierung. "
-            "Optimiere Video-Metadaten für maximale Reichweite und Engagement. "
+            f"Du bist ein Viral-Content-Stratege für {platform.upper()}. "
+            "Ziel: maximale Klickrate (CTR) und organische Reichweite. "
             "Antworte ausschließlich mit validem JSON – kein Markdown, keine Erklärungen."
         ),
         messages=[{"role": "user", "content": user_prompt}],
@@ -163,8 +173,15 @@ Anforderungen:
     raw = response.content[0].text
     result = json.loads(raw)
 
+    raw_options = result.get("title_options", [])
+    title_options = [str(t)[:title_limit] for t in raw_options][:3]
+    best_title = str(result.get("title", title_draft))[:title_limit]
+    if not title_options:
+        title_options = [best_title]
+
     return {
-        "title": str(result.get("title", title_draft))[:title_limit],
+        "title": best_title,
+        "title_options": title_options,
         "description": str(result.get("description", description_draft))[:desc_limit],
         "hashtags": [str(t) for t in result.get("hashtags", [])][:tags_max],
     }

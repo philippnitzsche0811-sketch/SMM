@@ -2,7 +2,7 @@
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
-from typing import Optional
+from typing import List, Optional
 from sqlalchemy.orm import Session
 
 from models.database import get_db
@@ -31,6 +31,7 @@ class SuggestRequest(BaseModel):
 
 class PlatformSuggestion(BaseModel):
     title: str
+    title_options: Optional[List[str]] = None
     description: str
     tags: list[str]
     upload_times: list[str]

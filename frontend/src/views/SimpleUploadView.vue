@@ -1,7 +1,6 @@
 <template>
   <div class="simple-upload-view">
     <div class="upload-card">
-      <!-- Back link -->
       <button class="back-link" @click="router.push('/upload')">
         <i class="pi pi-arrow-left"></i> Upload modes
       </button>
@@ -23,72 +22,153 @@
         </div>
       </div>
 
-      <!-- Step 1: Select file -->
+      <!-- Step 1: Drop file → context + platforms appear inline -->
       <div v-show="currentStep === 1" class="step-content">
         <DragDropZone @file-selected="handleFileSelect" />
-      </div>
 
-      <!-- Step 2: Describe + AI toggle -->
-      <div v-show="currentStep === 2" class="step-content">
-        <VideoMetaForm
-          v-model:title="meta.title"
-          v-model:description="meta.description"
-          v-model:tags="meta.tags"
-          v-model:privacyStatus="meta.privacyStatus"
-          v-model:category="meta.category"
-        />
-        <div class="divider"></div>
-        <DescribeVideoStep
-          v-model:context="aiContext"
-          v-model:aiEnabled="aiEnabled"
-        />
-        <div class="nav-buttons">
-          <Button label="Back" severity="secondary" outlined @click="currentStep = 1" />
-          <Button label="Continue" @click="goToReview" :disabled="!meta.title" />
-        </div>
-      </div>
+        <Transition name="slide-down">
+          <div v-if="videoFile" class="step1-extra">
+            <div class="file-badge">
+              <i class="pi pi-video"></i>
+              {{ videoFile.name }}
+            </div>
 
-      <!-- Step 3: Review AI suggestions -->
-      <div v-show="currentStep === 3" class="step-content">
-        <div v-if="aiEnabled">
-          <div v-if="isOptimizing" class="ai-loading">
-            <i class="pi pi-spin pi-spinner"></i>
-            <span>Claude is optimizing your content…</span>
+            <div class="divider"></div>
+
+            <DescribeVideoStep v-model:context="aiContext" />
+
+            <div class="divider"></div>
+
+            <div class="field-group">
+              <label>Upload to</label>
+              <PlatformSelector v-model="selectedPlatforms" />
+            </div>
+
+            <div class="nav-buttons">
+              <Button
+                label="Generate with AI"
+                icon="pi pi-sparkles"
+                iconPos="right"
+                :loading="isOptimizing"
+                :disabled="selectedPlatforms.length === 0"
+                @click="goToReview"
+              />
+            </div>
           </div>
-          <div v-else-if="aiSuggestions">
-            <OptimizerPanel
-              :suggestions="aiSuggestions"
-              @apply-title="meta.title = $event"
-              @apply-description="meta.description = $event"
-              @apply-tags="meta.tags = $event"
+        </Transition>
+      </div>
+
+      <!-- Step 2: AI review — title picker + desc + tags -->
+      <div v-show="currentStep === 2" class="step-content">
+        <div v-if="isOptimizing" class="ai-loading">
+          <i class="pi pi-spin pi-spinner"></i>
+          <span>Generating optimized content…</span>
+        </div>
+
+        <template v-else>
+          <!-- Title picker -->
+          <div class="review-section">
+            <TitlePickerPanel
+              :options="titleOptions"
+              v-model="meta.title"
             />
           </div>
-        </div>
-        <div v-else class="no-ai-note">
-          <i class="pi pi-info-circle"></i>
-          AI optimization is off — using your title and description as-is.
-        </div>
 
-        <div class="divider"></div>
-        <PlatformSelector v-model="selectedPlatforms" />
+          <div class="divider"></div>
+
+          <!-- Description -->
+          <div class="review-section">
+            <label class="review-label">Description</label>
+            <Textarea
+              v-model="meta.description"
+              :rows="4"
+              class="w-full"
+              placeholder="Video description…"
+            />
+          </div>
+
+          <div class="divider"></div>
+
+          <!-- Tags -->
+          <div class="review-section">
+            <label class="review-label">Tags</label>
+            <div class="tags-row">
+              <span
+                v-for="(tag, i) in meta.tags"
+                :key="i"
+                class="tag-chip"
+              >
+                #{{ tag }}
+                <button class="tag-remove" @click="meta.tags.splice(i, 1)">×</button>
+              </span>
+              <input
+                v-model="newTag"
+                class="tag-input"
+                placeholder="Add tag…"
+                @keydown.enter.prevent="addTag"
+                @keydown.comma.prevent="addTag"
+              />
+            </div>
+          </div>
+
+          <div class="divider"></div>
+
+          <!-- Privacy + Category -->
+          <div class="review-row">
+            <div class="field-group">
+              <label class="review-label">Visibility</label>
+              <Dropdown
+                v-model="meta.privacyStatus"
+                :options="privacyOptions"
+                optionLabel="label"
+                optionValue="value"
+                class="w-full"
+              />
+            </div>
+            <div class="field-group">
+              <label class="review-label">Category</label>
+              <Dropdown
+                v-model="meta.category"
+                :options="categoryOptions"
+                optionLabel="label"
+                optionValue="value"
+                class="w-full"
+              />
+            </div>
+          </div>
+
+          <div class="regen-row">
+            <Button
+              label="Regenerate"
+              icon="pi pi-refresh"
+              severity="secondary"
+              outlined
+              size="small"
+              :loading="isRegenerating"
+              @click="regenerate"
+            />
+            <span class="regen-hint">Re-runs AI with the same context</span>
+          </div>
+        </template>
 
         <div class="nav-buttons">
-          <Button label="Back" severity="secondary" outlined @click="currentStep = 2" />
-          <Button label="Continue" @click="currentStep = 4" :disabled="selectedPlatforms.length === 0" />
+          <Button label="Back" severity="secondary" outlined @click="currentStep = 1" :disabled="isOptimizing" />
+          <Button label="Continue" @click="currentStep = 3" :disabled="!meta.title.trim() || isOptimizing" />
         </div>
       </div>
 
-      <!-- Step 4: Schedule -->
-      <div v-show="currentStep === 4" class="step-content">
+      <!-- Step 3: Schedule -->
+      <div v-show="currentStep === 3" class="step-content">
         <ScheduleStep
           v-model:scheduleType="scheduleType"
           v-model:scheduledAt="scheduledAt"
           v-model:selectedGroupId="selectedGroupId"
           :groups="groups"
+          @create-group="showCreateGroupDialog = true"
         />
 
         <div class="nav-buttons">
-          <Button label="Back" severity="secondary" outlined @click="currentStep = 3" />
+          <Button label="Back" severity="secondary" outlined @click="currentStep = 2" />
           <Button
             :label="submitLabel"
             icon="pi pi-check"
@@ -117,6 +197,24 @@
       </div>
     </div>
   </div>
+
+  <!-- Inline: Create Upload Group dialog -->
+  <Dialog
+    v-model:visible="showCreateGroupDialog"
+    header="Create Upload Group"
+    :modal="true"
+    :style="{ width: '400px' }"
+    :closable="!isSaving"
+  >
+    <div class="dialog-field">
+      <label>Group name</label>
+      <InputText v-model="newGroupName" placeholder="e.g. Weekly Shorts" class="w-full" autofocus />
+    </div>
+    <template #footer>
+      <Button label="Cancel" class="p-button-text" @click="showCreateGroupDialog = false" :disabled="isSaving" />
+      <Button label="Create" icon="pi pi-plus" :loading="isSaving" :disabled="!newGroupName.trim()" @click="handleCreateGroup" />
+    </template>
+  </Dialog>
 </template>
 
 <script setup lang="ts">
@@ -126,48 +224,71 @@ import { useAuthStore } from '@/stores/authStore';
 import { useToast } from 'primevue/usetoast';
 import Button from 'primevue/button';
 import ProgressBar from 'primevue/progressbar';
-import { DragDropZone, VideoMetaForm, PlatformSelector, OptimizerPanel } from '@/components/upload';
+import Textarea from 'primevue/textarea';
+import Dropdown from 'primevue/dropdown';
+import Dialog from 'primevue/dialog';
+import InputText from 'primevue/inputtext';
+import { DragDropZone, PlatformSelector } from '@/components/upload';
 import DescribeVideoStep from '@/components/upload/DescribeVideoStep.vue';
 import ScheduleStep from '@/components/upload/ScheduleStep.vue';
-import { simpleUpload } from '@/services/api';
-import { optimizeSuggest } from '@/services/api';
+import TitlePickerPanel from '@/components/upload/TitlePickerPanel.vue';
+import { simpleUpload, optimizeSuggest } from '@/services/api';
 import { useUploadGroups } from '@/composables/useUploadGroups';
-import type { VideoMetadata } from '@/types/video.types';
 
 const router = useRouter();
 const authStore = useAuthStore();
 const toast = useToast();
-const { groups, fetchGroups } = useUploadGroups();
+const { groups, fetchGroups, createGroup, isSaving } = useUploadGroups();
 
 onMounted(() => {
   if (authStore.userId) fetchGroups(authStore.userId);
 });
 
-const steps = ['Select Video', 'Describe', 'Review', 'Schedule'];
+const steps = ['Upload', 'Review', 'Schedule'];
 const currentStep = ref(1);
 const videoFile = ref<File | null>(null);
 
-const meta = ref<VideoMetadata>({
+const meta = ref({
   title: '',
   description: '',
-  tags: [],
+  tags: [] as string[],
   privacyStatus: 'private',
   category: 'default',
 });
+const titleOptions = ref<string[]>([]);
 const aiContext = ref('');
-const aiEnabled = ref(true);
-const aiSuggestions = ref<any>(null);
 const isOptimizing = ref(false);
+const isRegenerating = ref(false);
+const newTag = ref('');
 
 const selectedPlatforms = ref<string[]>([]);
 const scheduleType = ref('now');
 const scheduledAt = ref<string | null>(null);
 const selectedGroupId = ref<string | null>(null);
+const showCreateGroupDialog = ref(false);
+const newGroupName = ref('');
 
 const isSubmitting = ref(false);
 const uploadProgress = ref(0);
 const done = ref(false);
 const doneMessage = ref('');
+
+const privacyOptions = [
+  { label: 'Private',  value: 'private'  },
+  { label: 'Unlisted', value: 'unlisted' },
+  { label: 'Public',   value: 'public'   },
+];
+
+const categoryOptions = [
+  { label: 'Default',        value: 'default'        },
+  { label: 'Entertainment',  value: 'entertainment'  },
+  { label: 'Education',      value: 'education'      },
+  { label: 'Gaming',         value: 'gaming'         },
+  { label: 'Music',          value: 'music'          },
+  { label: 'Sports',         value: 'sports'         },
+  { label: 'Tech',           value: 'tech'           },
+  { label: 'Lifestyle',      value: 'lifestyle'      },
+];
 
 const canSubmit = computed(() => {
   if (scheduleType.value === 'datetime' && !scheduledAt.value) return false;
@@ -184,28 +305,68 @@ const submitLabel = computed(() => ({
 function handleFileSelect(file: File) {
   videoFile.value = file;
   if (!meta.value.title) meta.value.title = file.name.replace(/\.[^.]+$/, '');
-  currentStep.value = 2;
+}
+
+async function runOptimize(isRegen = false) {
+  if (isRegen) isRegenerating.value = true;
+  else isOptimizing.value = true;
+
+  try {
+    const data = await optimizeSuggest({
+      user_id: authStore.userId!,
+      title_draft: meta.value.title,
+      description_draft: aiContext.value || meta.value.title,
+      category: meta.value.category || 'default',
+      platforms: selectedPlatforms.value,
+    });
+
+    const sug: any = data.suggestions?.youtube
+      ?? Object.values(data.suggestions || {})[0];
+
+    if (sug) {
+      titleOptions.value = sug.title_options?.length ? sug.title_options : [sug.title];
+      meta.value.title       = sug.title_options?.[0] ?? sug.title ?? meta.value.title;
+      meta.value.description = sug.description ?? meta.value.description;
+      meta.value.tags        = sug.tags ?? meta.value.tags;
+    }
+  } catch {
+    // non-fatal
+    toast.add({ severity: 'warn', summary: 'AI unavailable', detail: 'Could not generate suggestions — fill in manually.', life: 4000 });
+  } finally {
+    isOptimizing.value = false;
+    isRegenerating.value = false;
+  }
 }
 
 async function goToReview() {
-  currentStep.value = 3;
-  if (aiEnabled.value && !aiSuggestions.value) {
-    isOptimizing.value = true;
-    try {
-      const data = await optimizeSuggest({
-        user_id: authStore.userId!,
-        title_draft: meta.value.title,
-        description_draft: aiContext.value || meta.value.description,
-        category: meta.value.category || 'default',
-        platforms: selectedPlatforms.value.length ? selectedPlatforms.value : ['youtube', 'tiktok', 'instagram'],
-      });
-      aiSuggestions.value = data.suggestions;
-    } catch {
-      // non-fatal — user can continue without suggestions
-    } finally {
-      isOptimizing.value = false;
-    }
-  }
+  currentStep.value = 2;
+  await runOptimize(false);
+}
+
+async function regenerate() {
+  await runOptimize(true);
+}
+
+function addTag() {
+  const t = newTag.value.replace(/^#/, '').trim();
+  if (t && !meta.value.tags.includes(t)) meta.value.tags.push(t);
+  newTag.value = '';
+}
+
+async function handleCreateGroup() {
+  if (!newGroupName.value.trim() || !authStore.userId) return;
+  try {
+    const group = await createGroup(
+      authStore.userId,
+      newGroupName.value.trim(),
+      selectedPlatforms.value.length ? selectedPlatforms.value : ['youtube'],
+      meta.value.privacyStatus || 'private',
+      meta.value.category || 'default',
+    );
+    if (group) selectedGroupId.value = group.id;
+    showCreateGroupDialog.value = false;
+    newGroupName.value = '';
+  } catch { /* composable handles error */ }
 }
 
 async function handleSubmit() {
@@ -247,8 +408,8 @@ async function handleSubmit() {
 function reset() {
   videoFile.value = null;
   meta.value = { title: '', description: '', tags: [], privacyStatus: 'private', category: 'default' };
+  titleOptions.value = [];
   aiContext.value = '';
-  aiSuggestions.value = null;
   selectedPlatforms.value = [];
   scheduleType.value = 'now';
   scheduledAt.value = null;
@@ -284,7 +445,7 @@ function reset() {
 }
 .back-link:hover { color: #4f7fff; }
 
-/* Step indicator — reused from old UploadView */
+/* Step indicator */
 .steps {
   display: flex;
   align-items: flex-start;
@@ -340,7 +501,91 @@ function reset() {
 
 .step-content { min-height: 260px; }
 
-.divider { height: 1px; background: var(--border-color); margin: 1.5rem 0; }
+/* Step 1 extras */
+.step1-extra { margin-top: 1.25rem; }
+
+.file-badge {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.625rem 1rem;
+  background: rgba(79,127,255,0.06);
+  border: 1px solid rgba(79,127,255,0.2);
+  border-radius: 10px;
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+}
+.file-badge i { color: #7da5ff; }
+
+.field-group { display: flex; flex-direction: column; gap: 0.4rem; }
+.field-group label { font-size: 0.875rem; font-weight: 500; color: var(--text-secondary); }
+
+/* Step 2 review */
+.review-section { display: flex; flex-direction: column; gap: 0.5rem; }
+.review-label { font-size: 0.875rem; font-weight: 500; color: var(--text-secondary); display: block; margin-bottom: 0.25rem; }
+
+.review-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+/* Tags */
+.tags-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+  align-items: center;
+  padding: 0.5rem 0.75rem;
+  background: rgba(255,255,255,0.02);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 8px;
+  min-height: 42px;
+}
+.tag-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  background: var(--bg-tertiary);
+  color: var(--text-secondary);
+  border-radius: 6px;
+  padding: 0.15rem 0.5rem;
+  font-size: 0.8rem;
+}
+.tag-remove {
+  background: none;
+  border: none;
+  color: var(--text-disabled);
+  cursor: pointer;
+  padding: 0;
+  font-size: 1rem;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+}
+.tag-remove:hover { color: #f87171; }
+.tag-input {
+  flex: 1;
+  min-width: 80px;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: var(--text-primary);
+  font-size: 0.875rem;
+  padding: 0.15rem 0;
+}
+
+/* Regenerate row */
+.regen-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+}
+.regen-hint { font-size: 0.78rem; color: var(--text-disabled); }
+
+/* Shared */
+.divider { height: 1px; background: var(--border-color); margin: 1.25rem 0; }
 
 .nav-buttons {
   display: flex;
@@ -355,24 +600,11 @@ function reset() {
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  padding: 1.5rem;
+  padding: 2rem;
   color: var(--text-secondary);
   font-size: 0.9rem;
+  justify-content: center;
 }
-
-.no-ai-note {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  font-size: 0.875rem;
-  color: var(--text-secondary);
-  padding: 0.75rem 1rem;
-  background: rgba(255,255,255,0.02);
-  border: 1px solid rgba(255,255,255,0.07);
-  border-radius: 10px;
-  margin-bottom: 1rem;
-}
-.no-ai-note i { color: var(--text-disabled); }
 
 .progress-section { margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid var(--border-color); }
 .progress-header { display: flex; align-items: center; gap: 0.625rem; margin-bottom: 0.75rem; color: var(--text-secondary); font-weight: 500; }
@@ -381,10 +613,21 @@ function reset() {
 .done-icon { font-size: 3rem; color: #10b981; margin-bottom: 1rem; }
 .done-section h3 { font-size: 1.1rem; color: var(--text-primary); margin: 0 0 1.5rem; }
 
+/* Dialog */
+.dialog-field { display: flex; flex-direction: column; gap: 0.4rem; padding: 0.25rem 0; }
+.dialog-field label { font-size: 0.875rem; font-weight: 500; color: var(--text-secondary); }
+
+/* Slide-down transition */
+.slide-down-enter-active { transition: all 0.3s ease; }
+.slide-down-leave-active { transition: all 0.2s ease; }
+.slide-down-enter-from   { opacity: 0; transform: translateY(-8px); }
+.slide-down-leave-to     { opacity: 0; transform: translateY(-8px); }
+
 @media (max-width: 640px) {
   .upload-card { padding: 1.25rem; }
   .step-label   { display: none; }
   .nav-buttons  { flex-direction: column-reverse; }
   .nav-buttons .p-button { width: 100%; justify-content: center; }
+  .review-row { grid-template-columns: 1fr; }
 }
 </style>
