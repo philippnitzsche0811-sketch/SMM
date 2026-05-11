@@ -141,7 +141,7 @@ async def process_scheduled_videos_job():
     from services.video_service import VideoService
     db = SessionLocal()
     try:
-        now = datetime.now(timezone.utc)
+        now = datetime.now(timezone.utc).replace(tzinfo=None)  # naive UTC, matches DB column
         due = (
             db.query(VideoModel)
             .filter(

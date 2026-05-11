@@ -1,7 +1,7 @@
 ﻿from fastapi import APIRouter, UploadFile, File, Form, HTTPException, BackgroundTasks, Depends
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional, List
 import logging
 
@@ -278,6 +278,8 @@ async def simple_upload(
     if scheduled_at:
         try:
             scheduled_dt = datetime.fromisoformat(scheduled_at)
+            if scheduled_dt.tzinfo is not None:
+                scheduled_dt = scheduled_dt.astimezone(timezone.utc).replace(tzinfo=None)
         except ValueError:
             raise HTTPException(status_code=400, detail="Invalid scheduled_at format")
 
@@ -357,6 +359,8 @@ async def finalize_upload(
     if request.schedule_type == "datetime" and request.scheduled_at:
         try:
             scheduled_dt = datetime.fromisoformat(request.scheduled_at)
+            if scheduled_dt.tzinfo is not None:
+                scheduled_dt = scheduled_dt.astimezone(timezone.utc).replace(tzinfo=None)
         except ValueError:
             raise HTTPException(status_code=400, detail="Invalid scheduled_at format")
         video.scheduled_at = scheduled_dt

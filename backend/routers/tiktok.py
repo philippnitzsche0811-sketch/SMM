@@ -2,7 +2,6 @@
 from fastapi.responses import RedirectResponse
 from pydantic import BaseModel
 import logging
-import requests
 import hashlib
 import base64
 import secrets
@@ -185,55 +184,54 @@ async def tiktok_oauth_callback(request: FastAPIRequest):
         )
 
 
-async def exchange_code_for_token(code: str, code_verifier: str) -> tuple[str, str, str]:
+async def exchange_code_for_token(code: str, code_verifier: str) -> tuple[str, str, str, int]:
     """
     Tauscht Authorization Code gegen Access Token (mit PKCE)
-    
+
     Returns:
-        tuple: (access_token, open_id, refresh_token)
+        tuple: (access_token, open_id, refresh_token, expires_in)
     """
     url = "https://open.tiktokapis.com/v2/oauth/token/"
-    
+
     data = {
         "client_key": settings.TIKTOK_CLIENT_KEY,
         "client_secret": settings.TIKTOK_CLIENT_SECRET,
         "code": code,
         "grant_type": "authorization_code",
         "redirect_uri": f"{settings.BACKEND_URL}/api/tiktok/oauth/callback",
-        "code_verifier": code_verifier  # âœ… PKCE code_verifier
+        "code_verifier": code_verifier,
     }
-    
+
     headers = {
         "Content-Type": "application/x-www-form-urlencoded",
-        "Cache-Control": "no-cache"
+        "Cache-Control": "no-cache",
     }
-    
+
     try:
         logger.info(f"Token Exchange Request: {url}")
 
-        resp = requests.post(url, data=data, headers=headers, timeout=10)
+        async with httpx.AsyncClient(timeout=10) as client:
+            resp = await client.post(url, data=data, headers=headers)
 
         logger.info(f"Token Exchange Response Status: {resp.status_code}")
         logger.info(f"Token Exchange Response: {resp.text}")
-        
+
         resp.raise_for_status()
         result = resp.json()
-        
+
         if "access_token" not in result:
-            raise ValueError(f"UngÃ¼ltige TikTok API Response: {result}")
-        
+            raise ValueError(f"Ungueltige TikTok API Response: {result}")
+
         access_token = result["access_token"]
         open_id = result["open_id"]
         refresh_token = result.get("refresh_token", "")
-        
         expires_in = result.get("expires_in", 86400)
         return access_token, open_id, refresh_token, expires_in
-        
-    except requests.RequestException as e:
-        logger.error(f"âŒ TikTok Token Exchange fehlgeschlagen: {str(e)}")
-        if hasattr(e, 'response') and e.response is not None:
-            logger.error(f"âŒ Response Body: {e.response.text}")
+
+    except httpx.HTTPError as e:
+        logger.error(f"TikTok Token Exchange fehlgeschlagen: {str(e)}")
         raise ValueError(f"Token Exchange fehlgeschlagen: {str(e)}")
+
 
 
 # ==========================================
@@ -269,9 +267,9 @@ async def refresh_tiktok_token(request: RefreshRequest):
             "Content-Type": "application/x-www-form-urlencoded"
         }
         
-        resp = requests.post(url, data=data, headers=headers, timeout=10)
+        async with httpx.AsyncClient(timeout=10) as client:
+            resp = await client.post(url, data=data, headers=headers)
         resp.raise_for_status()
-        result = resp.json()
         
         # Save new tokens
         token_storage.save_tiktok_credentials(

@@ -215,9 +215,12 @@ async def exchange_instagram_code_for_token(code: str) -> tuple[str, str]:
         raise ValueError(f"Token Exchange fehlgeschlagen: {str(e)}")
 
 
+
 async def get_long_lived_token(short_lived_token: str) -> str:
     """
     Converts short-lived token to long-lived token (valid 60 days).
+    Raises ValueError if the exchange fails so the OAuth callback surfaces a proper error
+    instead of silently storing a 1-hour token that will break uploads later.
     """
     url = "https://graph.instagram.com/access_token"
 
@@ -233,15 +236,15 @@ async def get_long_lived_token(short_lived_token: str) -> str:
             result = resp.json()
 
             if "access_token" not in result:
-                logger.warning(f"Long-lived token exchange failed, using short-lived: {result}")
-                return short_lived_token
+                error_msg = result.get("error_message", result.get("error", str(result)))
+                raise ValueError(f"Long-lived token exchange failed: {error_msg}")
 
             logger.info("Successfully exchanged for long-lived token")
             return result["access_token"]
 
-    except Exception as e:
-        logger.warning(f"Long-lived token exchange failed: {str(e)}, using short-lived token")
-        return short_lived_token
+    except httpx.HTTPError as e:
+        raise ValueError(f"Long-lived token exchange request failed: {str(e)}")
+
 
 
 # ==========================================
