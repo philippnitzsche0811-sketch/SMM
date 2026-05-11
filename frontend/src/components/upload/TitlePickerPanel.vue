@@ -44,7 +44,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from 'vue';
+import { ref, watch, computed } from 'vue';
 import InputText from 'primevue/inputtext';
 
 const props = defineProps<{
@@ -57,7 +57,7 @@ const emit = defineEmits<{ 'update:modelValue': [value: string] }>();
 const selectedIdx = ref<number | null>(null);
 const inputRef = ref<any>(null);
 
-const displayOptions = props.options.slice(0, 3);
+const displayOptions = computed(() => props.options.slice(0, 3));
 
 watch(() => props.options, () => {
   selectedIdx.value = null;

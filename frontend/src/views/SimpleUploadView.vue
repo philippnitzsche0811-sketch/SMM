@@ -22,7 +22,7 @@
         </div>
       </div>
 
-      <!-- Step 1: Drop file → context + platforms appear inline -->
+      <!-- Step 1: Drop file → fields appear inline -->
       <div v-show="currentStep === 1" class="step-content">
         <DragDropZone @file-selected="handleFileSelect" />
 
@@ -35,13 +35,41 @@
 
             <div class="divider"></div>
 
+            <!-- Title -->
+            <div class="field-group">
+              <label>Video title <span class="required">*</span></label>
+              <InputText
+                v-model="meta.title"
+                placeholder="Your video title…"
+                class="w-full"
+                :maxlength="200"
+              />
+              <small class="field-hint">The AI will use this as a starting point to generate better titles.</small>
+            </div>
+
+            <div class="divider"></div>
+
+            <!-- Context (AI input) -->
             <DescribeVideoStep v-model:context="aiContext" />
 
             <div class="divider"></div>
 
-            <div class="field-group">
-              <label>Upload to</label>
-              <PlatformSelector v-model="selectedPlatforms" />
+            <!-- Category + Platforms side by side -->
+            <div class="step1-row">
+              <div class="field-group">
+                <label>Category</label>
+                <Dropdown
+                  v-model="meta.category"
+                  :options="categoryOptions"
+                  optionLabel="label"
+                  optionValue="value"
+                  class="w-full"
+                />
+              </div>
+              <div class="field-group">
+                <label>Upload to <span class="required">*</span></label>
+                <PlatformSelector v-model="selectedPlatforms" />
+              </div>
             </div>
 
             <div class="nav-buttons">
@@ -50,7 +78,7 @@
                 icon="pi pi-sparkles"
                 iconPos="right"
                 :loading="isOptimizing"
-                :disabled="selectedPlatforms.length === 0"
+                :disabled="selectedPlatforms.length === 0 || !meta.title.trim()"
                 @click="goToReview"
               />
             </div>
@@ -119,28 +147,16 @@
 
           <div class="divider"></div>
 
-          <!-- Privacy + Category -->
-          <div class="review-row">
-            <div class="field-group">
-              <label class="review-label">Visibility</label>
-              <Dropdown
-                v-model="meta.privacyStatus"
-                :options="privacyOptions"
-                optionLabel="label"
-                optionValue="value"
-                class="w-full"
-              />
-            </div>
-            <div class="field-group">
-              <label class="review-label">Category</label>
-              <Dropdown
-                v-model="meta.category"
-                :options="categoryOptions"
-                optionLabel="label"
-                optionValue="value"
-                class="w-full"
-              />
-            </div>
+          <!-- Visibility -->
+          <div class="field-group">
+            <label class="review-label">Visibility</label>
+            <Dropdown
+              v-model="meta.privacyStatus"
+              :options="privacyOptions"
+              optionLabel="label"
+              optionValue="value"
+              style="width: 220px"
+            />
           </div>
 
           <div class="regen-row">
@@ -319,7 +335,11 @@ const submitLabel = computed(() => ({
 
 function handleFileSelect(file: File) {
   videoFile.value = file;
-  if (!meta.value.title) meta.value.title = file.name.replace(/\.[^.]+$/, '');
+  if (!meta.value.title) {
+    const raw = file.name.replace(/\.[^.]+$/, '');
+    meta.value.title = raw.replace(/[_\-]+/g, ' ').replace(/\s+/g, ' ').trim()
+      .replace(/\b\w/g, c => c.toUpperCase());
+  }
 }
 
 async function runOptimize(isRegen = false) {
@@ -536,6 +556,15 @@ function reset() {
 
 .field-group { display: flex; flex-direction: column; gap: 0.4rem; }
 .field-group label { font-size: 0.875rem; font-weight: 500; color: var(--text-secondary); }
+.required { color: #f87171; }
+.field-hint { font-size: 0.78rem; color: var(--text-disabled); }
+
+.step1-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  align-items: start;
+}
 
 /* Step 2 review */
 .review-section { display: flex; flex-direction: column; gap: 0.5rem; }
@@ -661,5 +690,6 @@ function reset() {
   .nav-buttons  { flex-direction: column-reverse; }
   .nav-buttons .p-button { width: 100%; justify-content: center; }
   .review-row { grid-template-columns: 1fr; }
+  .step1-row  { grid-template-columns: 1fr; }
 }
 </style>

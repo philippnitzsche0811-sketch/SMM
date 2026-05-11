@@ -81,6 +81,7 @@ async def generate_suggestions(
                 )
                 .first()
             )
+            logger.info(f"🔍 Admin trend lookup ({platform}/{category}): {'found' if admin_row else 'no data'}")
             if admin_row:
                 trend_data = _merge_admin_trend(trend_data, admin_row)
                 logger.info(f"✅ Admin trend data merged ({platform}/{category}): {len(admin_row.top_tags or [])} tags, {len(admin_row.title_words or [])} words")
@@ -108,13 +109,13 @@ async def generate_suggestions(
                 logger.error(f"Claude optimization failed for {platform}: {exc}")
                 fallback = _template_fallback(platform, title_draft, description_draft, constraints)
                 title, description = fallback["title"], fallback["description"]
+                title_options = fallback.get("title_options", [title])
                 tags = _static_hashtags(platform, category)
-                title_options = [title]
         else:
             fallback = _template_fallback(platform, title_draft, description_draft, constraints)
             title, description = fallback["title"], fallback["description"]
+            title_options = fallback.get("title_options", [title])
             tags = _static_hashtags(platform, category)
-            title_options = [title]
 
         upload_times = _best_upload_times(platform, category, user_history)
         all_upload_times.extend(upload_times)
@@ -251,8 +252,30 @@ Anforderungen:
 
 
 # ---------------------------------------------------------------------------
-# Template fallback (no AI)
+# Template fallback (no AI / AI_MOCK_MODE)
 # ---------------------------------------------------------------------------
+
+import re as _re
+
+
+def _clean_title(raw: str) -> str:
+    cleaned = _re.sub(r"[_-]+", " ", raw).strip()
+    cleaned = _re.sub(r"\s+", " ", cleaned)
+    return cleaned.title()
+
+
+def _title_variants(title: str, platform: str, title_limit: int) -> list[str]:
+    base = _clean_title(title)
+    if platform == "youtube":
+        variants = [base, base + " (Full Video)", "How To: " + base]
+    elif platform == "tiktok":
+        variants = [base, base + " \U0001F525", "POV: " + base.lower()]
+    elif platform == "instagram":
+        variants = [base, base + " ✨", "My " + base.lower() + " experience"]
+    else:
+        variants = [base, base + " | Full Video", "Watch: " + base]
+    return [v[:title_limit] for v in variants]
+
 
 def _template_fallback(
     platform: str,
@@ -260,23 +283,35 @@ def _template_fallback(
     description_draft: str,
     constraints: dict,
 ) -> dict:
-    title = title_draft.strip()[:constraints.get("title_max_chars", 100)]
-    desc = description_draft.strip()
+    title_limit = constraints.get("title_max_chars", 100)
     desc_limit = constraints.get("description_max_chars", 2000)
 
+    title = _clean_title(title_draft.strip())[:title_limit]
+    context = description_draft.strip()
+    has_context = bool(context) and context.lower() != title_draft.strip().lower()
+
     if platform == "youtube":
-        if len(desc) < 100:
-            desc += "\n\n👇 Abonniere für mehr Content!"
+        base = context if has_context else title
+        desc = base + "\n\nLike & subscribe for more content like this."
         desc = desc[:desc_limit]
     elif platform == "tiktok":
-        desc = desc[:200]
+        desc = context[:200] if has_context else (title + " \U0001F525")
     elif platform == "instagram":
-        if len(desc) > 125:
-            cut = desc[:125].rsplit(" ", 1)[0]
-            desc = f"{cut}\n\n{desc[len(cut):].strip()}"
+        base_desc = context if has_context else title
+        if len(base_desc) > 125:
+            cut = base_desc[:125].rsplit(" ", 1)[0]
+            desc = cut + "\n\n" + base_desc[len(cut):].strip()
+        else:
+            desc = base_desc
         desc = desc[:desc_limit]
+    else:
+        desc = (context if has_context else title)[:desc_limit]
 
-    return {"title": title, "description": desc}
+    return {
+        "title": title,
+        "title_options": _title_variants(title_draft, platform, title_limit),
+        "description": desc,
+    }
 
 
 # ---------------------------------------------------------------------------
