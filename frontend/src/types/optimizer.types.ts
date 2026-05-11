@@ -17,6 +17,7 @@ export interface OptimizerSuggestions {
 export interface OptimizerResponse {
   suggestions: OptimizerSuggestions
   best_overall_time: string // ISO 8601
+  trend_refreshed_at?: string // ISO 8601, present when YouTube live data was used
 }
 
 export interface OptimizeRequest {

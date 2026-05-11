@@ -120,6 +120,12 @@ const router = createRouter({
           name: 'settings',
           component: () => import('@/views/SettingsView.vue'),
         },
+        {
+          path: 'admin',
+          name: 'admin',
+          component: () => import('@/views/AdminView.vue'),
+          meta: { requiresAdmin: true },
+        },
       ],
     },
   ],
@@ -140,6 +146,11 @@ router.beforeEach((to, from, next) => {
   // Protected routes: redirect unauthenticated users to login
   if (!authStore.isAuthenticated) {
     return next('/login');
+  }
+
+  // Admin guard
+  if (to.meta.requiresAdmin && !authStore.isAdmin) {
+    return next('/dashboard');
   }
 
   return next();

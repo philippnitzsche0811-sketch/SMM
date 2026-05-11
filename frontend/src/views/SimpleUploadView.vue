@@ -66,6 +66,12 @@
         </div>
 
         <template v-else>
+          <!-- Live data badge -->
+          <div v-if="liveDataAge" class="live-data-badge">
+            <i class="pi pi-globe"></i>
+            Powered by live YouTube data · Updated {{ liveDataAge }}
+          </div>
+
           <!-- Title picker -->
           <div class="review-section">
             <TitlePickerPanel
@@ -259,6 +265,15 @@ const titleOptions = ref<string[]>([]);
 const aiContext = ref('');
 const isOptimizing = ref(false);
 const isRegenerating = ref(false);
+const trendRefreshedAt = ref<string | null>(null);
+
+const liveDataAge = computed(() => {
+  if (!trendRefreshedAt.value) return null;
+  const ageMs = Date.now() - new Date(trendRefreshedAt.value).getTime();
+  const ageHours = Math.floor(ageMs / 3_600_000);
+  if (ageHours >= 6) return null;
+  return ageHours === 0 ? 'just now' : `${ageHours}h ago`;
+});
 const newTag = ref('');
 
 const selectedPlatforms = ref<string[]>([]);
@@ -322,6 +337,8 @@ async function runOptimize(isRegen = false) {
 
     const sug: any = data.suggestions?.youtube
       ?? Object.values(data.suggestions || {})[0];
+
+    trendRefreshedAt.value = data.trend_refreshed_at ?? null;
 
     if (sug) {
       titleOptions.value = sug.title_options?.length ? sug.title_options : [sug.title];
@@ -583,6 +600,21 @@ function reset() {
   margin-top: 0.5rem;
 }
 .regen-hint { font-size: 0.78rem; color: var(--text-disabled); }
+
+/* Live data badge */
+.live-data-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.3rem 0.75rem;
+  background: rgba(16, 185, 129, 0.08);
+  border: 1px solid rgba(16, 185, 129, 0.25);
+  border-radius: 20px;
+  font-size: 0.75rem;
+  color: #10b981;
+  margin-bottom: 1rem;
+}
+.live-data-badge i { font-size: 0.7rem; }
 
 /* Shared */
 .divider { height: 1px; background: var(--border-color); margin: 1.25rem 0; }

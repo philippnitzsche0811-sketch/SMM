@@ -10,7 +10,9 @@
       "Bash(curl -s http://localhost:8001/docs)",
       "Bash(curl -s http://localhost:8001/api/upload-groups/?user_id=test)",
       "Bash(curl *)",
-      "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); paths=[p for p in d['paths'] if 'upload' in p or 'group' in p]; print\\('\\\\n'.join\\(sorted\\(paths\\)\\)\\)\")"
+      "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); paths=[p for p in d['paths'] if 'upload' in p or 'group' in p]; print\\('\\\\n'.join\\(sorted\\(paths\\)\\)\\)\")",
+      "Read(//mnt/c/Users/Philipp/**)",
+      "Bash(dir \"C:\\\\\\\\Users\\\\\\\\Philipp\\\\\\\\SMM\")"
     ]
   }
 }

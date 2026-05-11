@@ -60,6 +60,9 @@ class Settings:
     # Encryption
     ENCRYPTION_KEY: str = os.getenv("ENCRYPTION_KEY")
     
+    # Admin
+    ADMIN_EMAIL: str = os.getenv("ADMIN_EMAIL", "")
+
     # Environment
     DEBUG: bool = os.getenv("DEBUG", "false").lower() == "true"
     ENVIRONMENT: str = os.getenv("ENVIRONMENT", "development")

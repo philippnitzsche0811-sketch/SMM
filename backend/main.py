@@ -11,6 +11,7 @@ from routers.smart_upload import router as smart_upload_router
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from datetime import datetime, timedelta, timezone
 from routers.optimizer import router as optimizer_router
+from routers.admin import router as admin_router
 
 
 
@@ -112,6 +113,7 @@ app.include_router(static_pages.router)
 app.include_router(optimizer_router)
 app.include_router(upload_groups_router, prefix="/api/upload-groups")
 app.include_router(smart_upload_router, prefix="/api/smart-upload")
+app.include_router(admin_router)
 # Health Check
 @app.get("/health")
 async def health_check():
@@ -184,6 +186,46 @@ async def process_upload_groups_job():
                 mark_video_failed(db, gv.id)
     except Exception as e:
         logger.error(f"❌ process_upload_groups_job failed: {e}")
+    finally:
+        db.close()
+
+
+@scheduler.scheduled_job("interval", hours=6)
+async def refresh_global_trends_job():
+    """Refresh YouTube trending-analysis cache for all known categories."""
+    from services import trend_cache_service
+    categories = ["default", "gaming", "education", "music", "entertainment",
+                  "lifestyle", "tech", "food", "sports"]
+    db = SessionLocal()
+    try:
+        for cat in categories:
+            await trend_cache_service.update_global_trend_cache(db, "youtube", cat)
+        logger.info(f"✅ Global trend cache refreshed ({len(categories)} categories)")
+    except Exception as e:
+        logger.error(f"❌ refresh_global_trends_job failed: {e}")
+    finally:
+        db.close()
+
+
+@scheduler.scheduled_job("cron", hour=3, minute=0)
+async def refresh_user_performance_job():
+    """Nightly refresh of per-user performance cache for all connected platforms."""
+    from models.database import PlatformConnection
+    from services import trend_cache_service
+    db = SessionLocal()
+    try:
+        user_ids = (
+            db.query(PlatformConnection.user_id)
+            .filter(PlatformConnection.connected == True)
+            .distinct()
+            .all()
+        )
+        user_ids = [row[0] for row in user_ids]
+        for uid in user_ids:
+            await trend_cache_service.update_user_performance(db, uid)
+        logger.info(f"✅ User performance cache refreshed ({len(user_ids)} users)")
+    except Exception as e:
+        logger.error(f"❌ refresh_user_performance_job failed: {e}")
     finally:
         db.close()
 

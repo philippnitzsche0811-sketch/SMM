@@ -15,7 +15,8 @@ from data.optimizer_config import (
     PLATFORM_CONSTRAINTS,
     HASHTAG_SEEDS,
 )
-from services import youtube_data_service
+from models.database import AdminTrendDataModel
+from services import youtube_data_service, trend_cache_service
 
 logger = logging.getLogger(__name__)
 
@@ -44,6 +45,7 @@ async def generate_suggestions(
 
     suggestions: dict = {}
     all_upload_times: list[str] = []
+    trend_refreshed_at: Optional[str] = None
 
     for platform in platforms:
         platform = platform.lower()
@@ -52,10 +54,38 @@ async def generate_suggestions(
 
         constraints = PLATFORM_CONSTRAINTS.get(platform, {})
 
-        # External trending tags (YouTube only – others use Claude knowledge)
-        trending_tags: list[str] = []
-        if platform == "youtube":
-            trending_tags = await youtube_data_service.get_trending_tags(category)
+        # Load live trend + personal performance data
+        try:
+            trend_data, refreshed_at = await trend_cache_service.get_trend_data(
+                db, platform, category
+            )
+            if refreshed_at and not trend_refreshed_at:
+                trend_refreshed_at = refreshed_at.isoformat()
+        except Exception as exc:
+            logger.warning(f"Trend data load failed ({platform}/{category}): {exc}")
+            trend_data = {}
+
+        try:
+            user_perf = await trend_cache_service.get_user_performance(db, user_id, platform)
+        except Exception as exc:
+            logger.warning(f"User perf load failed ({user_id}/{platform}): {exc}")
+            user_perf = None
+
+        # Merge manually curated admin data (takes priority — prepended to auto-fetched)
+        try:
+            admin_row = (
+                db.query(AdminTrendDataModel)
+                .filter(
+                    AdminTrendDataModel.platform == platform,
+                    AdminTrendDataModel.category == category,
+                )
+                .first()
+            )
+            if admin_row:
+                trend_data = _merge_admin_trend(trend_data, admin_row)
+                logger.info(f"✅ Admin trend data merged ({platform}/{category}): {len(admin_row.top_tags or [])} tags, {len(admin_row.title_words or [])} words")
+        except Exception as exc:
+            logger.warning(f"Admin trend data load failed ({platform}/{category}): {exc}")
 
         # AI optimization: title + description + hashtags in one call
         if _claude and not settings.AI_MOCK_MODE:
@@ -67,7 +97,8 @@ async def generate_suggestions(
                     category=category,
                     constraints=constraints,
                     video_duration=video_duration,
-                    trending_tags=trending_tags,
+                    trend_data=trend_data,
+                    user_perf=user_perf,
                 )
                 title = ai["title"]
                 title_options = ai.get("title_options", [title])
@@ -99,6 +130,7 @@ async def generate_suggestions(
     return {
         "suggestions": suggestions,
         "best_overall_time": _pick_best_time(all_upload_times),
+        "trend_refreshed_at": trend_refreshed_at,
     }
 
 
@@ -113,7 +145,8 @@ async def _optimize_with_claude(
     category: str,
     constraints: dict,
     video_duration: Optional[int],
-    trending_tags: list[str],
+    trend_data: dict,
+    user_perf: Optional[dict],
 ) -> dict:
     title_limit = constraints.get("title_max_chars", 100)
     desc_limit = constraints.get("description_max_chars", 2000)
@@ -121,10 +154,41 @@ async def _optimize_with_claude(
     tags_max = constraints.get("tags_max_count", 20)
 
     duration_line = f"Videolänge: {video_duration} Sekunden." if video_duration else ""
-    trending_line = (
-        f"Aktuell trending auf {platform.upper()}: {', '.join(trending_tags[:12])}"
-        if trending_tags else ""
-    )
+
+    # Build real-data block from trend + personal performance
+    real_data_lines: list[str] = []
+    if trend_data:
+        top_tags = trend_data.get("top_tags", [])
+        patterns = trend_data.get("title_patterns", {})
+        if top_tags:
+            real_data_lines.append(f"Trending-Tags ({platform.upper()}): {', '.join(top_tags[:12])}")
+        if patterns.get("common_words"):
+            real_data_lines.append(f"Häufige Titelwörter aktuell: {', '.join(patterns['common_words'][:10])}")
+        if patterns.get("common_starters"):
+            starters = '", "'.join(patterns["common_starters"][:4])
+            real_data_lines.append(f'Häufige Titel-Starter: "{starters}"')
+        if patterns.get("avg_length"):
+            real_data_lines.append(f"Ø Titellänge Top-Videos: {patterns['avg_length']} Zeichen")
+
+    if user_perf:
+        user_tags = [t["tag"] for t in (user_perf.get("top_tags") or [])[:8]]
+        user_hours = [str(h["hour"]) + ":00" for h in (user_perf.get("best_hours") or [])[:4]]
+        if user_tags:
+            real_data_lines.append(f"Deine best-performing eigenen Tags: {', '.join(user_tags)}")
+        if user_hours:
+            real_data_lines.append(f"Deine besten Upload-Zeiten (UTC): {', '.join(user_hours)}")
+
+    if trend_data.get("_admin_notes"):
+        real_data_lines.append(f"Admin-Beobachtungen: {trend_data['_admin_notes']}")
+
+    live_data_block = ""
+    if real_data_lines:
+        live_data_block = (
+            "\n=== LIVE PLATFORM DATA ===\n"
+            + "\n".join(f"- {line}" for line in real_data_lines)
+            + "\nNutze diese Daten konkret — verwende die trending Tags und Titelstruktur.\n"
+            "=== ENDE ===\n"
+        )
 
     user_prompt = f"""Erstelle viralitäts-optimierte Video-Metadaten für {platform.upper()}.
 
@@ -134,8 +198,7 @@ Plattform-Hinweis: {desc_note}
 Titel-Limit: {title_limit} Zeichen (alle Varianten einhalten)
 Beschreibungs-Limit: {desc_limit} Zeichen
 Max. Hashtags: {tags_max}
-{trending_line}
-
+{live_data_block}
 Kontext / Original-Titel: {title_draft}
 Kontext / Original-Beschreibung: {description_draft}
 
@@ -160,7 +223,7 @@ Anforderungen:
 - Aggressiv auf Klickrate und Reichweite optimieren"""
 
     response = await _claude.messages.create(
-        model="claude-sonnet-4-6",
+        model="claude-haiku-4-5-20251001",
         max_tokens=1500,
         system=(
             f"Du bist ein Viral-Content-Stratege für {platform.upper()}. "
@@ -357,6 +420,52 @@ def _get_user_upload_history(db: Session, user_id: str) -> list[dict]:
 # ---------------------------------------------------------------------------
 # Public helpers for standalone endpoints
 # ---------------------------------------------------------------------------
+
+def _merge_admin_trend(trend_data: dict, admin_row) -> dict:
+    """Merge admin-curated data into auto-fetched trend_data. Admin entries take priority."""
+    merged = dict(trend_data)
+
+    # top_tags: admin first, then auto-fetched — deduplicated
+    if admin_row.top_tags:
+        existing = merged.get("top_tags") or []
+        seen: set = set()
+        combined = []
+        for t in (list(admin_row.top_tags) + list(existing)):
+            if t not in seen:
+                seen.add(t)
+                combined.append(t)
+        merged["top_tags"] = combined
+
+    # title_patterns sub-dict
+    patterns = dict(merged.get("title_patterns") or {})
+
+    if admin_row.title_words:
+        existing_words = patterns.get("common_words") or []
+        seen = set()
+        combined = []
+        for w in (list(admin_row.title_words) + list(existing_words)):
+            if w not in seen:
+                seen.add(w)
+                combined.append(w)
+        patterns["common_words"] = combined
+
+    if admin_row.title_starters:
+        existing_starters = patterns.get("common_starters") or []
+        seen = set()
+        combined = []
+        for s in (list(admin_row.title_starters) + list(existing_starters)):
+            if s not in seen:
+                seen.add(s)
+                combined.append(s)
+        patterns["common_starters"] = combined
+
+    merged["title_patterns"] = patterns
+
+    if admin_row.notes:
+        merged["_admin_notes"] = admin_row.notes
+
+    return merged
+
 
 async def get_trending_hashtags(platform: str, category: str) -> list[str]:
     if platform == "youtube":

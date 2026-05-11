@@ -71,13 +71,19 @@ const authStore = useAuthStore();
 
 const isCollapsed = ref(false);
 
-const navItems = [
-  { name: 'dashboard',      path: '/dashboard',      icon: 'pi pi-home',        label: 'Dashboard' },
-  { name: 'upload',         path: '/upload',         icon: 'pi pi-cloud-upload', label: 'Upload'    },
-  { name: 'upload-groups',  path: '/upload/groups',  icon: 'pi pi-calendar',    label: 'Groups'    },
-  { name: 'platforms',      path: '/platforms',      icon: 'pi pi-link',         label: 'Platforms' },
-  { name: 'settings',       path: '/settings',       icon: 'pi pi-cog',          label: 'Settings'  },
-];
+const navItems = computed(() => {
+  const items = [
+    { name: 'dashboard',      path: '/dashboard',      icon: 'pi pi-home',         label: 'Dashboard' },
+    { name: 'upload',         path: '/upload',         icon: 'pi pi-cloud-upload', label: 'Upload'    },
+    { name: 'upload-groups',  path: '/upload/groups',  icon: 'pi pi-calendar',     label: 'Groups'    },
+    { name: 'platforms',      path: '/platforms',      icon: 'pi pi-link',          label: 'Platforms' },
+    { name: 'settings',       path: '/settings',       icon: 'pi pi-cog',           label: 'Settings'  },
+  ];
+  if (authStore.isAdmin) {
+    items.push({ name: 'admin', path: '/admin', icon: 'pi pi-shield', label: 'Admin' });
+  }
+  return items;
+});
 
 const userInitial = computed(() =>
   (authStore.userName || authStore.userEmail || 'U').charAt(0).toUpperCase()
@@ -85,7 +91,7 @@ const userInitial = computed(() =>
 
 const isActive = (path: string) => {
   if (!route.path.startsWith(path)) return false;
-  return !navItems.some(
+  return !navItems.value.some(
     item => item.path !== path &&
             item.path.startsWith(path + '/') &&
             route.path.startsWith(item.path),

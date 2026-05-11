@@ -14,6 +14,7 @@ export interface User {
   email: string;
   username?: string | null;
   isVerified: boolean;
+  isAdmin?: boolean;
   connectedPlatforms?: ConnectedPlatform[];
   createdAt?: string;
   updatedAt?: string;
@@ -35,6 +36,7 @@ export const useAuthStore = defineStore('auth', () => {
   const userEmail = computed(() => user.value?.email || null);
   const userName = computed(() => user.value?.username || null);
   const isVerified = computed(() => user.value?.isVerified || false);
+  const isAdmin = computed(() => user.value?.isAdmin ?? false);
   
   // Actions
   const setAuth = (userData: User, accessToken: string) => {
@@ -65,6 +67,7 @@ export const useAuthStore = defineStore('auth', () => {
         email: response.data.user.email,
         username: response.data.user.username,
         isVerified: response.data.user.is_verified,
+        isAdmin: response.data.user.is_admin ?? false,
         connectedPlatforms: response.data.user.connected_platforms || [],
         createdAt: response.data.user.created_at,
         updatedAt: response.data.user.updated_at
@@ -159,6 +162,7 @@ export const useAuthStore = defineStore('auth', () => {
         email: response.data.email,
         username: response.data.username,
         isVerified: response.data.is_verified,
+        isAdmin: response.data.is_admin ?? false,
         connectedPlatforms: response.data.connected_platforms || [],
         createdAt: response.data.created_at,
         updatedAt: response.data.updated_at
@@ -185,6 +189,7 @@ export const useAuthStore = defineStore('auth', () => {
     userEmail,
     userName,
     isVerified,
+    isAdmin,
     
     // Actions
     login,

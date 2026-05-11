@@ -247,6 +247,63 @@ export const listUploadGroups = async (userId: string) => {
   return response.data;
 };
 
+// ==========================================
+// Admin — Trend Data
+// ==========================================
+
+export interface AdminTrendDataIn {
+  platform: string;
+  category: string;
+  top_tags?: string[];
+  title_words?: string[];
+  title_starters?: string[];
+  notes?: string;
+}
+
+export interface AdminTrendDataOut {
+  id: string;
+  platform: string;
+  category: string;
+  top_tags?: string[];
+  title_words?: string[];
+  title_starters?: string[];
+  notes?: string;
+  updated_at?: string;
+}
+
+export const listAdminTrendData = async (): Promise<AdminTrendDataOut[]> => {
+  const response = await api.get('/api/admin/trend-data');
+  return response.data;
+};
+
+export const upsertAdminTrendData = async (data: AdminTrendDataIn): Promise<AdminTrendDataOut> => {
+  const response = await api.post('/api/admin/trend-data', data);
+  return response.data;
+};
+
+export const deleteAdminTrendData = async (id: string): Promise<void> => {
+  await api.delete(`/api/admin/trend-data/${id}`);
+};
+
+export interface ParseRawResult {
+  top_tags: string[];
+  title_words: string[];
+  title_starters: string[];
+}
+
+export const parseAdminRawText = async (
+  rawText: string,
+  platform: string,
+  category: string,
+): Promise<ParseRawResult> => {
+  const response = await api.post('/api/admin/parse-raw', {
+    raw_text: rawText,
+    platform,
+    category,
+  });
+  return response.data;
+};
+
 export const getUploadGroup = async (groupId: string) => {
   const response = await api.get(`/api/upload-groups/${groupId}`);
   return response.data;

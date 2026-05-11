@@ -40,6 +40,7 @@ class PlatformSuggestion(BaseModel):
 class SuggestResponse(BaseModel):
     suggestions: dict[str, PlatformSuggestion]
     best_overall_time: str
+    trend_refreshed_at: Optional[str] = None
 
 
 # ---------------------------------------------------------------------------

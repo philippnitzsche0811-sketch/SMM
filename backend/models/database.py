@@ -98,6 +98,42 @@ class VideoAnalysisModel(Base):
     created_at = Column(DateTime, default=datetime.now)
     updated_at = Column(DateTime, nullable=True)
 
+class TrendCacheModel(Base):
+    __tablename__ = "trend_cache"
+
+    id = Column(String, primary_key=True, index=True)
+    platform = Column(String, nullable=False, index=True)   # youtube / tiktok / instagram
+    category = Column(String, nullable=False, index=True)   # gaming, default, …
+    data = Column(JSON, nullable=True)                       # {top_tags, title_patterns, sample_titles}
+    refreshed_at = Column(DateTime, nullable=True)
+    expires_at = Column(DateTime, nullable=True)
+
+
+class UserPerformanceCacheModel(Base):
+    __tablename__ = "user_performance_cache"
+
+    id = Column(String, primary_key=True, index=True)
+    user_id = Column(String, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    platform = Column(String, nullable=False)               # youtube / tiktok / instagram
+    top_tags = Column(JSON, nullable=True)                  # [{tag, score}]
+    best_hours = Column(JSON, nullable=True)                # [{hour, avg_engagement}]
+    best_days = Column(JSON, nullable=True)                 # [{dow, avg_engagement}]
+    updated_at = Column(DateTime, nullable=True)
+
+
+class AdminTrendDataModel(Base):
+    __tablename__ = "admin_trend_data"
+
+    id             = Column(String, primary_key=True, index=True)
+    platform       = Column(String, nullable=False, index=True)   # youtube|tiktok|instagram
+    category       = Column(String, nullable=False, index=True)   # gaming|education|default|...
+    top_tags       = Column(JSON, nullable=True)                  # list[str]
+    title_words    = Column(JSON, nullable=True)                  # list[str]
+    title_starters = Column(JSON, nullable=True)                  # list[str]
+    notes          = Column(Text, nullable=True)
+    updated_at     = Column(DateTime, default=datetime.now, onupdate=datetime.now)
+
+
 class PlatformConnection(Base):
     __tablename__ = "platform_connections"
     

@@ -412,6 +412,7 @@ async def login(request: LoginRequest, db: Session = Depends(get_db)):
                 "email": user.email,
                 "username": user.username if hasattr(user, 'username') else None,
                 "is_verified": user.is_verified,
+                "is_admin": bool(settings.ADMIN_EMAIL) and user.email == settings.ADMIN_EMAIL,
                 "connected_platforms": connected_platforms
             }
         }
@@ -586,6 +587,7 @@ async def get_current_user(
             "email": user.email,
             "username": user.username if hasattr(user, 'username') else None,
             "is_verified": user.is_verified,
+            "is_admin": bool(settings.ADMIN_EMAIL) and user.email == settings.ADMIN_EMAIL,
             "connected_platforms": connected_platforms,
             "created_at": user.created_at.isoformat() if user.created_at else None,
             "updated_at": user.updated_at.isoformat() if user.updated_at and hasattr(user, 'updated_at') else None
