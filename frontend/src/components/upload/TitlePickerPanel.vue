@@ -2,7 +2,12 @@
   <div class="title-picker">
     <div class="picker-header">
       <i class="pi pi-sparkles"></i>
-      <span>Choose a title — or write your own below</span>
+      <span>3 Titelvorschläge — wähle einen aus oder schreib deinen eigenen</span>
+    </div>
+    <div class="picker-legend">
+      <span><b>Standard</b> – klarer, direkter Titel</span>
+      <span><b>Erweitert</b> – mit Zusatzinfo für mehr Kontext</span>
+      <span><b>Kreativ</b> – besonderer Winkel, hebt sich ab</span>
     </div>
 
     <div class="option-cards">
@@ -78,11 +83,11 @@ function onInput(val: string) {
   emit('update:modelValue', val);
 }
 
-const badgeLabels = ['Hook', 'SEO', 'Curiosity'];
-const badgeClasses = ['badge-hook', 'badge-seo', 'badge-curiosity'];
+const badgeLabels = ['Standard', 'Erweitert', 'Kreativ'];
+const badgeClasses = ['badge-a', 'badge-b', 'badge-c'];
 
 const badgeLabel = (idx: number) => badgeLabels[idx] ?? `Option ${idx + 1}`;
-const badgeClass = (idx: number) => badgeClasses[idx] ?? 'badge-hook';
+const badgeClass = (idx: number) => badgeClasses[idx] ?? 'badge-a';
 </script>
 
 <style scoped>
@@ -97,6 +102,14 @@ const badgeClass = (idx: number) => badgeClasses[idx] ?? 'badge-hook';
   color: var(--text-secondary);
 }
 .picker-header i { color: #7da5ff; }
+
+.picker-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 1.25rem;
+  font-size: 0.75rem;
+  color: var(--text-disabled);
+}
 
 .option-cards {
   display: grid;
@@ -138,10 +151,10 @@ const badgeClass = (idx: number) => badgeClasses[idx] ?? 'badge-hook';
   letter-spacing: 0.03em;
   text-transform: uppercase;
 }
-.badge-hook      { background: rgba(239,68,68,0.15);  color: #f87171; }
-.badge-seo       { background: rgba(16,185,129,0.15); color: #34d399; }
-.badge-curiosity { background: rgba(139,92,246,0.15); color: #a78bfa; }
-.badge-own       { background: rgba(255,255,255,0.08); color: var(--text-disabled); }
+.badge-a   { background: rgba(79,127,255,0.15);  color: #7da5ff; }
+.badge-b   { background: rgba(16,185,129,0.15);  color: #34d399; }
+.badge-c   { background: rgba(139,92,246,0.15);  color: #a78bfa; }
+.badge-own { background: rgba(255,255,255,0.08); color: var(--text-disabled); }
 
 .title-text {
   font-size: 0.875rem;
