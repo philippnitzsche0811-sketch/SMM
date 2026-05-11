@@ -12,7 +12,10 @@
       "Bash(curl *)",
       "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); paths=[p for p in d['paths'] if 'upload' in p or 'group' in p]; print\\('\\\\n'.join\\(sorted\\(paths\\)\\)\\)\")",
       "Read(//mnt/c/Users/Philipp/**)",
-      "Bash(dir \"C:\\\\\\\\Users\\\\\\\\Philipp\\\\\\\\SMM\")"
+      "Bash(dir \"C:\\\\\\\\Users\\\\\\\\Philipp\\\\\\\\SMM\")",
+      "Bash(Select-String -Pattern \"\\(Admin trend|optimizer|suggest|instagram\\)\")",
+      "Bash(Select-Object -Last 30)",
+      "Bash(python *)"
     ]
   }
 }

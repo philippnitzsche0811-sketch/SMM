@@ -88,7 +88,7 @@
         </Transition>
       </div>
 
-      <!-- Step 2: AI review — title picker + desc + tags -->
+      <!-- Step 2: AI review — per-platform tabs -->
       <div v-show="currentStep === 2" class="step-content">
         <div v-if="isOptimizing" class="ai-loading">
           <i class="pi pi-spin pi-spinner"></i>
@@ -102,82 +102,98 @@
             Powered by live YouTube data · Updated {{ liveDataAge }}
           </div>
 
-          <!-- Title picker -->
-          <div class="review-section">
-            <TitlePickerPanel
-              :options="titleOptions"
-              v-model="meta.title"
-            />
+          <!-- Platform tabs (only shown when >1 platform selected) -->
+          <div v-if="selectedPlatforms.length > 1" class="platform-tabs">
+            <button
+              v-for="p in selectedPlatforms"
+              :key="p"
+              class="platform-tab"
+              :class="['tab-' + p, { active: activeTab === p }]"
+              @click="activeTab = p"
+            >
+              <i :class="platformTabIcon(p)"></i>
+              {{ platformLabel(p) }}
+            </button>
           </div>
 
-          <div class="divider"></div>
-
-          <!-- Description -->
-          <div class="review-section">
-            <label class="review-label">Description</label>
-            <Textarea
-              v-model="meta.description"
-              :rows="4"
-              class="w-full"
-              placeholder="Video description…"
-            />
-          </div>
-
-          <div class="divider"></div>
-
-          <!-- Tags -->
-          <div class="review-section">
-            <label class="review-label">Tags</label>
-            <div class="tags-row">
-              <span
-                v-for="(tag, i) in meta.tags"
-                :key="i"
-                class="tag-chip"
-              >
-                #{{ tag }}
-                <button class="tag-remove" @click="meta.tags.splice(i, 1)">×</button>
-              </span>
-              <input
-                v-model="newTag"
-                class="tag-input"
-                placeholder="Add tag…"
-                @keydown.enter.prevent="addTag"
-                @keydown.comma.prevent="addTag"
+          <div v-if="currentMeta" class="tab-content">
+            <!-- Title picker -->
+            <div class="review-section">
+              <TitlePickerPanel
+                :options="currentMeta.titleOptions"
+                v-model="currentMeta.title"
               />
             </div>
-          </div>
 
-          <div class="divider"></div>
+            <div class="divider"></div>
 
-          <!-- Visibility -->
-          <div class="field-group">
-            <label class="review-label">Visibility</label>
-            <Dropdown
-              v-model="meta.privacyStatus"
-              :options="privacyOptions"
-              optionLabel="label"
-              optionValue="value"
-              style="width: 220px"
-            />
-          </div>
+            <!-- Description -->
+            <div class="review-section">
+              <label class="review-label">Description</label>
+              <Textarea
+                v-model="currentMeta.description"
+                :rows="4"
+                class="w-full"
+                placeholder="Video description…"
+              />
+            </div>
 
-          <div class="regen-row">
-            <Button
-              label="Regenerate"
-              icon="pi pi-refresh"
-              severity="secondary"
-              outlined
-              size="small"
-              :loading="isRegenerating"
-              @click="regenerate"
-            />
-            <span class="regen-hint">Re-runs AI with the same context</span>
+            <div class="divider"></div>
+
+            <!-- Tags -->
+            <div class="review-section">
+              <label class="review-label">Tags</label>
+              <div class="tags-row">
+                <span
+                  v-for="(tag, i) in currentMeta.tags"
+                  :key="i"
+                  class="tag-chip"
+                >
+                  #{{ tag }}
+                  <button class="tag-remove" @click="currentMeta.tags.splice(i, 1)">×</button>
+                </span>
+                <input
+                  v-model="currentMeta.newTag"
+                  class="tag-input"
+                  placeholder="Add tag…"
+                  @keydown.enter.prevent="addTagToCurrentPlatform"
+                  @keydown.comma.prevent="addTagToCurrentPlatform"
+                />
+              </div>
+            </div>
+
+            <div class="divider"></div>
+
+            <!-- Visibility -->
+            <div class="field-group">
+              <label class="review-label">Visibility</label>
+              <Dropdown
+                v-model="currentMeta.privacyStatus"
+                :options="privacyOptions"
+                optionLabel="label"
+                optionValue="value"
+                style="width: 220px"
+              />
+            </div>
+
+            <div class="regen-row">
+              <Button
+                label="Regenerate"
+                icon="pi pi-refresh"
+                severity="secondary"
+                outlined
+                size="small"
+                :loading="isRegenerating"
+                @click="regenerate"
+              />
+              <span class="regen-hint">Re-runs AI with the same context</span>
+            </div>
           </div>
         </template>
 
         <div class="nav-buttons">
           <Button label="Back" severity="secondary" outlined @click="currentStep = 1" :disabled="isOptimizing" />
-          <Button label="Continue" @click="currentStep = 3" :disabled="!meta.title.trim() || isOptimizing" />
+          <Button label="Continue" @click="currentStep = 3" :disabled="!canProceedFromStep2 || isOptimizing" />
         </div>
       </div>
 
@@ -272,14 +288,25 @@ const steps = ['Upload', 'Review', 'Schedule'];
 const currentStep = ref(1);
 const videoFile = ref<File | null>(null);
 
+// Step 1 data
 const meta = ref({
   title: '',
-  description: '',
-  tags: [] as string[],
-  privacyStatus: 'private',
   category: 'default',
 });
-const titleOptions = ref<string[]>([]);
+
+// Step 2 per-platform data
+type PlatformMeta = {
+  title: string;
+  titleOptions: string[];
+  description: string;
+  tags: string[];
+  privacyStatus: string;
+  newTag: string;
+};
+const platformMetas = ref<Record<string, PlatformMeta>>({});
+const activeTab = ref('');
+const currentMeta = computed(() => platformMetas.value[activeTab.value] ?? null);
+
 const aiContext = ref('');
 const isOptimizing = ref(false);
 const isRegenerating = ref(false);
@@ -292,7 +319,6 @@ const liveDataAge = computed(() => {
   if (ageHours >= 6) return null;
   return ageHours === 0 ? 'just now' : `${ageHours}h ago`;
 });
-const newTag = ref('');
 
 const selectedPlatforms = ref<string[]>([]);
 const scheduleType = ref('now');
@@ -323,6 +349,24 @@ const categoryOptions = [
   { label: 'Lifestyle',      value: 'lifestyle'      },
 ];
 
+const platformLabels: Record<string, string> = {
+  youtube: 'YouTube',
+  tiktok: 'TikTok',
+  instagram: 'Instagram',
+};
+const platformTabIcons: Record<string, string> = {
+  youtube: 'pi pi-youtube',
+  tiktok: 'pi pi-mobile',
+  instagram: 'pi pi-instagram',
+};
+function platformLabel(p: string) { return platformLabels[p] ?? p; }
+function platformTabIcon(p: string) { return platformTabIcons[p] ?? 'pi pi-video'; }
+
+const canProceedFromStep2 = computed(() =>
+  selectedPlatforms.value.length > 0 &&
+  selectedPlatforms.value.every(p => platformMetas.value[p]?.title?.trim())
+);
+
 const canSubmit = computed(() => {
   if (scheduleType.value === 'datetime' && !scheduledAt.value) return false;
   if (scheduleType.value === 'group' && !selectedGroupId.value) return false;
@@ -344,6 +388,24 @@ function handleFileSelect(file: File) {
   }
 }
 
+function initPlatformMetas() {
+  const metas: Record<string, PlatformMeta> = {};
+  for (const p of selectedPlatforms.value) {
+    metas[p] = platformMetas.value[p] ?? {
+      title: meta.value.title,
+      titleOptions: [],
+      description: '',
+      tags: [],
+      privacyStatus: 'private',
+      newTag: '',
+    };
+  }
+  platformMetas.value = metas;
+  if (!activeTab.value || !selectedPlatforms.value.includes(activeTab.value)) {
+    activeTab.value = selectedPlatforms.value[0] ?? '';
+  }
+}
+
 async function runOptimize(isRegen = false) {
   if (isRegen) isRegenerating.value = true;
   else isOptimizing.value = true;
@@ -357,19 +419,21 @@ async function runOptimize(isRegen = false) {
       platforms: selectedPlatforms.value,
     });
 
-    const sug: any = data.suggestions?.youtube
-      ?? Object.values(data.suggestions || {})[0];
-
+    const suggestions = data.suggestions ?? {};
     trendRefreshedAt.value = data.trend_refreshed_at ?? null;
 
-    if (sug) {
-      titleOptions.value = sug.title_options?.length ? sug.title_options : [sug.title];
-      meta.value.title       = sug.title_options?.[0] ?? sug.title ?? meta.value.title;
-      meta.value.description = sug.description ?? meta.value.description;
-      meta.value.tags        = sug.tags ?? meta.value.tags;
+    for (const platform of selectedPlatforms.value) {
+      const sug: any = suggestions[platform] ?? Object.values(suggestions)[0] ?? null;
+      if (sug && platformMetas.value[platform]) {
+        platformMetas.value[platform].titleOptions = sug.title_options?.length
+          ? sug.title_options
+          : [sug.title ?? meta.value.title];
+        platformMetas.value[platform].title = sug.title_options?.[0] ?? sug.title ?? meta.value.title;
+        platformMetas.value[platform].description = sug.description ?? '';
+        platformMetas.value[platform].tags = sug.tags ?? [];
+      }
     }
   } catch {
-    // non-fatal
     toast.add({ severity: 'warn', summary: 'AI unavailable', detail: 'Could not generate suggestions — fill in manually.', life: 4000 });
   } finally {
     isOptimizing.value = false;
@@ -378,6 +442,7 @@ async function runOptimize(isRegen = false) {
 }
 
 async function goToReview() {
+  initPlatformMetas();
   currentStep.value = 2;
   await runOptimize(false);
 }
@@ -386,20 +451,23 @@ async function regenerate() {
   await runOptimize(true);
 }
 
-function addTag() {
-  const t = newTag.value.replace(/^#/, '').trim();
-  if (t && !meta.value.tags.includes(t)) meta.value.tags.push(t);
-  newTag.value = '';
+function addTagToCurrentPlatform() {
+  if (!currentMeta.value) return;
+  const t = currentMeta.value.newTag.replace(/^#/, '').trim();
+  if (t && !currentMeta.value.tags.includes(t)) currentMeta.value.tags.push(t);
+  currentMeta.value.newTag = '';
 }
 
 async function handleCreateGroup() {
   if (!newGroupName.value.trim() || !authStore.userId) return;
   try {
+    const firstPlatform = selectedPlatforms.value[0];
+    const primaryMeta = platformMetas.value[firstPlatform];
     const group = await createGroup(
       authStore.userId,
       newGroupName.value.trim(),
       selectedPlatforms.value.length ? selectedPlatforms.value : ['youtube'],
-      meta.value.privacyStatus || 'private',
+      primaryMeta?.privacyStatus || 'private',
       meta.value.category || 'default',
     );
     if (group) selectedGroupId.value = group.id;
@@ -414,16 +482,32 @@ async function handleSubmit() {
   done.value = false;
 
   try {
+    const firstPlatform = selectedPlatforms.value[0];
+    const primaryMeta = platformMetas.value[firstPlatform] ?? {
+      title: meta.value.title, description: '', tags: [], privacyStatus: 'private',
+    };
+
+    const platformMetaJson: Record<string, any> = {};
+    for (const [platform, m] of Object.entries(platformMetas.value)) {
+      platformMetaJson[platform] = {
+        title: m.title,
+        description: m.description,
+        tags: m.tags,
+        privacy_status: m.privacyStatus,
+      };
+    }
+
     const formData = new FormData();
     formData.append('video', videoFile.value);
     formData.append('user_id', authStore.userId);
-    formData.append('title', meta.value.title);
-    formData.append('description', meta.value.description || '');
-    formData.append('tags', (meta.value.tags || []).join(','));
+    formData.append('title', primaryMeta.title || meta.value.title);
+    formData.append('description', primaryMeta.description || '');
+    formData.append('tags', (primaryMeta.tags || []).join(','));
     formData.append('platforms', selectedPlatforms.value.join(','));
-    formData.append('privacy_status', meta.value.privacyStatus || 'private');
+    formData.append('privacy_status', primaryMeta.privacyStatus || 'private');
     formData.append('upload_mode', 'simple');
     formData.append('schedule_type', scheduleType.value);
+    formData.append('platform_metadata', JSON.stringify(platformMetaJson));
     if (scheduledAt.value) formData.append('scheduled_at', scheduledAt.value);
     if (selectedGroupId.value) formData.append('group_id', selectedGroupId.value);
 
@@ -446,8 +530,9 @@ async function handleSubmit() {
 
 function reset() {
   videoFile.value = null;
-  meta.value = { title: '', description: '', tags: [], privacyStatus: 'private', category: 'default' };
-  titleOptions.value = [];
+  meta.value = { title: '', category: 'default' };
+  platformMetas.value = {};
+  activeTab.value = '';
   aiContext.value = '';
   selectedPlatforms.value = [];
   scheduleType.value = 'now';
@@ -579,11 +664,34 @@ function reset() {
 .review-section { display: flex; flex-direction: column; gap: 0.5rem; }
 .review-label { font-size: 0.875rem; font-weight: 500; color: var(--text-secondary); display: block; margin-bottom: 0.25rem; }
 
-.review-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 1rem;
+/* Platform tabs */
+.platform-tabs {
+  display: flex;
+  gap: 0;
+  margin-bottom: 1.5rem;
+  border-bottom: 1px solid var(--border-color);
 }
+.platform-tab {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.625rem 1.25rem;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 0.875rem;
+  font-weight: 500;
+  margin-bottom: -1px;
+  transition: color 0.15s, border-color 0.15s;
+}
+.platform-tab:hover { color: var(--text-primary); }
+.platform-tab.active { color: var(--text-primary); border-bottom-color: #4f7fff; }
+.tab-youtube.active   { border-bottom-color: #ff4444; color: #ff6666; }
+.tab-tiktok.active    { border-bottom-color: #69c9d0; color: #69c9d0; }
+.tab-instagram.active { border-bottom-color: #e1306c; color: #e1306c; }
+.platform-tab i { font-size: 0.875rem; }
 
 /* Tags */
 .tags-row {
@@ -698,8 +806,9 @@ function reset() {
   .step-label   { display: none; }
   .nav-buttons  { flex-direction: column-reverse; }
   .nav-buttons .p-button { width: 100%; justify-content: center; }
-  .review-row { grid-template-columns: 1fr; }
   .category-row { flex-wrap: wrap; }
   .category-dropdown { width: 100%; }
+  .platform-tabs { overflow-x: auto; }
+  .platform-tab  { padding: 0.5rem 0.875rem; font-size: 0.8rem; }
 }
 </style>

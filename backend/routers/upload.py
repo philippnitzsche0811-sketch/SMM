@@ -4,6 +4,7 @@ from pydantic import BaseModel
 from datetime import datetime, timezone
 from typing import Optional, List
 import logging
+import json
 
 from services.file_service import FileService
 from services.video_service import VideoService
@@ -260,6 +261,7 @@ async def simple_upload(
     scheduled_at: str = Form(""),
     group_id: str = Form(""),
     upload_mode: str = Form("simple"),
+    platform_metadata: str = Form(""),
     db: Session = Depends(get_db),
 ):
     content_type = video.content_type or ""
@@ -293,10 +295,18 @@ async def simple_upload(
         privacy_status=privacy_status,
         file_path=temp_path,
     )
+    pm_dict = {}
+    if platform_metadata:
+        try:
+            pm_dict = json.loads(platform_metadata)
+        except Exception:
+            pass
+
     db_video = db.query(VideoModel).filter(VideoModel.id == video_record.id).first()
     if db_video:
         db_video.upload_mode = upload_mode
         db_video.scheduled_at = scheduled_dt
+        db_video.platform_metadata = pm_dict or None
         db.commit()
 
     if schedule_type == "now":

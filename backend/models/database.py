@@ -52,6 +52,7 @@ class VideoModel(Base):
     file_path = Column(String, nullable=True)
     upload_results = Column(JSON, nullable=True)
     errors = Column(JSON, nullable=True)
+    platform_metadata = Column(JSON, nullable=True)  # {youtube: {title, description, tags, privacy_status}, ...}
     scheduled_at = Column(DateTime, nullable=True)
     upload_mode = Column(String, nullable=True)  # "simple" | "smart" | "group"
     created_at = Column(DateTime, default=datetime.now)

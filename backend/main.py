@@ -4,11 +4,12 @@ from fastapi.responses import FileResponse, PlainTextResponse, Response
 from fastapi.middleware.cors import CORSMiddleware
 import logging
 from config import settings
-from models.database import init_db,SessionLocal, UserModel
+from models.database import init_db, SessionLocal, UserModel, engine
 from routers import youtube, tiktok, instagram, upload, user, static_pages, auth
 from routers.upload_groups import router as upload_groups_router
 from routers.smart_upload import router as smart_upload_router
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from sqlalchemy import text
 from datetime import datetime, timedelta, timezone
 from routers.optimizer import router as optimizer_router
 from routers.admin import router as admin_router
@@ -95,6 +96,12 @@ async def startup_event():
     try:
         init_db()
         logger.info("✅ Database tables initialized")
+        # Add columns that may be missing on existing deployments
+        with engine.connect() as conn:
+            conn.execute(text(
+                "ALTER TABLE videos ADD COLUMN IF NOT EXISTS platform_metadata JSON"
+            ))
+            conn.commit()
         scheduler.start()
         logger.info("✅ Scheduler gestartet")
     except Exception as e:

@@ -95,7 +95,7 @@ def _initialize_upload(
     Returns:
         dict: Init-Response mit upload_url und publish_id
     """
-    url = f"{TIKTOK_API_BASE}/v2/post/publish/inbox/video/init/"
+    url = f"{TIKTOK_API_BASE}/v2/post/publish/video/init/"
     
     headers = {
         "Authorization": f"Bearer {access_token}",

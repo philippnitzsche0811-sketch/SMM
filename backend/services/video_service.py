@@ -178,15 +178,18 @@ class VideoService:
             successful = []
             failed = []
 
+            pm = video.platform_metadata or {}
+
             if "youtube" in video.platforms:
                 try:
+                    yt = pm.get("youtube", {})
                     result = upload_to_youtube(
                         video.user_id,
                         temp_file_path,
-                        video.title,
-                        video.description or "",
-                        video.tags or [],
-                        video.privacy_status
+                        yt.get("title") or video.title,
+                        yt.get("description") or video.description or "",
+                        yt.get("tags") or video.tags or [],
+                        yt.get("privacy_status") or video.privacy_status,
                     )
                     VideoService.add_upload_result(db, video_id, "youtube", result)
                     VideoService.track_upload(db, video.user_id, "youtube")
@@ -199,12 +202,13 @@ class VideoService:
 
             if "tiktok" in video.platforms:
                 try:
+                    tt = pm.get("tiktok", {})
                     result = await upload_to_tiktok(
                         video.user_id,
                         temp_file_path,
-                        video.title,
-                        video.description or "",
-                        video.tags or []
+                        tt.get("title") or video.title,
+                        tt.get("description") or video.description or "",
+                        tt.get("tags") or video.tags or [],
                     )
                     VideoService.add_upload_result(db, video_id, "tiktok", result)
                     VideoService.track_upload(db, video.user_id, "tiktok")
@@ -217,10 +221,11 @@ class VideoService:
 
             if "instagram" in video.platforms:
                 try:
+                    ig = pm.get("instagram", {})
                     result = await upload_to_instagram(
                         video.user_id,
                         temp_file_path,
-                        video.title
+                        ig.get("title") or video.title,
                     )
                     VideoService.add_upload_result(db, video_id, "instagram", result)
                     VideoService.track_upload(db, video.user_id, "instagram")
