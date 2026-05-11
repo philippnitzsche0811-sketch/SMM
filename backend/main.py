@@ -10,6 +10,7 @@ from routers.upload_groups import router as upload_groups_router
 from routers.smart_upload import router as smart_upload_router
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from sqlalchemy import text
+from sqlalchemy.exc import IntegrityError, ProgrammingError, OperationalError
 from datetime import datetime, timedelta, timezone
 from routers.optimizer import router as optimizer_router
 from routers.admin import router as admin_router
@@ -94,14 +95,23 @@ app.add_middleware(
 async def startup_event():
     logger.info(f"🚀 Starting application in {settings.ENVIRONMENT} mode...")
     try:
-        init_db()
+        try:
+            init_db()
+        except IntegrityError:
+            # Multiple uvicorn workers race to create tables — the winner already did it
+            logger.warning("⚠️ init_db: table creation race ignored (another worker created it)")
         logger.info("✅ Database tables initialized")
-        # Add columns that may be missing on existing deployments
-        with engine.connect() as conn:
-            conn.execute(text(
-                "ALTER TABLE videos ADD COLUMN IF NOT EXISTS platform_metadata JSON"
-            ))
-            conn.commit()
+
+        try:
+            with engine.connect() as conn:
+                conn.execute(text(
+                    "ALTER TABLE videos ADD COLUMN IF NOT EXISTS platform_metadata JSON"
+                ))
+                conn.commit()
+            logger.info("✅ Migration: platform_metadata column ready")
+        except (ProgrammingError, OperationalError) as e:
+            logger.warning(f"⚠️ Migration skipped (needs DB owner — run manually): {e.__class__.__name__}")
+
         scheduler.start()
         logger.info("✅ Scheduler gestartet")
     except Exception as e:
