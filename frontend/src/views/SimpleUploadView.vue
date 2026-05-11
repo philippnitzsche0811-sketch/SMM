@@ -54,22 +54,24 @@
 
             <div class="divider"></div>
 
-            <!-- Category + Platforms side by side -->
-            <div class="step1-row">
-              <div class="field-group">
-                <label>Category</label>
-                <Dropdown
-                  v-model="meta.category"
-                  :options="categoryOptions"
-                  optionLabel="label"
-                  optionValue="value"
-                  class="w-full"
-                />
-              </div>
-              <div class="field-group">
-                <label>Upload to <span class="required">*</span></label>
-                <PlatformSelector v-model="selectedPlatforms" />
-              </div>
+            <!-- Category inline (compact row) -->
+            <div class="category-row">
+              <label>Category</label>
+              <Dropdown
+                v-model="meta.category"
+                :options="categoryOptions"
+                optionLabel="label"
+                optionValue="value"
+                class="category-dropdown"
+              />
+            </div>
+
+            <div class="divider"></div>
+
+            <!-- Platforms -->
+            <div class="field-group">
+              <label>Upload to <span class="required">*</span></label>
+              <PlatformSelector v-model="selectedPlatforms" />
             </div>
 
             <div class="nav-buttons">
@@ -559,12 +561,19 @@ function reset() {
 .required { color: #f87171; }
 .field-hint { font-size: 0.78rem; color: var(--text-disabled); }
 
-.step1-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 1rem;
-  align-items: start;
+.category-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
 }
+.category-row label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.category-dropdown { width: 200px; }
 
 /* Step 2 review */
 .review-section { display: flex; flex-direction: column; gap: 0.5rem; }
@@ -690,6 +699,7 @@ function reset() {
   .nav-buttons  { flex-direction: column-reverse; }
   .nav-buttons .p-button { width: 100%; justify-content: center; }
   .review-row { grid-template-columns: 1fr; }
-  .step1-row  { grid-template-columns: 1fr; }
+  .category-row { flex-wrap: wrap; }
+  .category-dropdown { width: 100%; }
 }
 </style>
