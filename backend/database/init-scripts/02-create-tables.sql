@@ -25,9 +25,12 @@ CREATE TABLE IF NOT EXISTS videos (
     platforms JSONB NOT NULL,
     privacy_status VARCHAR(50) DEFAULT 'private',
     status VARCHAR(50) DEFAULT 'pending',
-    file_path VARCHAR(500),           
+    file_path VARCHAR(500),
     upload_results JSONB,
     errors JSONB,
+    platform_metadata JSON,
+    scheduled_at TIMESTAMP,
+    upload_mode VARCHAR(50),
     created_at TIMESTAMP DEFAULT NOW(),
     updated_at TIMESTAMP
 );
