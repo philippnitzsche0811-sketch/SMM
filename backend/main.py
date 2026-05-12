@@ -104,11 +104,11 @@ async def startup_event():
 
         try:
             with engine.connect() as conn:
-                conn.execute(text(
-                    "ALTER TABLE videos ADD COLUMN IF NOT EXISTS platform_metadata JSON"
-                ))
+                conn.execute(text("ALTER TABLE videos ADD COLUMN IF NOT EXISTS scheduled_at TIMESTAMP"))
+                conn.execute(text("ALTER TABLE videos ADD COLUMN IF NOT EXISTS upload_mode VARCHAR(50)"))
+                conn.execute(text("ALTER TABLE videos ADD COLUMN IF NOT EXISTS platform_metadata JSON"))
                 conn.commit()
-            logger.info("✅ Migration: platform_metadata column ready")
+            logger.info("✅ Migration: videos columns ready")
         except (ProgrammingError, OperationalError) as e:
             logger.warning(f"⚠️ Migration skipped (needs DB owner — run manually): {e.__class__.__name__}")
 
