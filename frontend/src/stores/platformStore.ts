@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
-import { getUserStatus } from '@/services/api';
+import { getUserPlatforms } from '@/services/api';
 import type { UserPlatforms } from '@/types/platform.types';
 
 export const usePlatformStore = defineStore('platform', () => {
@@ -44,28 +44,9 @@ export const usePlatformStore = defineStore('platform', () => {
     error.value = null;
 
     try {
-      // TODO: API Call zum Backend
-      // const response = await getUserStatus(userId);
-
-      // Mock für Entwicklung
-      const mockPlatforms: UserPlatforms = {
-        youtube: {
-          connected: false,
-          lastSync: undefined
-        },
-        tiktok: {
-          connected: false,
-          lastSync: undefined
-        },
-        instagram: {
-          connected: false,
-          lastSync: undefined
-        }
-      };
-
-      platforms.value = mockPlatforms;
+      const data = await getUserPlatforms(userId);
+      platforms.value = data as UserPlatforms;
       lastFetch.value = new Date();
-
       console.log('✅ Platform status geladen:', connectedPlatforms.value);
     } catch (err) {
       error.value = err instanceof Error ? err.message : 'Fehler beim Laden';

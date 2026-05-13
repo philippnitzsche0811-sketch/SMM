@@ -14,6 +14,12 @@ from sqlalchemy.exc import IntegrityError, ProgrammingError, OperationalError
 from datetime import datetime, timedelta, timezone
 from routers.optimizer import router as optimizer_router
 from routers.admin import router as admin_router
+from routers.ideas import router as ideas_router
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
+
+limiter = Limiter(key_func=get_remote_address, headers_enabled=True)
 
 
 
@@ -33,6 +39,9 @@ app = FastAPI(
 )
 
 os.makedirs(settings.TEMP_DIR, exist_ok=True)
+
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 
 @app.get("/robots.txt", include_in_schema=False)
@@ -107,8 +116,23 @@ async def startup_event():
                 conn.execute(text("ALTER TABLE videos ADD COLUMN IF NOT EXISTS scheduled_at TIMESTAMP"))
                 conn.execute(text("ALTER TABLE videos ADD COLUMN IF NOT EXISTS upload_mode VARCHAR(50)"))
                 conn.execute(text("ALTER TABLE videos ADD COLUMN IF NOT EXISTS platform_metadata JSON"))
+                conn.execute(text("""
+                    CREATE TABLE IF NOT EXISTS content_ideas (
+                        id VARCHAR PRIMARY KEY,
+                        user_id VARCHAR NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                        title VARCHAR NOT NULL,
+                        concept TEXT,
+                        target_platforms JSON,
+                        target_date TIMESTAMP,
+                        status VARCHAR DEFAULT 'idea',
+                        tags JSON,
+                        ai_suggestions JSON,
+                        created_at TIMESTAMP DEFAULT NOW(),
+                        updated_at TIMESTAMP
+                    )
+                """))
                 conn.commit()
-            logger.info("✅ Migration: videos columns ready")
+            logger.info("✅ Migration: videos columns + content_ideas table ready")
         except (ProgrammingError, OperationalError) as e:
             logger.warning(f"⚠️ Migration skipped (needs DB owner — run manually): {e.__class__.__name__}")
 
@@ -131,6 +155,7 @@ app.include_router(optimizer_router)
 app.include_router(upload_groups_router, prefix="/api/upload-groups")
 app.include_router(smart_upload_router, prefix="/api/smart-upload")
 app.include_router(admin_router)
+app.include_router(ideas_router, prefix="/api/ideas")
 # Health Check
 @app.get("/health")
 async def health_check():

@@ -234,7 +234,15 @@ Anforderungen:
         messages=[{"role": "user", "content": user_prompt}],
     )
 
-    raw = response.content[0].text
+    raw = response.content[0].text.strip()
+    # Strip markdown code fences if model wrapped response despite instructions
+    if raw.startswith("```"):
+        raw = raw.split("\n", 1)[1] if "\n" in raw else ""
+        if raw.endswith("```"):
+            raw = raw.rsplit("\n```", 1)[0]
+        raw = raw.strip()
+    if not raw:
+        raise ValueError("Claude returned empty response")
     result = json.loads(raw)
 
     raw_options = result.get("title_options", [])

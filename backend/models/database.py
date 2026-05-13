@@ -135,6 +135,22 @@ class AdminTrendDataModel(Base):
     updated_at     = Column(DateTime, default=datetime.now, onupdate=datetime.now)
 
 
+class ContentIdeaModel(Base):
+    __tablename__ = "content_ideas"
+
+    id = Column(String, primary_key=True, index=True)
+    user_id = Column(String, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    title = Column(String, nullable=False)
+    concept = Column(Text, nullable=True)
+    target_platforms = Column(JSON, nullable=True)   # ["tiktok", "instagram"]
+    target_date = Column(DateTime, nullable=True)
+    status = Column(String, default="idea")          # idea | filming | editing | ready
+    tags = Column(JSON, nullable=True)
+    ai_suggestions = Column(JSON, nullable=True)     # {titles: [], hashtags: []}
+    created_at = Column(DateTime, default=datetime.now)
+    updated_at = Column(DateTime, nullable=True)
+
+
 class PlatformConnection(Base):
     __tablename__ = "platform_connections"
     

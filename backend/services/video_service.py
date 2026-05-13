@@ -209,6 +209,10 @@ class VideoService:
                         tt.get("title") or video.title,
                         tt.get("description") or video.description or "",
                         tt.get("tags") or video.tags or [],
+                        privacy_level=tt.get("privacy_status") or "SELF_ONLY",
+                        allow_comment=bool(tt.get("allow_comment", False)),
+                        allow_duet=bool(tt.get("allow_duet", False)),
+                        allow_stitch=bool(tt.get("allow_stitch", False)),
                     )
                     VideoService.add_upload_result(db, video_id, "tiktok", result)
                     VideoService.track_upload(db, video.user_id, "tiktok")

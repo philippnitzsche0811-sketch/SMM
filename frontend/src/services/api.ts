@@ -349,6 +349,67 @@ export const getGroupSchedulePreview = async (groupId: string) => {
 };
 
 // ==========================================
+// Platform Status
+// ==========================================
+
+export const getUserPlatforms = async (userId: string) => {
+  const response = await api.get(`/api/user/${userId}/platforms`);
+  return response.data;
+};
+
+// ==========================================
+// Calendar
+// ==========================================
+
+export const getCalendarEvents = async (userId: string, from: string, to: string) => {
+  const response = await api.get('/api/upload/calendar', {
+    params: { user_id: userId, from, to },
+  });
+  return response.data;
+};
+
+// ==========================================
+// Content Ideas
+// ==========================================
+
+export const listIdeas = async (userId: string) => {
+  const response = await api.get('/api/ideas/', { params: { user_id: userId } });
+  return response.data;
+};
+
+export const createIdea = async (data: {
+  user_id: string;
+  title: string;
+  concept?: string;
+  target_platforms?: string[];
+  target_date?: string;
+  status?: string;
+  tags?: string[];
+}) => {
+  const response = await api.post('/api/ideas/', data);
+  return response.data;
+};
+
+export const updateIdea = async (ideaId: string, data: {
+  user_id: string;
+  title?: string;
+  concept?: string;
+  target_platforms?: string[];
+  target_date?: string;
+  status?: string;
+  tags?: string[];
+  ai_suggestions?: Record<string, unknown>;
+}) => {
+  const response = await api.patch(`/api/ideas/${ideaId}`, data);
+  return response.data;
+};
+
+export const deleteIdea = async (ideaId: string, userId: string) => {
+  const response = await api.delete(`/api/ideas/${ideaId}`, { params: { user_id: userId } });
+  return response.data;
+};
+
+// ==========================================
 // Health Check
 // ==========================================
 

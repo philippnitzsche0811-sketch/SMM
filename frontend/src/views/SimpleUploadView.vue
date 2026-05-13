@@ -74,7 +74,14 @@
               <PlatformSelector v-model="selectedPlatforms" />
             </div>
 
-            <div class="nav-buttons">
+            <div class="nav-buttons step1-nav">
+              <button
+                class="manual-link"
+                :disabled="selectedPlatforms.length === 0 || !meta.title.trim()"
+                @click="goToManual"
+              >
+                Fill in manually
+              </button>
               <Button
                 label="Generate with AI"
                 icon="pi pi-sparkles"
@@ -166,8 +173,21 @@
 
             <!-- Visibility -->
             <div class="field-group">
-              <label class="review-label">Visibility</label>
+              <label class="review-label">
+                Visibility
+                <span v-if="activeTab === 'tiktok'" class="required">*</span>
+              </label>
               <Dropdown
+                v-if="activeTab === 'tiktok'"
+                v-model="currentMeta.privacyStatus"
+                :options="tiktokPrivacyOptions"
+                optionLabel="label"
+                optionValue="value"
+                placeholder="Select visibility…"
+                style="width: 260px"
+              />
+              <Dropdown
+                v-else
                 v-model="currentMeta.privacyStatus"
                 :options="privacyOptions"
                 optionLabel="label"
@@ -175,6 +195,67 @@
                 style="width: 220px"
               />
             </div>
+
+            <!-- TikTok-specific fields -->
+            <template v-if="activeTab === 'tiktok' && currentMeta">
+              <div class="divider"></div>
+
+              <div class="tiktok-section">
+                <label class="review-label">Interaction abilities</label>
+                <div class="checkbox-group">
+                  <div class="checkbox-row">
+                    <Checkbox v-model="currentMeta.allowComment" :binary="true" inputId="ck-comment" />
+                    <label for="ck-comment">Allow comments</label>
+                  </div>
+                  <div class="checkbox-row">
+                    <Checkbox v-model="currentMeta.allowDuet" :binary="true" inputId="ck-duet" />
+                    <label for="ck-duet">Allow Duet</label>
+                  </div>
+                  <div class="checkbox-row">
+                    <Checkbox v-model="currentMeta.allowStitch" :binary="true" inputId="ck-stitch" />
+                    <label for="ck-stitch">Allow Stitch</label>
+                  </div>
+                </div>
+              </div>
+
+              <div class="divider"></div>
+
+              <div class="tiktok-section">
+                <div class="disclosure-header">
+                  <div>
+                    <label class="review-label">Content disclosure</label>
+                    <p class="disclosure-hint">Turn on to disclose that this video promotes goods or services</p>
+                  </div>
+                  <InputSwitch v-model="currentMeta.contentDisclosure" />
+                </div>
+
+                <template v-if="currentMeta.contentDisclosure">
+                  <div class="disclosure-options">
+                    <div class="checkbox-row">
+                      <Checkbox v-model="currentMeta.yourBrand" :binary="true" inputId="ck-your-brand" />
+                      <div>
+                        <label for="ck-your-brand" class="disclosure-option-label">Your Brand</label>
+                        <p class="disclosure-hint">You are promoting yourself or your own business</p>
+                      </div>
+                    </div>
+                    <div class="checkbox-row">
+                      <Checkbox v-model="currentMeta.brandedContent" :binary="true" inputId="ck-branded" />
+                      <div>
+                        <label for="ck-branded" class="disclosure-option-label">Branded Content</label>
+                        <p class="disclosure-hint">You are promoting another brand or a third party</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <p class="compliance-text" v-if="currentMeta.brandedContent">
+                    By posting, you agree to TikTok's Branded Content Policy and Music Usage Confirmation.
+                  </p>
+                  <p class="compliance-text" v-else-if="currentMeta.yourBrand">
+                    By posting, you agree to TikTok's Music Usage Confirmation.
+                  </p>
+                </template>
+              </div>
+            </template>
 
             <div class="regen-row">
               <Button
@@ -228,13 +309,6 @@
         </div>
         <ProgressBar :value="uploadProgress" />
       </div>
-
-      <!-- Done state -->
-      <div v-if="done" class="done-section">
-        <div class="done-icon"><i class="pi pi-check-circle"></i></div>
-        <h3>{{ doneMessage }}</h3>
-        <Button label="Upload another video" icon="pi pi-plus" outlined @click="reset" />
-      </div>
     </div>
   </div>
 
@@ -268,6 +342,8 @@ import Textarea from 'primevue/textarea';
 import Dropdown from 'primevue/dropdown';
 import Dialog from 'primevue/dialog';
 import InputText from 'primevue/inputtext';
+import Checkbox from 'primevue/checkbox';
+import InputSwitch from 'primevue/inputswitch';
 import { DragDropZone, PlatformSelector } from '@/components/upload';
 import DescribeVideoStep from '@/components/upload/DescribeVideoStep.vue';
 import ScheduleStep from '@/components/upload/ScheduleStep.vue';
@@ -300,8 +376,14 @@ type PlatformMeta = {
   titleOptions: string[];
   description: string;
   tags: string[];
-  privacyStatus: string;
+  privacyStatus: string | null;
   newTag: string;
+  allowComment: boolean;
+  allowDuet: boolean;
+  allowStitch: boolean;
+  contentDisclosure: boolean;
+  yourBrand: boolean;
+  brandedContent: boolean;
 };
 const platformMetas = ref<Record<string, PlatformMeta>>({});
 const activeTab = ref('');
@@ -329,13 +411,17 @@ const newGroupName = ref('');
 
 const isSubmitting = ref(false);
 const uploadProgress = ref(0);
-const done = ref(false);
-const doneMessage = ref('');
 
 const privacyOptions = [
   { label: 'Private',  value: 'private'  },
   { label: 'Unlisted', value: 'unlisted' },
   { label: 'Public',   value: 'public'   },
+];
+
+const tiktokPrivacyOptions = [
+  { label: 'Private (Only me)', value: 'SELF_ONLY'             },
+  { label: 'Friends',           value: 'MUTUAL_FOLLOW_FRIENDS' },
+  { label: 'Public',            value: 'PUBLIC_TO_EVERYONE'    },
 ];
 
 const categoryOptions = [
@@ -362,10 +448,15 @@ const platformTabIcons: Record<string, string> = {
 function platformLabel(p: string) { return platformLabels[p] ?? p; }
 function platformTabIcon(p: string) { return platformTabIcons[p] ?? 'pi pi-video'; }
 
-const canProceedFromStep2 = computed(() =>
-  selectedPlatforms.value.length > 0 &&
-  selectedPlatforms.value.every(p => platformMetas.value[p]?.title?.trim())
-);
+const canProceedFromStep2 = computed(() => {
+  if (selectedPlatforms.value.length === 0) return false;
+  for (const p of selectedPlatforms.value) {
+    const m = platformMetas.value[p];
+    if (!m?.title?.trim()) return false;
+    if (p === 'tiktok' && !m.privacyStatus) return false;
+  }
+  return true;
+});
 
 const canSubmit = computed(() => {
   if (scheduleType.value === 'datetime' && !scheduledAt.value) return false;
@@ -396,8 +487,14 @@ function initPlatformMetas() {
       titleOptions: [],
       description: '',
       tags: [],
-      privacyStatus: 'private',
+      privacyStatus: p === 'tiktok' ? null : 'private',
       newTag: '',
+      allowComment: false,
+      allowDuet: false,
+      allowStitch: false,
+      contentDisclosure: false,
+      yourBrand: false,
+      brandedContent: false,
     };
   }
   platformMetas.value = metas;
@@ -447,6 +544,11 @@ async function goToReview() {
   await runOptimize(false);
 }
 
+function goToManual() {
+  initPlatformMetas();
+  currentStep.value = 2;
+}
+
 async function regenerate() {
   await runOptimize(true);
 }
@@ -479,7 +581,6 @@ async function handleCreateGroup() {
 async function handleSubmit() {
   if (!videoFile.value || !authStore.userId) return;
   isSubmitting.value = true;
-  done.value = false;
 
   try {
     const firstPlatform = selectedPlatforms.value[0];
@@ -493,7 +594,12 @@ async function handleSubmit() {
         title: m.title,
         description: m.description,
         tags: m.tags,
-        privacy_status: m.privacyStatus,
+        privacy_status: m.privacyStatus ?? (platform === 'tiktok' ? 'SELF_ONLY' : 'private'),
+        ...(platform === 'tiktok' ? {
+          allow_comment: m.allowComment,
+          allow_duet: m.allowDuet,
+          allow_stitch: m.allowStitch,
+        } : {}),
       };
     }
 
@@ -513,14 +619,17 @@ async function handleSubmit() {
 
     await simpleUpload(formData, (pct) => { uploadProgress.value = pct; });
 
-    done.value = true;
-    doneMessage.value = scheduleType.value === 'now'
-      ? 'Upload started! Your video is being processed.'
+    const hasTikTok = selectedPlatforms.value.includes('tiktok');
+    const detail = scheduleType.value === 'now'
+      ? hasTikTok
+        ? 'Upload started! TikTok posts may take a few minutes to appear on your profile.'
+        : 'Upload started! Your video is being processed.'
       : scheduleType.value === 'group'
         ? 'Video added to group — it will upload at the scheduled time.'
         : 'Upload scheduled successfully.';
 
-    toast.add({ severity: 'success', summary: 'Done!', detail: doneMessage.value, life: 5000 });
+    toast.add({ severity: 'success', summary: 'Done!', detail, life: 6000 });
+    router.push('/dashboard');
   } catch (err: any) {
     toast.add({ severity: 'error', summary: 'Upload failed', detail: err.response?.data?.detail || 'Something went wrong', life: 5000 });
   } finally {
@@ -539,7 +648,6 @@ function reset() {
   scheduledAt.value = null;
   selectedGroupId.value = null;
   uploadProgress.value = 0;
-  done.value = false;
   currentStep.value = 1;
 }
 </script>
@@ -800,6 +908,86 @@ function reset() {
 .slide-down-leave-active { transition: all 0.2s ease; }
 .slide-down-enter-from   { opacity: 0; transform: translateY(-8px); }
 .slide-down-leave-to     { opacity: 0; transform: translateY(-8px); }
+
+/* Step 1 nav: manual link left, AI button right */
+.step1-nav {
+  justify-content: space-between;
+  align-items: center;
+}
+
+.manual-link {
+  background: none;
+  border: none;
+  color: var(--text-disabled);
+  font-size: 0.825rem;
+  cursor: pointer;
+  padding: 0;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  transition: color 0.15s;
+}
+.manual-link:hover:not(:disabled) { color: var(--text-secondary); }
+.manual-link:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* TikTok-specific UI */
+.tiktok-section { display: flex; flex-direction: column; gap: 0.75rem; }
+
+.checkbox-group { display: flex; flex-direction: column; gap: 0.5rem; margin-top: 0.25rem; }
+
+.checkbox-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.625rem;
+}
+.checkbox-row label {
+  font-size: 0.875rem;
+  color: var(--text-primary);
+  cursor: pointer;
+  line-height: 1.4;
+}
+
+.disclosure-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.disclosure-hint {
+  font-size: 0.78rem;
+  color: var(--text-disabled);
+  margin: 0.15rem 0 0;
+}
+
+.disclosure-options {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+  padding: 0.75rem;
+  background: rgba(255,255,255,0.02);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 8px;
+}
+
+.disclosure-option-label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--text-primary);
+  cursor: pointer;
+  display: block;
+}
+
+.compliance-text {
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+  margin: 0.5rem 0 0;
+  padding: 0.5rem 0.75rem;
+  background: rgba(105, 201, 208, 0.06);
+  border-left: 2px solid #69c9d0;
+  border-radius: 0 4px 4px 0;
+  line-height: 1.5;
+}
 
 @media (max-width: 640px) {
   .upload-card { padding: 1.25rem; }

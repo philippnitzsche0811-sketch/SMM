@@ -270,12 +270,13 @@ async def refresh_tiktok_token(request: RefreshRequest):
         async with httpx.AsyncClient(timeout=10) as client:
             resp = await client.post(url, data=data, headers=headers)
         resp.raise_for_status()
-        
+        result = resp.json()
+
         # Save new tokens
         token_storage.save_tiktok_credentials(
             request.user_id,
             result["access_token"],
-            creds["open_id"],
+            creds.get("open_id", ""),
             result.get("refresh_token", creds["refresh_token"])
         )
         
@@ -331,7 +332,11 @@ async def disconnect_tiktok(
 # ==========================================
 
 async def upload_to_tiktok(user_id: str, video_path: str, title: str,
-                           description: str, tags_list: list):
+                           description: str, tags_list: list,
+                           privacy_level: str = "SELF_ONLY",
+                           allow_comment: bool = False,
+                           allow_duet: bool = False,
+                           allow_stitch: bool = False):
     from models.database import SessionLocal, PlatformConnection
     
     # Token-Gültigkeit prüfen + ggf. auto-refreshen
@@ -387,7 +392,11 @@ async def upload_to_tiktok(user_id: str, video_path: str, title: str,
         access_token=tiktok_creds["access_token"],
         open_id=tiktok_creds["open_id"],
         video_path=video_path,
-        caption=caption
+        caption=caption,
+        privacy_level=privacy_level,
+        allow_comment=allow_comment,
+        allow_duet=allow_duet,
+        allow_stitch=allow_stitch,
     )
     logger.info(f"✅ TikTok Upload erfolgreich für User {user_id}")
     return result

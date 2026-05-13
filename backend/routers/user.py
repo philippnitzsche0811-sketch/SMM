@@ -1,16 +1,41 @@
-﻿from fastapi import APIRouter, HTTPException
+﻿from fastapi import APIRouter, HTTPException, Depends
 import logging
 from datetime import datetime
 from pathlib import Path
 
 from services.user_service import UserService
 from services.token_storage import TokenStorage
+from models.database import get_db, PlatformConnection
+from sqlalchemy.orm import Session
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="", tags=["User Management"])
 
 user_service = UserService()
 token_storage = TokenStorage()
+
+@router.get("/{user_id}/platforms")
+async def get_user_platforms(user_id: str, db: Session = Depends(get_db)):
+    """Gibt Plattform-Verbindungsstatus eines Users aus der DB zurück."""
+    connections = db.query(PlatformConnection).filter(
+        PlatformConnection.user_id == user_id,
+        PlatformConnection.platform.notin_(["tiktok_pkce", "youtube_temp"])
+    ).all()
+
+    result = {
+        "youtube": {"connected": False, "username": None, "lastSync": None},
+        "tiktok":  {"connected": False, "username": None, "lastSync": None},
+        "instagram": {"connected": False, "username": None, "lastSync": None},
+    }
+    for c in connections:
+        if c.platform in result:
+            result[c.platform] = {
+                "connected": bool(c.connected),
+                "username": c.username,
+                "lastSync": c.updated_at.isoformat() if c.updated_at else None,
+            }
+    return result
+
 
 @router.get("/{user_id}/status")
 async def get_user_status(user_id: str):

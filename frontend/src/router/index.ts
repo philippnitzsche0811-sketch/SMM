@@ -121,6 +121,16 @@ const router = createRouter({
           component: () => import('@/views/SettingsView.vue'),
         },
         {
+          path: 'calendar',
+          name: 'calendar',
+          component: () => import('@/views/CalendarView.vue'),
+        },
+        {
+          path: 'plan',
+          name: 'plan',
+          component: () => import('@/views/IdeasView.vue'),
+        },
+        {
           path: 'admin',
           name: 'admin',
           component: () => import('@/views/AdminView.vue'),

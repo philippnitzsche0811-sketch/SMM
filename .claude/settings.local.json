@@ -15,7 +15,12 @@
       "Bash(dir \"C:\\\\\\\\Users\\\\\\\\Philipp\\\\\\\\SMM\")",
       "Bash(Select-String -Pattern \"\\(Admin trend|optimizer|suggest|instagram\\)\")",
       "Bash(Select-Object -Last 30)",
-      "Bash(python *)"
+      "Bash(python *)",
+      "WebFetch(domain:developers.tiktok.com)",
+      "WebSearch",
+      "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\Philipp\\\\SMM\\\\frontend\\\\src\" -Recurse -Directory)",
+      "Bash(Select-Object FullName)",
+      "Bash(Sort-Object FullName)"
     ]
   }
 }

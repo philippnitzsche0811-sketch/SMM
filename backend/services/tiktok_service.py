@@ -18,7 +18,10 @@ def tiktok_upload_video(
     open_id: str,
     video_path: str,
     caption: str = "",
-    privacy_level: str = "SELF_ONLY"  # SELF_ONLY, MUTUAL_FOLLOW_FRIENDS, PUBLIC_TO_EVERYONE
+    privacy_level: str = "SELF_ONLY",
+    allow_comment: bool = False,
+    allow_duet: bool = False,
+    allow_stitch: bool = False,
 ) -> dict:
     if settings.UPLOAD_MOCK_MODE:
         filesize = Path(video_path).stat().st_size if Path(video_path).exists() else 0
@@ -55,7 +58,10 @@ def tiktok_upload_video(
             access_token=access_token,
             caption=caption,
             privacy_level=privacy_level,
-            filesize=filesize
+            filesize=filesize,
+            allow_comment=allow_comment,
+            allow_duet=allow_duet,
+            allow_stitch=allow_stitch,
         )
         
         upload_url = init_response["data"]["upload_url"]
@@ -87,7 +93,10 @@ def _initialize_upload(
     access_token: str,
     caption: str,
     privacy_level: str,
-    filesize: int
+    filesize: int,
+    allow_comment: bool = False,
+    allow_duet: bool = False,
+    allow_stitch: bool = False,
 ) -> dict:
     """
     Initialisiert den TikTok Upload
@@ -109,11 +118,10 @@ def _initialize_upload(
     data = {
         "post_info": {
             "title": caption,
-            "description": caption,
             "privacy_level": privacy_level,
-            "disable_duet": False,
-            "disable_comment": False,
-            "disable_stitch": False,
+            "disable_comment": not allow_comment,
+            "disable_duet": not allow_duet,
+            "disable_stitch": not allow_stitch,
             "video_cover_timestamp_ms": 1000
         },
         "source_info": {
@@ -123,8 +131,10 @@ def _initialize_upload(
             "total_chunk_count": total_chunks
         }
     }
-    
+
     response = requests.post(url, json=data, headers=headers, timeout=30)
+    if response.status_code == 403:
+        logger.error(f"❌ TikTok 403 Forbidden – App not approved for Content Posting API. Response: {response.text}")
     response.raise_for_status()
     
     result = response.json()

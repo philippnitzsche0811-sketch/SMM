@@ -1,4 +1,4 @@
-﻿from fastapi import APIRouter, UploadFile, File, Form, HTTPException, BackgroundTasks, Depends
+﻿from fastapi import APIRouter, UploadFile, File, Form, HTTPException, BackgroundTasks, Depends, Query
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 from datetime import datetime, timezone
@@ -388,6 +388,78 @@ async def finalize_upload(
         }
 
     raise HTTPException(status_code=400, detail="Invalid schedule_type")
+
+
+@router.get("/calendar")
+async def get_calendar_events(
+    user_id: str = Query(...),
+    from_date: str = Query(..., alias="from"),
+    to_date: str = Query(..., alias="to"),
+    db: Session = Depends(get_db),
+):
+    """Gibt alle Videos + Gruppen-Videos mit scheduled_at im Zeitraum zurück."""
+    try:
+        from_dt = datetime.fromisoformat(from_date)
+        to_dt = datetime.fromisoformat(to_date)
+    except ValueError:
+        raise HTTPException(400, "Ungültiges Datumsformat. Erwartet: YYYY-MM-DD")
+
+    # Direkt geplante Videos
+    videos = (
+        db.query(VideoModel)
+        .filter(
+            VideoModel.user_id == user_id,
+            VideoModel.scheduled_at != None,
+            VideoModel.scheduled_at >= from_dt,
+            VideoModel.scheduled_at <= to_dt,
+        )
+        .all()
+    )
+
+    events = [
+        {
+            "id": v.id,
+            "title": v.title,
+            "platforms": v.platforms or [],
+            "scheduled_at": v.scheduled_at.isoformat(),
+            "status": v.status,
+            "source": "direct",
+            "upload_mode": v.upload_mode,
+        }
+        for v in videos
+    ]
+
+    # Gruppen-Videos
+    try:
+        from models.database import GroupVideoModel, UploadGroupModel
+        group_videos = (
+            db.query(GroupVideoModel, VideoModel, UploadGroupModel)
+            .join(VideoModel, GroupVideoModel.video_id == VideoModel.id)
+            .join(UploadGroupModel, GroupVideoModel.group_id == UploadGroupModel.id)
+            .filter(
+                UploadGroupModel.user_id == user_id,
+                GroupVideoModel.scheduled_at != None,
+                GroupVideoModel.scheduled_at >= from_dt,
+                GroupVideoModel.scheduled_at <= to_dt,
+            )
+            .all()
+        )
+        for gv, v, g in group_videos:
+            events.append({
+                "id": v.id,
+                "title": v.title,
+                "platforms": g.platforms or [],
+                "scheduled_at": gv.scheduled_at.isoformat(),
+                "status": gv.status,
+                "source": "group",
+                "group_name": g.name,
+                "group_id": g.id,
+            })
+    except Exception as e:
+        logger.warning(f"Gruppen-Videos konnten nicht geladen werden: {e}")
+
+    events.sort(key=lambda x: x["scheduled_at"])
+    return {"events": events, "total": len(events)}
 
 
 @router.delete("/video/{video_id}")

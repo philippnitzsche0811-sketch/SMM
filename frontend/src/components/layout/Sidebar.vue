@@ -26,18 +26,21 @@
 
     <!-- Navigation -->
     <nav class="sidebar-nav">
-      <router-link
-        v-for="item in navItems"
-        :key="item.name"
-        :to="item.path"
-        class="nav-item"
-        :class="{ active: isActive(item.path) }"
-        :title="isCollapsed ? item.label : ''"
-        @click="$emit('close')"
-      >
-        <i :class="item.icon" class="nav-icon"></i>
-        <span class="nav-label" v-show="!isCollapsed">{{ item.label }}</span>
-      </router-link>
+      <template v-for="group in navGroups" :key="group.label">
+        <div class="nav-group-label" v-show="!isCollapsed">{{ group.label }}</div>
+        <router-link
+          v-for="item in group.items"
+          :key="item.name"
+          :to="item.path"
+          class="nav-item"
+          :class="{ active: isActive(item.path) }"
+          :title="isCollapsed ? item.label : ''"
+          @click="$emit('close')"
+        >
+          <i :class="item.icon" class="nav-icon"></i>
+          <span class="nav-label" v-show="!isCollapsed">{{ item.label }}</span>
+        </router-link>
+      </template>
     </nav>
 
     <!-- User / Logout -->
@@ -71,19 +74,45 @@ const authStore = useAuthStore();
 
 const isCollapsed = ref(false);
 
-const navItems = computed(() => {
-  const items = [
-    { name: 'dashboard',      path: '/dashboard',      icon: 'pi pi-home',         label: 'Dashboard' },
-    { name: 'upload',         path: '/upload',         icon: 'pi pi-cloud-upload', label: 'Upload'    },
-    { name: 'upload-groups',  path: '/upload/groups',  icon: 'pi pi-calendar',     label: 'Groups'    },
-    { name: 'platforms',      path: '/platforms',      icon: 'pi pi-link',          label: 'Platforms' },
-    { name: 'settings',       path: '/settings',       icon: 'pi pi-cog',           label: 'Settings'  },
+const navGroups = computed(() => {
+  const groups = [
+    {
+      label: 'Planen',
+      items: [
+        { name: 'calendar', path: '/calendar', icon: 'pi pi-calendar', label: 'Kalender' },
+        { name: 'plan',     path: '/plan',     icon: 'pi pi-lightbulb', label: 'Ideen'    },
+      ],
+    },
+    {
+      label: 'Erstellen',
+      items: [
+        { name: 'upload',    path: '/upload',    icon: 'pi pi-cloud-upload', label: 'Hochladen'    },
+        { name: 'dashboard', path: '/dashboard', icon: 'pi pi-video',        label: 'Meine Videos' },
+      ],
+    },
+    {
+      label: 'Verbinden',
+      items: [
+        { name: 'platforms', path: '/platforms', icon: 'pi pi-link', label: 'Plattformen' },
+      ],
+    },
+    {
+      label: 'Konto',
+      items: [
+        { name: 'settings', path: '/settings', icon: 'pi pi-cog', label: 'Einstellungen' },
+        ...(authStore.isAdmin
+          ? [{ name: 'admin', path: '/admin', icon: 'pi pi-shield', label: 'Admin' }]
+          : []),
+      ],
+    },
   ];
-  if (authStore.isAdmin) {
-    items.push({ name: 'admin', path: '/admin', icon: 'pi pi-shield', label: 'Admin' });
-  }
-  return items;
+  return groups;
 });
+
+// kept for isActive logic compatibility
+const navItems = computed(() =>
+  navGroups.value.flatMap(g => g.items)
+);
 
 const userInitial = computed(() =>
   (authStore.userName || authStore.userEmail || 'U').charAt(0).toUpperCase()
@@ -204,6 +233,18 @@ const handleLogout = () => { authStore.logout(); router.push('/'); };
   flex-shrink: 0;
 }
 .collapse-btn:hover { background: var(--sidebar-hover-bg); color: var(--sidebar-text-hover); }
+
+/* Nav group labels */
+.nav-group-label {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--sidebar-text);
+  opacity: 0.5;
+  padding: 0.75rem 0.75rem 0.25rem;
+  pointer-events: none;
+}
 
 /* Nav */
 .sidebar-nav {

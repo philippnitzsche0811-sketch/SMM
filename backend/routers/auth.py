@@ -1,15 +1,19 @@
-from fastapi import APIRouter, HTTPException, Depends, Header
+from fastapi import APIRouter, HTTPException, Depends, Header, Request
 from sqlalchemy.orm import Session
 from pydantic import BaseModel, EmailStr
 from datetime import datetime, timedelta
 import secrets
 import bcrypt
 import logging
-from utils.auth import create_access_token, decode_access_token  # ✅ NUR diese beiden
+from utils.auth import create_access_token, decode_access_token
 from models.database import UserModel, get_db, PlatformConnection
 from services.email_service import EmailService
 from config import settings
 from typing import Optional
+from slowapi import Limiter
+from slowapi.util import get_remote_address
+
+limiter = Limiter(key_func=get_remote_address)
 
 
 logger = logging.getLogger(__name__)
@@ -124,46 +128,47 @@ async def change_password(
 # ==========================================
 
 @router.post("/register")
-async def register(request: RegisterRequest, db: Session = Depends(get_db)):
+@limiter.limit("3/minute")
+async def register(request: Request, body: RegisterRequest, db: Session = Depends(get_db)):
     """
     Registriert neuen User und sendet Verification Email
     """
     try:
         # Check if email already exists
-        existing_user = db.query(UserModel).filter(UserModel.email == request.email).first()
+        existing_user = db.query(UserModel).filter(UserModel.email == body.email).first()
         if existing_user:
             raise HTTPException(400, "Email bereits registriert")
-        
+
         # Validate password
-        if len(request.password) < 8:
+        if len(body.password) < 8:
             raise HTTPException(400, "Passwort muss mindestens 8 Zeichen lang sein")
-        
+
         # Generate user ID and tokens
         user_id = f"user_{secrets.token_hex(8)}"
         verification_token = generate_verification_token()
         verification_expires = datetime.now() + timedelta(hours=settings.EMAIL_VERIFICATION_EXPIRE_HOURS)
-        
+
         # Create user
         new_user = UserModel(
             id=user_id,
-            email=request.email,
-            hashed_password=hash_password(request.password),
+            email=body.email,
+            hashed_password=hash_password(body.password),
             is_verified=False,
             verification_token=verification_token,
             verification_token_expires=verification_expires,
             created_at=datetime.now()
         )
-        
+
         db.add(new_user)
         db.commit()
-        
+
         # Send verification email
-        email_sent = email_service.send_verification_email(request.email, verification_token)
-        
+        email_sent = email_service.send_verification_email(body.email, verification_token)
+
         if not email_sent:
-            logger.warning(f"⚠️  Verification Email konnte nicht gesendet werden an {request.email}")
-        
-        logger.info(f"✅ User registriert: {request.email}")
+            logger.warning(f"⚠️  Verification Email konnte nicht gesendet werden an {body.email}")
+
+        logger.info(f"✅ User registriert: {body.email}")
         
         return {
             "status": "success",
@@ -349,19 +354,20 @@ async def dev_connect(request: DevConnectRequest, db: Session = Depends(get_db))
 # ==========================================
 
 @router.post("/login")
-async def login(request: LoginRequest, db: Session = Depends(get_db)):
+@limiter.limit("5/minute")
+async def login(request: Request, body: LoginRequest, db: Session = Depends(get_db)):
     """
     Login mit Email + Password
     """
     try:
-        # ✅ Find user (DIESER CODE FEHLTE!)
-        user = db.query(UserModel).filter(UserModel.email == request.email).first()
-        
+        # ✅ Find user
+        user = db.query(UserModel).filter(UserModel.email == body.email).first()
+
         if not user:
             raise HTTPException(401, "Ungültige Email oder Passwort")
-        
-        # ✅ Check password (DIESER CODE FEHLTE!)
-        if not verify_password(request.password, user.hashed_password):
+
+        # ✅ Check password
+        if not verify_password(body.password, user.hashed_password):
             raise HTTPException(401, "Ungültige Email oder Passwort")
         
         # ✅ Check if verified (DIESER CODE FEHLTE!)
@@ -430,20 +436,21 @@ async def login(request: LoginRequest, db: Session = Depends(get_db)):
 # ==========================================
 
 @router.post("/forgot-password")
-async def forgot_password(request: ForgotPasswordRequest, db: Session = Depends(get_db)):
+@limiter.limit("3/minute")
+async def forgot_password(request: Request, body: ForgotPasswordRequest, db: Session = Depends(get_db)):
     """
     Sendet Password Reset Email
     """
     try:
-        user = db.query(UserModel).filter(UserModel.email == request.email).first()
-        
+        user = db.query(UserModel).filter(UserModel.email == body.email).first()
+
         if not user:
             # Don't reveal if email exists
             return {
                 "status": "success",
                 "message": "Falls die Email existiert, wurde ein Reset Link gesendet."
             }
-        
+
         # Generate reset token
         reset_token = generate_verification_token()
         reset_expires = datetime.now() + timedelta(hours=settings.PASSWORD_RESET_EXPIRE_HOURS)
