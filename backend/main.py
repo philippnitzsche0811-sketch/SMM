@@ -9,8 +9,7 @@ from routers import youtube, tiktok, instagram, upload, user, static_pages, auth
 from routers.upload_groups import router as upload_groups_router
 from routers.smart_upload import router as smart_upload_router
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
-from sqlalchemy import text
-from sqlalchemy.exc import IntegrityError, ProgrammingError, OperationalError
+from sqlalchemy.exc import IntegrityError
 from datetime import datetime, timedelta, timezone
 from routers.optimizer import router as optimizer_router
 from routers.admin import router as admin_router
@@ -110,62 +109,6 @@ async def startup_event():
             # Multiple uvicorn workers race to create tables — the winner already did it
             logger.warning("⚠️ init_db: table creation race ignored (another worker created it)")
         logger.info("✅ Database tables initialized")
-
-        try:
-            with engine.connect() as conn:
-                conn.execute(text("ALTER TABLE videos ADD COLUMN IF NOT EXISTS scheduled_at TIMESTAMP"))
-                conn.execute(text("ALTER TABLE videos ADD COLUMN IF NOT EXISTS upload_mode VARCHAR(50)"))
-                conn.execute(text("ALTER TABLE videos ADD COLUMN IF NOT EXISTS platform_metadata JSON"))
-                conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS niche VARCHAR(100)"))
-                conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS creator_tone VARCHAR(100)"))
-                conn.execute(text("ALTER TABLE video_analyses ADD COLUMN IF NOT EXISTS hook_result JSON"))
-                conn.execute(text("""
-                    CREATE TABLE IF NOT EXISTS hook_examples (
-                        id VARCHAR PRIMARY KEY,
-                        platform VARCHAR NOT NULL,
-                        niche VARCHAR NOT NULL,
-                        hook_type VARCHAR,
-                        description TEXT,
-                        what_worked TEXT,
-                        score INTEGER,
-                        source_url VARCHAR,
-                        created_at TIMESTAMP DEFAULT NOW()
-                    )
-                """))
-                conn.execute(text("""
-                    CREATE TABLE IF NOT EXISTS video_stats (
-                        id VARCHAR PRIMARY KEY,
-                        video_id VARCHAR NOT NULL REFERENCES videos(id) ON DELETE CASCADE,
-                        user_id VARCHAR NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-                        platform VARCHAR NOT NULL,
-                        platform_video_id VARCHAR,
-                        view_count INTEGER DEFAULT 0,
-                        like_count INTEGER DEFAULT 0,
-                        comment_count INTEGER DEFAULT 0,
-                        share_count INTEGER DEFAULT 0,
-                        fetched_at TIMESTAMP,
-                        created_at TIMESTAMP DEFAULT NOW()
-                    )
-                """))
-                conn.execute(text("""
-                    CREATE TABLE IF NOT EXISTS content_ideas (
-                        id VARCHAR PRIMARY KEY,
-                        user_id VARCHAR NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-                        title VARCHAR NOT NULL,
-                        concept TEXT,
-                        target_platforms JSON,
-                        target_date TIMESTAMP,
-                        status VARCHAR DEFAULT 'idea',
-                        tags JSON,
-                        ai_suggestions JSON,
-                        created_at TIMESTAMP DEFAULT NOW(),
-                        updated_at TIMESTAMP
-                    )
-                """))
-                conn.commit()
-            logger.info("✅ Migration: videos columns + content_ideas table + user niche/tone ready")
-        except (ProgrammingError, OperationalError) as e:
-            logger.warning(f"⚠️ Migration skipped (needs DB owner — run manually): {e.__class__.__name__}")
 
         scheduler.start()
         logger.info("✅ Scheduler gestartet")

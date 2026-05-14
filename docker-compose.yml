@@ -23,6 +23,24 @@ services:
     networks:
       - smm-net
 
+  migrate:
+    image: postgres:15-alpine
+    container_name: socialhub-migrate
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    entrypoint: ["sh", "-c", "psql -h postgres -U ${POSTGRES_USER} -d ${POSTGRES_DB} -f /migrations.sql && echo '✅ Migrations complete'"]
+    volumes:
+      - ./backend/database/migrations.sql:/migrations.sql:ro
+    networks:
+      - smm-net
+    restart: "no"
+
   backend:
     build:
       context: ./backend
@@ -68,6 +86,8 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
     command: uvicorn main:app --host 0.0.0.0 --port 8000 --workers 4
     restart: unless-stopped
     networks:
