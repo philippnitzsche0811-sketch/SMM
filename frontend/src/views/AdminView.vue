@@ -5,6 +5,87 @@
       <p class="subtitle">Manuell recherchierte Plattform-Daten für den KI-Optimizer</p>
     </div>
 
+    <!-- KI-Token Nutzung -->
+    <div class="admin-card token-card">
+      <div class="token-card-header">
+        <h3 class="card-title" style="margin:0"><i class="pi pi-chart-bar"></i> KI-Token Nutzung</h3>
+        <a href="https://console.anthropic.com/usage" target="_blank" rel="noopener" class="console-link">
+          <i class="pi pi-external-link"></i> Anthropic Console
+        </a>
+      </div>
+
+      <div v-if="tokenLoading" class="status-msg">Lade...</div>
+      <div v-else-if="tokenError" class="status-msg" style="color:#f87171">{{ tokenError }}</div>
+      <div v-else-if="tokenUsage">
+        <div class="token-month-header">
+          <span class="token-period-label">Diesen Monat ({{ tokenUsage.month_label }})</span>
+          <span class="token-calls-badge">{{ tokenUsage.this_month.calls }} API-Aufrufe</span>
+        </div>
+
+        <div class="token-stats-grid">
+          <div class="token-stat">
+            <span class="stat-num">{{ formatTokens(tokenUsage.this_month.total_tokens) }}</span>
+            <span class="stat-label">Tokens gesamt</span>
+          </div>
+          <div class="token-stat">
+            <span class="stat-num">{{ formatTokens(tokenUsage.this_month.input_tokens) }}</span>
+            <span class="stat-label">Input</span>
+          </div>
+          <div class="token-stat">
+            <span class="stat-num">{{ formatTokens(tokenUsage.this_month.output_tokens) }}</span>
+            <span class="stat-label">Output</span>
+          </div>
+          <div class="token-stat token-stat-cost">
+            <span class="stat-num">${{ tokenUsage.this_month.estimated_cost_usd.toFixed(4) }}</span>
+            <span class="stat-label">~Kosten (USD)</span>
+          </div>
+        </div>
+
+        <!-- Budget progress (only if budget set) -->
+        <div v-if="tokenUsage.monthly_budget_tokens" class="budget-bar-wrap">
+          <div class="budget-bar-labels">
+            <span>{{ formatTokens(tokenUsage.this_month.total_tokens) }} / {{ formatTokens(tokenUsage.monthly_budget_tokens) }}</span>
+            <span :class="budgetPercent >= 100 ? 'text-danger' : ''">{{ budgetPercent }}%</span>
+          </div>
+          <div class="budget-bar">
+            <div class="budget-fill" :style="{ width: Math.min(budgetPercent, 100) + '%' }" :class="budgetBarClass" />
+          </div>
+          <div v-if="budgetPercent < 100" class="budget-remaining">
+            Noch ~{{ formatTokens(tokenUsage.monthly_budget_tokens - tokenUsage.this_month.total_tokens) }} Tokens übrig
+          </div>
+          <div v-else class="text-danger" style="font-size:0.8rem;margin-top:0.25rem">Budget überschritten</div>
+        </div>
+
+        <div class="token-alltime">
+          <i class="pi pi-history" style="color:var(--text-disabled)"></i>
+          Gesamt:&nbsp;
+          <strong>{{ formatTokens(tokenUsage.all_time.total_tokens) }}</strong> Tokens &nbsp;·&nbsp;
+          <strong>{{ tokenUsage.all_time.calls }}</strong> Aufrufe &nbsp;·&nbsp;
+          ~<strong>${{ tokenUsage.all_time.estimated_cost_usd.toFixed(4) }}</strong>
+        </div>
+
+        <div class="budget-setting-row">
+          <label class="budget-setting-label">
+            Monatliches Token-Budget
+            <small class="field-hint">0 = kein Limit</small>
+          </label>
+          <div class="budget-input-group">
+            <input
+              v-model.number="budgetInput"
+              type="number"
+              min="0"
+              step="10000"
+              class="form-select budget-input"
+              placeholder="z.B. 500000"
+            />
+            <button class="btn-primary" :disabled="savingBudget" @click="saveBudget">
+              {{ savingBudget ? '...' : 'Speichern' }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Research guide -->
     <div class="admin-card guide-card">
       <h3 class="card-title"><i class="pi pi-info-circle"></i> Woher kommen die Daten?</h3>
@@ -133,6 +214,104 @@
       </div>
     </div>
 
+    <!-- Hook Examples -->
+    <div class="admin-card hook-card">
+      <h3 class="card-title"><i class="pi pi-video"></i> Hook-Beispiele</h3>
+      <p class="extract-hint">
+        Erfolgreiche Hooks pro Nische &amp; Plattform — werden beim Analyse-Prompt als Referenz mitgegeben.
+      </p>
+
+      <!-- Add form -->
+      <div class="hook-form-grid">
+        <div class="form-field">
+          <label>Platform</label>
+          <select v-model="hookForm.platform" class="form-select">
+            <option value="youtube">YouTube</option>
+            <option value="tiktok">TikTok</option>
+            <option value="instagram">Instagram</option>
+          </select>
+        </div>
+        <div class="form-field">
+          <label>Nische</label>
+          <select v-model="hookForm.niche" class="form-select">
+            <option v-for="c in CATEGORIES" :key="c" :value="c">{{ c }}</option>
+          </select>
+        </div>
+        <div class="form-field">
+          <label>Hook-Typ</label>
+          <select v-model="hookForm.hook_type" class="form-select">
+            <option value="">– keiner –</option>
+            <option value="verbal">Verbal</option>
+            <option value="visual">Visual</option>
+            <option value="text_overlay">Text Overlay</option>
+            <option value="music">Music</option>
+            <option value="combo">Combo</option>
+          </select>
+        </div>
+        <div class="form-field">
+          <label>Score (1–10)</label>
+          <input v-model.number="hookForm.score" type="number" min="1" max="10" class="form-select" placeholder="8" />
+        </div>
+        <div class="form-field hook-form-full">
+          <label>Beschreibung <small class="field-hint">was passiert in den ersten 3–5s?</small></label>
+          <textarea v-model="hookForm.description" rows="2" class="form-textarea" placeholder="z.B. Creator schaut direkt in Kamera, stellt provokante Frage ohne Kontext..." />
+        </div>
+        <div class="form-field hook-form-full">
+          <label>Was hat funktioniert?</label>
+          <textarea v-model="hookForm.what_worked" rows="2" class="form-textarea" placeholder="z.B. Instant-Pattern-Interrupt + Gesicht sofort sichtbar + 1 Satz Hook" />
+        </div>
+        <div class="form-field hook-form-full">
+          <label>Source URL <small class="field-hint">optional</small></label>
+          <input v-model="hookForm.source_url" type="text" class="form-select" placeholder="https://..." />
+        </div>
+      </div>
+
+      <div class="form-actions">
+        <span v-if="hookSaveError" class="error-msg">{{ hookSaveError }}</span>
+        <span v-if="hookSaveSuccess" class="success-msg"><i class="pi pi-check"></i> Gespeichert</span>
+        <button class="btn-primary" :disabled="hookSaving || !hookForm.niche" @click="saveHookExample">
+          <i class="pi pi-plus"></i>
+          {{ hookSaving ? 'Speichern...' : 'Hook-Beispiel hinzufügen' }}
+        </button>
+      </div>
+
+      <!-- Table -->
+      <div v-if="hookExamples.length" class="table-wrap" style="margin-top:1.25rem">
+        <table class="entries-table">
+          <thead>
+            <tr>
+              <th>Platform</th>
+              <th>Nische</th>
+              <th>Typ</th>
+              <th>Score</th>
+              <th>Beschreibung</th>
+              <th>Was hat gewirkt?</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="ex in hookExamples" :key="ex.id">
+              <td><span class="platform-badge" :class="ex.platform">{{ ex.platform }}</span></td>
+              <td>{{ ex.niche }}</td>
+              <td>{{ ex.hook_type || '–' }}</td>
+              <td>
+                <span v-if="ex.score" class="score-chip" :class="scoreClass(ex.score)">{{ ex.score }}/10</span>
+                <span v-else>–</span>
+              </td>
+              <td class="notes-cell">{{ truncate(ex.description, 60) }}</td>
+              <td class="notes-cell">{{ truncate(ex.what_worked, 60) }}</td>
+              <td class="actions-cell">
+                <button class="btn-icon btn-delete" title="Löschen" @click="deleteHook(ex.id)">
+                  <i class="pi pi-trash"></i>
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div v-else class="status-msg muted">Noch keine Hook-Beispiele. Füge oben dein erstes hinzu!</div>
+    </div>
+
     <!-- Entries table -->
     <div class="admin-card">
       <h3 class="card-title">Vorhandene Einträge</h3>
@@ -183,13 +362,20 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted } from 'vue';
+import { ref, reactive, computed, onMounted } from 'vue';
 import {
   listAdminTrendData,
   upsertAdminTrendData,
   deleteAdminTrendData,
   parseAdminRawText,
+  listHookExamples,
+  createHookExample,
+  deleteHookExample,
+  getAdminTokenUsage,
+  setAdminTokenBudget,
   type AdminTrendDataOut,
+  type HookExampleOut,
+  type TokenUsageResponse,
 } from '@/services/api';
 
 const CATEGORIES = [
@@ -286,7 +472,120 @@ function truncate(s?: string | null, n = 55) {
   return s.length > n ? s.slice(0, n) + '…' : s;
 }
 
-onMounted(fetchEntries);
+// ── Hook Examples ─────────────────────────────────────────────────────────────
+
+const hookExamples   = ref<HookExampleOut[]>([]);
+const hookSaving     = ref(false);
+const hookSaveError  = ref('');
+const hookSaveSuccess = ref(false);
+
+const hookForm = reactive({
+  platform: 'youtube',
+  niche: 'default',
+  hook_type: '',
+  description: '',
+  what_worked: '',
+  score: undefined as number | undefined,
+  source_url: '',
+});
+
+async function fetchHookExamples() {
+  try { hookExamples.value = await listHookExamples(); }
+  catch { /* silent */ }
+}
+
+async function saveHookExample() {
+  hookSaveError.value = '';
+  hookSaveSuccess.value = false;
+  hookSaving.value = true;
+  try {
+    await createHookExample({
+      platform:    hookForm.platform,
+      niche:       hookForm.niche,
+      hook_type:   hookForm.hook_type || undefined,
+      description: hookForm.description || undefined,
+      what_worked: hookForm.what_worked || undefined,
+      score:       hookForm.score || undefined,
+      source_url:  hookForm.source_url || undefined,
+    });
+    hookSaveSuccess.value = true;
+    setTimeout(() => { hookSaveSuccess.value = false; }, 3000);
+    hookForm.description = '';
+    hookForm.what_worked = '';
+    hookForm.score = undefined;
+    hookForm.source_url = '';
+    hookForm.hook_type = '';
+    await fetchHookExamples();
+  } catch (e: any) {
+    hookSaveError.value = e?.response?.data?.detail || 'Fehler beim Speichern';
+  } finally {
+    hookSaving.value = false;
+  }
+}
+
+async function deleteHook(id: string) {
+  if (!confirm('Hook-Beispiel wirklich löschen?')) return;
+  await deleteHookExample(id);
+  await fetchHookExamples();
+}
+
+function scoreClass(score: number) {
+  if (score >= 8) return 'score-high';
+  if (score >= 5) return 'score-mid';
+  return 'score-low';
+}
+
+// ── Token Usage ───────────────────────────────────────────────────────────────
+
+const tokenUsage   = ref<TokenUsageResponse | null>(null);
+const tokenLoading = ref(false);
+const tokenError   = ref('');
+const budgetInput  = ref<number | undefined>(undefined);
+const savingBudget = ref(false);
+
+const budgetPercent = computed(() => {
+  if (!tokenUsage.value?.monthly_budget_tokens) return 0;
+  return Math.round((tokenUsage.value.this_month.total_tokens / tokenUsage.value.monthly_budget_tokens) * 100);
+});
+
+const budgetBarClass = computed(() => {
+  if (budgetPercent.value >= 90) return 'fill-danger';
+  if (budgetPercent.value >= 70) return 'fill-warn';
+  return 'fill-ok';
+});
+
+function formatTokens(n: number) {
+  if (n >= 1_000_000) return (n / 1_000_000).toFixed(2) + 'M';
+  if (n >= 1_000)     return (n / 1_000).toFixed(1) + 'K';
+  return String(n);
+}
+
+async function fetchTokenUsage() {
+  tokenLoading.value = true;
+  tokenError.value = '';
+  try {
+    tokenUsage.value = await getAdminTokenUsage();
+    budgetInput.value = tokenUsage.value.monthly_budget_tokens ?? undefined;
+  } catch (e: any) {
+    tokenError.value = e?.response?.data?.detail || 'Fehler beim Laden der Token-Daten';
+  } finally {
+    tokenLoading.value = false;
+  }
+}
+
+async function saveBudget() {
+  savingBudget.value = true;
+  try {
+    await setAdminTokenBudget(budgetInput.value || null);
+    await fetchTokenUsage();
+  } catch {
+    /* silent */
+  } finally {
+    savingBudget.value = false;
+  }
+}
+
+onMounted(() => { fetchEntries(); fetchHookExamples(); fetchTokenUsage(); });
 </script>
 
 <style scoped>
@@ -464,8 +763,157 @@ onMounted(fetchEntries);
 .status-msg { color: var(--text-secondary); font-size: 0.875rem; padding: 0.5rem 0; }
 .status-msg.muted { color: var(--text-disabled); }
 
+.hook-card { background: rgba(99,102,241,0.04); border-color: rgba(99,102,241,0.18); }
+
+.hook-form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0 1rem;
+}
+.hook-form-full { grid-column: 1 / -1; }
+
+.score-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.1rem 0.45rem;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  border: 1px solid;
+}
+.score-high { background: rgba(34,197,94,0.12);  color: #22c55e; border-color: rgba(34,197,94,0.25); }
+.score-mid  { background: rgba(234,179,8,0.12);   color: #eab308; border-color: rgba(234,179,8,0.25); }
+.score-low  { background: rgba(239,68,68,0.12);   color: #ef4444; border-color: rgba(239,68,68,0.25); }
+
+/* Token usage card */
+.token-card { background: rgba(16,185,129,0.03); border-color: rgba(16,185,129,0.2); }
+
+.token-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1.25rem;
+}
+
+.console-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  text-decoration: none;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  padding: 0.25rem 0.6rem;
+  transition: all 0.2s;
+}
+.console-link:hover { color: var(--text-primary); border-color: rgba(16,185,129,0.4); }
+
+.token-month-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.875rem;
+}
+.token-period-label { font-size: 0.875rem; font-weight: 600; color: var(--text-primary); }
+.token-calls-badge {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  background: rgba(255,255,255,0.05);
+  border: 1px solid var(--border-color);
+  border-radius: 20px;
+  padding: 0.1rem 0.5rem;
+}
+
+.token-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.token-stat {
+  background: rgba(255,255,255,0.03);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 0.6rem 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+.token-stat-cost { border-color: rgba(16,185,129,0.25); background: rgba(16,185,129,0.05); }
+
+.stat-num   { font-size: 1.1rem; font-weight: 700; color: var(--text-primary); font-variant-numeric: tabular-nums; }
+.stat-label { font-size: 0.72rem; color: var(--text-disabled); }
+
+.budget-bar-wrap { margin-bottom: 0.75rem; }
+.budget-bar-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+  margin-bottom: 0.35rem;
+}
+.budget-bar {
+  height: 8px;
+  background: rgba(255,255,255,0.08);
+  border-radius: 99px;
+  overflow: hidden;
+}
+.budget-fill {
+  height: 100%;
+  border-radius: 99px;
+  transition: width 0.4s ease;
+}
+.fill-ok     { background: linear-gradient(90deg, #10b981, #34d399); }
+.fill-warn   { background: linear-gradient(90deg, #f59e0b, #fbbf24); }
+.fill-danger { background: linear-gradient(90deg, #ef4444, #f87171); }
+
+.budget-remaining {
+  font-size: 0.78rem;
+  color: #10b981;
+  margin-top: 0.3rem;
+}
+.text-danger { color: #f87171; }
+
+.token-alltime {
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  padding: 0.625rem 0;
+  border-top: 1px solid var(--border-color);
+  border-bottom: 1px solid var(--border-color);
+  margin-bottom: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+.token-alltime strong { color: var(--text-primary); }
+
+.budget-setting-row {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+.budget-setting-label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+.budget-input-group { display: flex; gap: 0.5rem; align-items: center; flex: 1; min-width: 220px; }
+.budget-input { max-width: 180px; }
+
+@media (max-width: 640px) {
+  .token-stats-grid { grid-template-columns: repeat(2, 1fr); }
+  .token-card-header { flex-direction: column; align-items: flex-start; gap: 0.5rem; }
+  .budget-setting-row { flex-direction: column; align-items: flex-start; }
+}
+
 @media (max-width: 640px) {
   .form-row { grid-template-columns: 1fr; }
+  .hook-form-grid { grid-template-columns: 1fr; }
+  .hook-form-full { grid-column: 1; }
   .admin-card { padding: 1rem; }
 }
 </style>

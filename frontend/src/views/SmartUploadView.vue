@@ -78,6 +78,14 @@
         </div>
 
         <template v-else>
+          <!-- Hook Score -->
+          <HookScorePanel
+            :hookResult="analysis?.hook_result ?? null"
+            :loading="false"
+          />
+
+          <div class="divider"></div>
+
           <!-- Score + summary -->
           <div class="score-row" v-if="analysis?.result">
             <div class="score-badge" :class="scoreBadgeClass">
@@ -212,6 +220,7 @@ import { DragDropZone, PlatformSelector } from '@/components/upload';
 import DescribeVideoStep from '@/components/upload/DescribeVideoStep.vue';
 import ScheduleStep from '@/components/upload/ScheduleStep.vue';
 import TitlePickerPanel from '@/components/upload/TitlePickerPanel.vue';
+import HookScorePanel from '@/components/upload/HookScorePanel.vue';
 import { useSmartUpload } from '@/composables/useSmartUpload';
 import { useUploadGroups } from '@/composables/useUploadGroups';
 

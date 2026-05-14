@@ -15,7 +15,7 @@ from data.optimizer_config import (
     PLATFORM_CONSTRAINTS,
     HASHTAG_SEEDS,
 )
-from models.database import AdminTrendDataModel
+from models.database import AdminTrendDataModel, AiTokenUsageModel, AppConfigModel
 from services import youtube_data_service, trend_cache_service
 
 logger = logging.getLogger(__name__)
@@ -40,6 +40,8 @@ async def generate_suggestions(
     category: str,
     platforms: list[str],
     video_duration: Optional[int] = None,
+    niche: str = "default",
+    creator_tone: str = "informative",
 ) -> dict:
     user_history = _get_user_upload_history(db, user_id)
 
@@ -53,6 +55,13 @@ async def generate_suggestions(
             continue
 
         constraints = PLATFORM_CONSTRAINTS.get(platform, {})
+
+        # Load top-performing video history for feedback context
+        try:
+            from services.video_stats_service import get_top_performing_videos
+            top_videos = get_top_performing_videos(db, user_id, platform, n=5)
+        except Exception:
+            top_videos = []
 
         # Load live trend + personal performance data
         try:
@@ -92,6 +101,7 @@ async def generate_suggestions(
         if _claude and not settings.AI_MOCK_MODE:
             try:
                 ai = await _optimize_with_claude(
+                    db=db,
                     platform=platform,
                     title_draft=title_draft,
                     description_draft=description_draft,
@@ -100,6 +110,9 @@ async def generate_suggestions(
                     video_duration=video_duration,
                     trend_data=trend_data,
                     user_perf=user_perf,
+                    niche=niche,
+                    creator_tone=creator_tone,
+                    top_videos=top_videos,
                 )
                 title = ai["title"]
                 title_options = ai.get("title_options", [title])
@@ -139,7 +152,75 @@ async def generate_suggestions(
 # Claude AI optimization
 # ---------------------------------------------------------------------------
 
+_NICHE_STRATEGY: dict[str, str] = {
+    "fitness": "Fitness & Sport — Schmerzpunkt ansprechen (Fett verlieren, Muskeln aufbauen, schneller werden), konkrete Zahlen im Titel (5kg in 4 Wochen), vorher/nachher Framing, Motivation + Disziplin als Trigger.",
+    "food": "Food & Rezepte — Gericht prominent nennen, Schwierigkeitsgrad (5 Minuten, einfach, schnell), Emotion (das cremigste, das beste ever), Jahreszeit oder Anlass nutzen.",
+    "finance": "Finance & Geld — konkrete Summen nennen (1000€ im Monat, 5% Rendite), Angst vor Verlust oder FOMO nutzen, Expertise signalisieren (Fehler die 99% machen), Clickbait mit Substanz.",
+    "gaming": "Gaming — Titel mit Spielname + Event/Patch, emotional (unmöglich, episch, 1 vs 100), Community-Insider-Sprache nutzen, Cliffhanger am Titelende.",
+    "tech": "Tech & Gadgets — Produktname früh nennen, Vergleich oder Review-Format (besser als X?, lohnt sich?), konkrete Specs oder Preisnennung, Neuheit betonen.",
+    "lifestyle": "Lifestyle — Aspiration und Ästhetik, 'mein', 'meine Routine', 'ein Tag in meinem Leben', Storytelling und Authentizität, Orte und Gefühle.",
+    "education": "Education & Lernen — klare Lernversprechen (du lernst X in Y Minuten), Stufenformat (für Anfänger, für Fortgeschrittene), Komplexes einfach erklären, Nützlichkeit direkt im Titel.",
+    "comedy": "Comedy & Entertainment — Überraschung und Subversion der Erwartung, übertriebene Aussagen, Selbstironie, Trendbezug oder virales Meme aufgreifen.",
+    "beauty": "Beauty & Make-up — Produkt oder Look nennen, Transformation betonen, Dauer (10-Minuten-Make-up), Anlass (Party, Alltag, Hochzeit), Trending Looks referenzieren.",
+    "travel": "Travel & Reise — Ort konkret nennen, Überraschungsmoment (das erwartet dich nicht, geheimtipp), Budget (X Euro Urlaub), Itinerary-Format (3 Tage in X).",
+    "default": "Allgemeiner Content — starke Emotion oder Neugier im Titel, klarer Nutzen für den Zuschauer, konkrete Zahlen oder Versprechen wo möglich.",
+}
+
+_TONE_GUIDE: dict[str, str] = {
+    "educational": "Lehrreicher, autoritativer Ton. Erkläre das Warum. Baue Expertise auf. CTA: 'Mehr lernen', 'Alles erklärt in…'",
+    "entertainer": "Lebendiger, unterhaltsamer Ton. Humor und Persönlichkeit durchscheinen lassen. CTA: 'Schau dir auch an…', 'Folge für mehr'",
+    "inspirational": "Motivierender, emotionaler Ton. Transformation betonen. Zuschauer ermächtigen. CTA: 'Du schaffst das', 'Starte heute'",
+    "informative": "Sachlicher, direkter Ton. Fakten first. Klarer Nutzen ohne Blabla. CTA: 'Alle Details in der Beschreibung', 'Link unten'",
+}
+
+_PLATFORM_FORMAT: dict[str, str] = {
+    "youtube": """YOUTUBE-SPEZIFISCHE REGELN (STRIKT EINHALTEN):
+- Titel: Hauptkeyword in den ersten 40 Zeichen, klar und suchoptimiert. Keine Clickbait ohne Substanz.
+- Beschreibung: 150-400 Wörter. Erste 2 Zeilen entscheidend (erscheinen vor "mehr anzeigen"). Struktur:
+  Zeile 1-2: Kurze Zusammenfassung mit Haupt-Keywords
+  [Leerzeile]
+  Ausführlichere Erklärung des Inhalts (2-3 Absätze)
+  [Leerzeile]
+  Timestamps wenn sinnvoll: 00:00 Intro, 01:30 Hauptteil...
+  [Leerzeile]
+  Links / Social Media / CTAs
+  [Leerzeile]
+  #Hashtag1 #Hashtag2 #Hashtag3 (3-5 am Ende der Beschreibung)
+- Hashtags: 8-15 Tags, Mix aus Broad (Millionen Suchen) + Mid (100k-1M) + Nischen-Tags. KEIN #-Zeichen im Array.
+- Ziel: SEO-Ranking + hohe CTR durch Thumbnail+Titel Combo.""",
+
+    "tiktok": """TIKTOK-SPEZIFISCHE REGELN (STRIKT EINHALTEN):
+- Titel/Caption: Max 150 Zeichen für optimale Darstellung. Kurz, direkt, mit Hook in den ersten 5 Wörtern.
+  Emojis strategisch einsetzen (1-3 pro Caption, am Satzende oder als Aufzählung).
+  Caption = das erste was Nutzer nach dem Video lesen — muss Neugier oder Engagement erzeugen.
+- Beschreibung: IDENTISCH mit dem Titel/Caption Feld — bei TikTok gibt es nur die Caption.
+  Kein langer Fließtext. Hashtags direkt in der Caption oder darunter.
+- Hashtags: Genau 3-5 Tags. Formel: 1 Mega-Tag (>10M Views), 1-2 Mid-Tags (1M-10M), 1-2 Nischen-Tags.
+  Direkt nach der Caption, ohne Leerzeile.
+- Titeloptionen: Alle 3 unter 150 Zeichen. Mindestens eine Option mit Emoji. Eine mit Frage-Hook. Eine mit Zahlen.
+- Ziel: Watch-Time + Shares + Kommentare (FYP-Algorithmus).""",
+
+    "instagram": """INSTAGRAM-SPEZIFISCHE REGELN (STRIKT EINHALTEN):
+- Titel: Wird als erster Satz der Caption genutzt. Kurz und packend (unter 125 Zeichen, erscheint vor "mehr").
+  Starke erste Zeile = mehr "mehr anzeigen" Klicks = besseres Engagement-Signal.
+- Beschreibung/Caption: 150-300 Wörter. Storytelling-Struktur:
+  Zeile 1: Hook-Satz (unter 125 Zeichen — wird vor "mehr" angezeigt)
+  [Leerzeile]
+  Story oder Mehrwert (3-5 kurze Absätze, luftig formatiert)
+  [Leerzeile]
+  Soft CTA (kein harter Link-Push — "speichern falls hilfreich", "markiere jemanden dem das hilft")
+  [Leerzeile]
+  .
+  .
+  .
+  #Hashtag1 #Hashtag2 ... (Hashtags am Ende oder im ersten Kommentar, 15-20 Stück)
+- Hashtags: 15-20 Tags. Formel: 5 Große (>500k Posts), 7-8 Mid (50k-500k), 5 Nischen (<50k). KEIN #-Zeichen im Array.
+- Ziel: Saves + Shares (Reels-Algorithmus), Entdeckung über Hashtags.""",
+}
+
+
 async def _optimize_with_claude(
+    db: Session,
     platform: str,
     title_draft: str,
     description_draft: str,
@@ -148,10 +229,12 @@ async def _optimize_with_claude(
     video_duration: Optional[int],
     trend_data: dict,
     user_perf: Optional[dict],
+    niche: str = "default",
+    creator_tone: str = "informative",
+    top_videos: list | None = None,
 ) -> dict:
     title_limit = constraints.get("title_max_chars", 100)
     desc_limit = constraints.get("description_max_chars", 2000)
-    desc_note = constraints.get("description_note", "")
     tags_max = constraints.get("tags_max_count", 20)
 
     duration_line = f"Videolänge: {video_duration} Sekunden." if video_duration else ""
@@ -182,6 +265,18 @@ async def _optimize_with_claude(
     if trend_data.get("_admin_notes"):
         real_data_lines.append(f"Admin-Beobachtungen: {trend_data['_admin_notes']}")
 
+    # Top-performing videos feedback loop
+    if top_videos:
+        for i, v in enumerate(top_videos[:3], 1):
+            views = v.get("view_count", 0)
+            title = v.get("title", "")
+            tags = v.get("tags") or []
+            if title and views > 0:
+                tag_preview = ", ".join(tags[:5]) if tags else "—"
+                real_data_lines.append(
+                    f"Dein Top-{i} Video ({views:,} Views): Titel='{title}' | Tags: {tag_preview}"
+                )
+
     live_data_block = ""
     if real_data_lines:
         live_data_block = (
@@ -191,48 +286,75 @@ async def _optimize_with_claude(
             "=== ENDE ===\n"
         )
 
-    user_prompt = f"""Erstelle viralitäts-optimierte Video-Metadaten für {platform.upper()}.
+    niche_strategy = _NICHE_STRATEGY.get(niche, _NICHE_STRATEGY["default"])
+    tone_guide = _TONE_GUIDE.get(creator_tone, _TONE_GUIDE["informative"])
+    platform_format = _PLATFORM_FORMAT.get(platform, "")
 
+    user_prompt = f"""Du erstellst plattform-native Video-Metadaten für {platform.upper()}.
+
+=== CREATOR PROFIL ===
+Nische: {niche.upper()} — {niche_strategy}
+Ton: {creator_tone.upper()} — {tone_guide}
 Kategorie: {category}
 {duration_line}
-Plattform-Hinweis: {desc_note}
-Titel-Limit: {title_limit} Zeichen (alle Varianten einhalten)
+
+=== PLATTFORM-FORMAT REGELN ===
+{platform_format}
+
+=== LIMITS ===
+Titel-Limit: {title_limit} Zeichen (alle 3 Varianten müssen eingehalten werden)
 Beschreibungs-Limit: {desc_limit} Zeichen
 Max. Hashtags: {tags_max}
 {live_data_block}
-Kontext / Original-Titel: {title_draft}
-Kontext / Original-Beschreibung: {description_draft}
+=== ORIGINAL-KONTEXT ===
+Titel-Entwurf: {title_draft}
+Beschreibung/Kontext: {description_draft}
 
-Antworte NUR mit dieser JSON-Struktur:
+=== AUFGABE ===
+Erstelle 3 Titel-Varianten nach diesen Strategien:
+1. HOOK — startet mit einer Emotion, überraschenden Aussage oder Schmerzpunkt. Kein generischer Einstieg.
+2. SEO — Haupt-Keyword in den ersten Wörtern, klar und suchoptimiert. Für {platform.upper()} Suchalgorithmus.
+3. CURIOSITY — erzeugt Neugier oder FOMO. Lässt eine Frage offen oder deutet Überraschendes an.
+
+Antworte NUR mit dieser JSON-Struktur (kein Markdown, keine Erklärungen):
 {{
-  "title": "stärkste der drei Varianten",
+  "title": "die stärkste der drei Varianten für {platform.upper()}",
   "title_options": [
-    "HOOK: Titel der mit Emotion oder überraschender Aussage startet",
-    "SEO: Titel mit Hauptkeyword früh, klar, für Suchalgorithmus optimiert",
-    "CURIOSITY: Titel der Neugier oder FOMO erzeugt"
+    "HOOK-Variante (Emotion/Schmerzpunkt)",
+    "SEO-Variante (Keyword-optimiert)",
+    "CURIOSITY-Variante (Neugier/FOMO)"
   ],
-  "description": "optimierte Beschreibung",
-  "hashtags": ["hashtag1", "hashtag2"]
+  "description": "plattform-native Beschreibung nach den obigen FORMAT REGELN",
+  "hashtags": ["tag1", "tag2"]
 }}
 
-Anforderungen:
-- Alle 3 Titel-Varianten innerhalb des Zeichenlimits ({title_limit} Zeichen)
-- "title" = die stärkste der drei Optionen (wähle selbst)
-- Beschreibung: plattformgerechte Formatierung, natürliche Keywords, CTA einbauen
-- Hashtags: {tags_max} Tags ohne #-Zeichen, Mix aus trending und nischen-spezifisch
-- Sprache des Originals beibehalten (deutsch oder englisch)
-- Aggressiv auf Klickrate und Reichweite optimieren"""
+Kritisch: Beschreibung und Hashtags müssen sich je nach Plattform DEUTLICH unterscheiden.
+Sprache des Originals beibehalten (deutsch oder englisch)."""
 
     response = await _claude.messages.create(
         model="claude-haiku-4-5-20251001",
-        max_tokens=1500,
+        max_tokens=2000,
         system=(
-            f"Du bist ein Viral-Content-Stratege für {platform.upper()}. "
-            "Ziel: maximale Klickrate (CTR) und organische Reichweite. "
+            f"Du bist ein spezialisierter Content-Stratege für {platform.upper()} mit Fokus auf die Nische '{niche}'. "
+            f"Du kennst die plattform-spezifischen Algorithmen, Formate und Creator-Strategien für {platform.upper()} genau. "
+            "Deine Metadaten sind platform-native — nicht copy-paste zwischen Plattformen. "
             "Antworte ausschließlich mit validem JSON – kein Markdown, keine Erklärungen."
         ),
         messages=[{"role": "user", "content": user_prompt}],
     )
+
+    try:
+        import uuid as _uuid
+        db.add(AiTokenUsageModel(
+            id=str(_uuid.uuid4()),
+            model=response.model,
+            platform=platform,
+            input_tokens=response.usage.input_tokens,
+            output_tokens=response.usage.output_tokens,
+        ))
+        db.commit()
+    except Exception as _e:
+        logger.warning(f"Token usage tracking failed: {_e}")
 
     raw = response.content[0].text.strip()
     # Strip markdown code fences if model wrapped response despite instructions

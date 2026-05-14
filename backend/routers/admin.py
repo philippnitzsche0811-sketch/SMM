@@ -15,7 +15,8 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from config import settings
-from models.database import AdminTrendDataModel, get_db
+from sqlalchemy import func
+from models.database import AdminTrendDataModel, HookExampleModel, AiTokenUsageModel, AppConfigModel, get_db
 from routers.auth import get_current_user
 
 logger = logging.getLogger(__name__)
@@ -215,6 +216,191 @@ async def parse_raw_text(
         "title_words":    title_words,
         "title_starters": title_starters,
     }
+
+
+# ---------------------------------------------------------------------------
+# Hook Examples CRUD
+# ---------------------------------------------------------------------------
+
+class HookExampleIn(BaseModel):
+    platform: str
+    niche: str
+    hook_type: Optional[str] = None
+    description: Optional[str] = None
+    what_worked: Optional[str] = None
+    score: Optional[int] = None
+    source_url: Optional[str] = None
+
+
+@router.post("/hook-examples", status_code=201)
+async def create_hook_example(
+    body: HookExampleIn,
+    db: Session = Depends(get_db),
+    _: dict = Depends(require_admin),
+):
+    if body.platform not in _VALID_PLATFORMS:
+        raise HTTPException(400, f"platform must be one of {_VALID_PLATFORMS}")
+
+    row = HookExampleModel(
+        id=str(uuid.uuid4()),
+        platform=body.platform,
+        niche=body.niche,
+        hook_type=body.hook_type,
+        description=body.description,
+        what_worked=body.what_worked,
+        score=body.score,
+        source_url=body.source_url,
+    )
+    db.add(row)
+    try:
+        db.commit()
+        db.refresh(row)
+    except Exception as exc:
+        db.rollback()
+        raise HTTPException(500, "Failed to save hook example")
+    return _hook_to_out(row)
+
+
+@router.get("/hook-examples")
+async def list_hook_examples(
+    platform: Optional[str] = None,
+    niche: Optional[str] = None,
+    db: Session = Depends(get_db),
+    _: dict = Depends(require_admin),
+):
+    q = db.query(HookExampleModel)
+    if platform:
+        q = q.filter(HookExampleModel.platform == platform)
+    if niche:
+        q = q.filter(HookExampleModel.niche == niche)
+    rows = q.order_by(HookExampleModel.created_at.desc()).all()
+    return [_hook_to_out(r) for r in rows]
+
+
+@router.patch("/hook-examples/{example_id}")
+async def update_hook_example(
+    example_id: str,
+    body: HookExampleIn,
+    db: Session = Depends(get_db),
+    _: dict = Depends(require_admin),
+):
+    row = db.query(HookExampleModel).filter(HookExampleModel.id == example_id).first()
+    if not row:
+        raise HTTPException(404, "Hook example not found")
+    for field in ("platform", "niche", "hook_type", "description", "what_worked", "score", "source_url"):
+        val = getattr(body, field, None)
+        if val is not None:
+            setattr(row, field, val)
+    try:
+        db.commit()
+        db.refresh(row)
+    except Exception as exc:
+        db.rollback()
+        raise HTTPException(500, "Failed to update")
+    return _hook_to_out(row)
+
+
+@router.delete("/hook-examples/{example_id}", status_code=204)
+async def delete_hook_example(
+    example_id: str,
+    db: Session = Depends(get_db),
+    _: dict = Depends(require_admin),
+):
+    row = db.query(HookExampleModel).filter(HookExampleModel.id == example_id).first()
+    if not row:
+        raise HTTPException(404, "Hook example not found")
+    db.delete(row)
+    try:
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise HTTPException(500, "Failed to delete")
+
+
+def _hook_to_out(row: HookExampleModel) -> dict:
+    return {
+        "id":          row.id,
+        "platform":    row.platform,
+        "niche":       row.niche,
+        "hook_type":   row.hook_type,
+        "description": row.description,
+        "what_worked": row.what_worked,
+        "score":       row.score,
+        "source_url":  row.source_url,
+        "created_at":  row.created_at.isoformat() if row.created_at else None,
+    }
+
+
+# ---------------------------------------------------------------------------
+# Token usage tracking
+# ---------------------------------------------------------------------------
+
+_INPUT_PRICE_PER_M  = 0.80   # USD per 1M input tokens  (Haiku estimate)
+_OUTPUT_PRICE_PER_M = 4.00   # USD per 1M output tokens (Haiku estimate)
+
+
+@router.get("/token-usage")
+async def get_token_usage(
+    db: Session = Depends(get_db),
+    _: dict = Depends(require_admin),
+):
+    from datetime import timezone
+    now = datetime.now(timezone.utc)
+    month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+
+    def _agg(query_result):
+        inp = query_result.input_tokens or 0
+        out = query_result.output_tokens or 0
+        calls = query_result.calls or 0
+        cost = round((inp / 1_000_000 * _INPUT_PRICE_PER_M) + (out / 1_000_000 * _OUTPUT_PRICE_PER_M), 4)
+        return {"input_tokens": inp, "output_tokens": out, "total_tokens": inp + out, "calls": calls, "estimated_cost_usd": cost}
+
+    total_row = db.query(
+        func.coalesce(func.sum(AiTokenUsageModel.input_tokens), 0).label("input_tokens"),
+        func.coalesce(func.sum(AiTokenUsageModel.output_tokens), 0).label("output_tokens"),
+        func.count(AiTokenUsageModel.id).label("calls"),
+    ).one()
+
+    month_row = db.query(
+        func.coalesce(func.sum(AiTokenUsageModel.input_tokens), 0).label("input_tokens"),
+        func.coalesce(func.sum(AiTokenUsageModel.output_tokens), 0).label("output_tokens"),
+        func.count(AiTokenUsageModel.id).label("calls"),
+    ).filter(AiTokenUsageModel.timestamp >= month_start).one()
+
+    budget_row = db.query(AppConfigModel).filter(AppConfigModel.key == "monthly_token_budget").first()
+    budget = int(budget_row.value) if (budget_row and budget_row.value) else None
+
+    return {
+        "all_time": _agg(total_row),
+        "this_month": _agg(month_row),
+        "monthly_budget_tokens": budget,
+        "month_label": now.strftime("%B %Y"),
+    }
+
+
+class TokenBudgetIn(BaseModel):
+    budget: Optional[int] = None
+
+
+@router.put("/token-budget", status_code=204)
+async def set_token_budget(
+    body: TokenBudgetIn,
+    db: Session = Depends(get_db),
+    _: dict = Depends(require_admin),
+):
+    row = db.query(AppConfigModel).filter(AppConfigModel.key == "monthly_token_budget").first()
+    value = str(body.budget) if body.budget is not None else None
+    if row:
+        row.value = value
+        row.updated_at = datetime.utcnow()
+    else:
+        row = AppConfigModel(key="monthly_token_budget", value=value)
+        db.add(row)
+    try:
+        db.commit()
+    except Exception as exc:
+        db.rollback()
+        raise HTTPException(500, "Failed to save budget")
 
 
 def _to_out(row: AdminTrendDataModel) -> dict:

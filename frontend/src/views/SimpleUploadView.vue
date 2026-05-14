@@ -514,6 +514,8 @@ async function runOptimize(isRegen = false) {
       description_draft: aiContext.value || meta.value.title,
       category: meta.value.category || 'default',
       platforms: selectedPlatforms.value,
+      niche: authStore.user?.niche || 'default',
+      creator_tone: authStore.user?.creatorTone || 'informative',
     });
 
     const suggestions = data.suggestions ?? {};

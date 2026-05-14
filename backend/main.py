@@ -116,6 +116,37 @@ async def startup_event():
                 conn.execute(text("ALTER TABLE videos ADD COLUMN IF NOT EXISTS scheduled_at TIMESTAMP"))
                 conn.execute(text("ALTER TABLE videos ADD COLUMN IF NOT EXISTS upload_mode VARCHAR(50)"))
                 conn.execute(text("ALTER TABLE videos ADD COLUMN IF NOT EXISTS platform_metadata JSON"))
+                conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS niche VARCHAR(100)"))
+                conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS creator_tone VARCHAR(100)"))
+                conn.execute(text("ALTER TABLE video_analyses ADD COLUMN IF NOT EXISTS hook_result JSON"))
+                conn.execute(text("""
+                    CREATE TABLE IF NOT EXISTS hook_examples (
+                        id VARCHAR PRIMARY KEY,
+                        platform VARCHAR NOT NULL,
+                        niche VARCHAR NOT NULL,
+                        hook_type VARCHAR,
+                        description TEXT,
+                        what_worked TEXT,
+                        score INTEGER,
+                        source_url VARCHAR,
+                        created_at TIMESTAMP DEFAULT NOW()
+                    )
+                """))
+                conn.execute(text("""
+                    CREATE TABLE IF NOT EXISTS video_stats (
+                        id VARCHAR PRIMARY KEY,
+                        video_id VARCHAR NOT NULL REFERENCES videos(id) ON DELETE CASCADE,
+                        user_id VARCHAR NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                        platform VARCHAR NOT NULL,
+                        platform_video_id VARCHAR,
+                        view_count INTEGER DEFAULT 0,
+                        like_count INTEGER DEFAULT 0,
+                        comment_count INTEGER DEFAULT 0,
+                        share_count INTEGER DEFAULT 0,
+                        fetched_at TIMESTAMP,
+                        created_at TIMESTAMP DEFAULT NOW()
+                    )
+                """))
                 conn.execute(text("""
                     CREATE TABLE IF NOT EXISTS content_ideas (
                         id VARCHAR PRIMARY KEY,
@@ -132,7 +163,7 @@ async def startup_event():
                     )
                 """))
                 conn.commit()
-            logger.info("✅ Migration: videos columns + content_ideas table ready")
+            logger.info("✅ Migration: videos columns + content_ideas table + user niche/tone ready")
         except (ProgrammingError, OperationalError) as e:
             logger.warning(f"⚠️ Migration skipped (needs DB owner — run manually): {e.__class__.__name__}")
 
@@ -228,6 +259,19 @@ async def process_upload_groups_job():
                 mark_video_failed(db, gv.id)
     except Exception as e:
         logger.error(f"❌ process_upload_groups_job failed: {e}")
+    finally:
+        db.close()
+
+
+@scheduler.scheduled_job("interval", hours=12)
+async def collect_video_stats_job():
+    """Fetch per-video stats from platforms for videos uploaded 20+ hours ago."""
+    from services.video_stats_service import collect_stats_for_uploaded_videos
+    db = SessionLocal()
+    try:
+        await collect_stats_for_uploaded_videos(db)
+    except Exception as e:
+        logger.error(f"❌ collect_video_stats_job failed: {e}")
     finally:
         db.close()
 

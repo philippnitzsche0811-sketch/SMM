@@ -23,6 +23,38 @@
         </div>
       </div>
 
+      <!-- Creator Profile -->
+      <div class="settings-card">
+        <h3 class="settings-card-title"><i class="pi pi-sparkles"></i> Creator Profile</h3>
+        <p class="field-hint" style="margin:0">These settings personalize the AI — it generates niche-specific titles, descriptions and hashtags that match your content style.</p>
+        <div class="form-field">
+          <span class="form-label">Your niche</span>
+          <Dropdown
+            v-model="creatorProfile.niche"
+            :options="nicheOptions"
+            optionLabel="label"
+            optionValue="value"
+            placeholder="Select your niche…"
+            class="w-full"
+          />
+        </div>
+        <div class="form-field">
+          <span class="form-label">Creator tone</span>
+          <Dropdown
+            v-model="creatorProfile.creatorTone"
+            :options="toneOptions"
+            optionLabel="label"
+            optionValue="value"
+            placeholder="Select your tone…"
+            class="w-full"
+          />
+          <small class="field-hint">How you communicate with your audience</small>
+        </div>
+        <div class="card-footer">
+          <Button label="Save creator profile" icon="pi pi-check" :loading="savingCreator" @click="saveCreatorProfile" />
+        </div>
+      </div>
+
       <!-- Change Password -->
       <div class="settings-card">
         <h3 class="settings-card-title"><i class="pi pi-lock"></i> Change Password</h3>
@@ -119,6 +151,7 @@ import { useConfirm } from 'primevue/useconfirm';
 import Button from 'primevue/button';
 import InputText from 'primevue/inputtext';
 import Password from 'primevue/password';
+import Dropdown from 'primevue/dropdown';
 import Tag from 'primevue/tag';
 import ConfirmDialog from 'primevue/confirmdialog';
 import Toast from 'primevue/toast';
@@ -131,9 +164,35 @@ const router    = useRouter();
 
 const savingProfile  = ref(false);
 const savingPassword = ref(false);
+const savingCreator  = ref(false);
 
 const profile   = ref({ username: authStore.userName || '' });
 const passwords = ref({ current: '', new: '', confirm: '' });
+const creatorProfile = ref({
+  niche:       authStore.user?.niche || null,
+  creatorTone: authStore.user?.creatorTone || null,
+});
+
+const nicheOptions = [
+  { label: 'General (default)',     value: 'default'   },
+  { label: 'Fitness & Sport',       value: 'fitness'   },
+  { label: 'Food & Recipes',        value: 'food'      },
+  { label: 'Finance & Money',       value: 'finance'   },
+  { label: 'Gaming',                value: 'gaming'    },
+  { label: 'Tech & Gadgets',        value: 'tech'      },
+  { label: 'Lifestyle',             value: 'lifestyle' },
+  { label: 'Education & Learning',  value: 'education' },
+  { label: 'Comedy & Entertainment',value: 'comedy'    },
+  { label: 'Beauty & Make-up',      value: 'beauty'    },
+  { label: 'Travel',                value: 'travel'    },
+];
+
+const toneOptions = [
+  { label: 'Informative (factual, direct)',        value: 'informative'   },
+  { label: 'Educational (teach & explain)',        value: 'educational'   },
+  { label: 'Entertainer (fun & personality)',      value: 'entertainer'   },
+  { label: 'Inspirational (motivate & empower)',   value: 'inspirational' },
+];
 
 const passwordMismatch = computed(() =>
   passwords.value.new && passwords.value.confirm && passwords.value.new !== passwords.value.confirm
@@ -155,6 +214,24 @@ const saveProfile = async () => {
   } catch (err: any) {
     toast.add({ severity: 'error', summary: 'Error', detail: err.response?.data?.detail || 'Save failed', life: 5000 });
   } finally { savingProfile.value = false; }
+};
+
+const saveCreatorProfile = async () => {
+  savingCreator.value = true;
+  try {
+    await api.patch('/api/auth/me', {
+      niche:        creatorProfile.value.niche,
+      creator_tone: creatorProfile.value.creatorTone,
+    });
+    if (authStore.user) {
+      authStore.user.niche = creatorProfile.value.niche;
+      authStore.user.creatorTone = creatorProfile.value.creatorTone;
+      localStorage.setItem('user', JSON.stringify(authStore.user));
+    }
+    toast.add({ severity: 'success', summary: 'Saved', detail: 'Creator profile updated — AI will use this for all future uploads', life: 4000 });
+  } catch (err: any) {
+    toast.add({ severity: 'error', summary: 'Error', detail: err.response?.data?.detail || 'Save failed', life: 5000 });
+  } finally { savingCreator.value = false; }
 };
 
 const changePassword = async () => {

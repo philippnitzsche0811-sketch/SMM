@@ -162,6 +162,8 @@ export const optimizeSuggest = async (data: {
   category: string;
   platforms: string[];
   video_duration?: number;
+  niche?: string;
+  creator_tone?: string;
 }) => {
   const response = await api.post('/api/optimizer/suggest', data);
   return response.data;
@@ -303,6 +305,59 @@ export const parseAdminRawText = async (
     category,
   });
   return response.data;
+};
+
+export interface HookExampleIn {
+  platform: string;
+  niche: string;
+  hook_type?: string;
+  description?: string;
+  what_worked?: string;
+  score?: number;
+  source_url?: string;
+}
+
+export interface HookExampleOut extends HookExampleIn {
+  id: string;
+  created_at?: string;
+}
+
+export const listHookExamples = async (platform?: string, niche?: string): Promise<HookExampleOut[]> => {
+  const response = await api.get('/api/admin/hook-examples', { params: { platform, niche } });
+  return response.data;
+};
+
+export const createHookExample = async (data: HookExampleIn): Promise<HookExampleOut> => {
+  const response = await api.post('/api/admin/hook-examples', data);
+  return response.data;
+};
+
+export const deleteHookExample = async (id: string): Promise<void> => {
+  await api.delete(`/api/admin/hook-examples/${id}`);
+};
+
+export interface TokenUsageStats {
+  input_tokens: number;
+  output_tokens: number;
+  total_tokens: number;
+  calls: number;
+  estimated_cost_usd: number;
+}
+
+export interface TokenUsageResponse {
+  all_time: TokenUsageStats;
+  this_month: TokenUsageStats;
+  monthly_budget_tokens: number | null;
+  month_label: string;
+}
+
+export const getAdminTokenUsage = async (): Promise<TokenUsageResponse> => {
+  const response = await api.get('/api/admin/token-usage');
+  return response.data;
+};
+
+export const setAdminTokenBudget = async (budget: number | null): Promise<void> => {
+  await api.put('/api/admin/token-budget', { budget });
 };
 
 export const getUploadGroup = async (groupId: string) => {

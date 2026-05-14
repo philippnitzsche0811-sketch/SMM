@@ -157,6 +157,8 @@ const runOptimizer = async () => {
       description_draft: localDescription.value,
       category:         localCategory.value,
       platforms:        ['youtube', 'tiktok', 'instagram'],
+      niche:            authStore.user?.niche || 'default',
+      creator_tone:     authStore.user?.creatorTone || 'informative',
     })
   } catch {
     optimizerError.value = 'AI optimization failed. Please try again.'

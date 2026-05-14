@@ -25,7 +25,7 @@ Base = declarative_base()
 # Models bleiben gleich...
 class UserModel(Base):
     __tablename__ = "users"
-    
+
     id = Column(String, primary_key=True, index=True)
     email = Column(String, unique=True, index=True, nullable=False)
     hashed_password = Column(String, nullable=False)
@@ -35,6 +35,8 @@ class UserModel(Base):
     verification_token_expires = Column(DateTime, nullable=True)
     reset_token = Column(String, nullable=True)
     reset_token_expires = Column(DateTime, nullable=True)
+    niche = Column(String, nullable=True)          # fitness | food | finance | gaming | tech | lifestyle | education | comedy | beauty | travel | default
+    creator_tone = Column(String, nullable=True)   # educational | entertainer | inspirational | informative
     created_at = Column(DateTime, default=datetime.now)
     updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
 
@@ -95,9 +97,24 @@ class VideoAnalysisModel(Base):
     user_id = Column(String, nullable=False, index=True)
     frames_extracted = Column(Integer, default=0)
     analysis_result = Column(JSON, nullable=True)
+    hook_result = Column(JSON, nullable=True)   # Hook-specific analysis (first 5s)
     status = Column(String, default="pending")  # pending | processing | done | failed
     created_at = Column(DateTime, default=datetime.now)
     updated_at = Column(DateTime, nullable=True)
+
+
+class HookExampleModel(Base):
+    __tablename__ = "hook_examples"
+
+    id = Column(String, primary_key=True, index=True)
+    platform = Column(String, nullable=False, index=True)  # youtube|tiktok|instagram
+    niche = Column(String, nullable=False, index=True)     # fitness|gaming|default|...
+    hook_type = Column(String, nullable=True)              # verbal|visual|text|music|combo
+    description = Column(Text, nullable=True)              # "Video über Gewichtsverlust..."
+    what_worked = Column(Text, nullable=True)              # "Zahlen im ersten Satz + Gesicht"
+    score = Column(Integer, nullable=True)                 # 1-10
+    source_url = Column(String, nullable=True)
+    created_at = Column(DateTime, default=datetime.now)
 
 class TrendCacheModel(Base):
     __tablename__ = "trend_cache"
@@ -120,6 +137,25 @@ class UserPerformanceCacheModel(Base):
     best_hours = Column(JSON, nullable=True)                # [{hour, avg_engagement}]
     best_days = Column(JSON, nullable=True)                 # [{dow, avg_engagement}]
     updated_at = Column(DateTime, nullable=True)
+
+
+class AiTokenUsageModel(Base):
+    __tablename__ = "ai_token_usage"
+
+    id            = Column(String, primary_key=True, index=True)
+    timestamp     = Column(DateTime, default=datetime.utcnow)
+    model         = Column(String, nullable=False)
+    platform      = Column(String, nullable=True)   # youtube|tiktok|instagram
+    input_tokens  = Column(Integer, nullable=False)
+    output_tokens = Column(Integer, nullable=False)
+
+
+class AppConfigModel(Base):
+    __tablename__ = "app_config"
+
+    key        = Column(String, primary_key=True)
+    value      = Column(String, nullable=True)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
 
 class AdminTrendDataModel(Base):
@@ -149,6 +185,22 @@ class ContentIdeaModel(Base):
     ai_suggestions = Column(JSON, nullable=True)     # {titles: [], hashtags: []}
     created_at = Column(DateTime, default=datetime.now)
     updated_at = Column(DateTime, nullable=True)
+
+
+class VideoStatsModel(Base):
+    __tablename__ = "video_stats"
+
+    id = Column(String, primary_key=True, index=True)
+    video_id = Column(String, ForeignKey("videos.id", ondelete="CASCADE"), nullable=False, index=True)
+    user_id = Column(String, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    platform = Column(String, nullable=False)          # youtube | tiktok | instagram
+    platform_video_id = Column(String, nullable=True)  # YouTube video_id, TikTok publish_id, ...
+    view_count = Column(Integer, default=0)
+    like_count = Column(Integer, default=0)
+    comment_count = Column(Integer, default=0)
+    share_count = Column(Integer, default=0)
+    fetched_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, default=datetime.now)
 
 
 class PlatformConnection(Base):

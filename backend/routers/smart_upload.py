@@ -8,7 +8,7 @@ import logging
 from models.database import get_db, VideoModel
 from models.video import VideoStatus
 from services.video_service import VideoService
-from services.video_analysis_service import analyze_video_frames, get_analysis
+from services.video_analysis_service import analyze_video_frames, analyze_hook, get_analysis
 from services.file_service import FileService
 from services.upload_group_service import add_video_to_group, get_group
 
@@ -76,6 +76,7 @@ async def start_analysis(
         video_record.id,
         user_id,
         temp_path,
+        db,
     )
 
     return {
@@ -95,6 +96,7 @@ async def get_analysis_status(video_id: str, db: Session = Depends(get_db)):
         "status": analysis.status,
         "frames_extracted": analysis.frames_extracted,
         "result": analysis.analysis_result if analysis.status == "done" else None,
+        "hook_result": analysis.hook_result if analysis.status == "done" else None,
     }
 
 
@@ -160,12 +162,22 @@ async def schedule_smart_upload(
 
 # ── Background task ──────────────────────────────────────────────────────────
 
-async def _run_analysis_background(video_id: str, user_id: str, video_path: str):
-    from models.database import SessionLocal
+async def _run_analysis_background(video_id: str, user_id: str, video_path: str, request_db=None):
+    from models.database import SessionLocal, UserModel
     db = SessionLocal()
     try:
-        await analyze_video_frames(db, user_id, video_id, video_path)
-        logger.info(f"✅ Analysis complete for video {video_id}")
+        # Fetch user niche for hook context
+        user = db.query(UserModel).filter(UserModel.id == user_id).first()
+        niche = getattr(user, "niche", None) or "default"
+
+        # Run full analysis and hook analysis concurrently
+        import asyncio
+        await asyncio.gather(
+            analyze_video_frames(db, user_id, video_id, video_path),
+            analyze_hook(db, user_id, video_id, video_path, niche=niche),
+            return_exceptions=True,
+        )
+        logger.info(f"✅ Analysis + hook analysis complete for video {video_id}")
     except Exception as exc:
         logger.error(f"❌ Background analysis failed for {video_id}: {exc}")
     finally:

@@ -5,7 +5,7 @@ from pydantic import BaseModel, Field
 from typing import List, Optional
 from sqlalchemy.orm import Session
 
-from models.database import get_db
+from models.database import get_db, UserModel
 from routers.auth import get_current_user
 from services.optimizer_service import (
     generate_suggestions,
@@ -59,6 +59,10 @@ async def suggest(
     if not body.platforms:
         raise HTTPException(status_code=400, detail="At least one platform must be specified.")
 
+    user = db.query(UserModel).filter(UserModel.id == body.user_id).first()
+    niche = getattr(user, "niche", None) or "default"
+    creator_tone = getattr(user, "creator_tone", None) or "informative"
+
     return await generate_suggestions(
         db=db,
         user_id=body.user_id,
@@ -67,6 +71,8 @@ async def suggest(
         category=body.category,
         platforms=body.platforms,
         video_duration=body.video_duration,
+        niche=niche,
+        creator_tone=creator_tone,
     )
 
 

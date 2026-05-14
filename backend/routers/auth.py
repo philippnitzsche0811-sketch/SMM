@@ -50,6 +50,8 @@ class ChangePasswordRequest(BaseModel):
 
 class UpdateMeRequest(BaseModel):
     username: Optional[str] = None
+    niche: Optional[str] = None
+    creator_tone: Optional[str] = None
 
 # ==========================================
 # Helper Functions
@@ -417,6 +419,8 @@ async def login(request: Request, body: LoginRequest, db: Session = Depends(get_
                 "id": user.id,
                 "email": user.email,
                 "username": user.username if hasattr(user, 'username') else None,
+                "niche": user.niche if hasattr(user, 'niche') else None,
+                "creator_tone": user.creator_tone if hasattr(user, 'creator_tone') else None,
                 "is_verified": user.is_verified,
                 "is_admin": bool(settings.ADMIN_EMAIL) and user.email == settings.ADMIN_EMAIL,
                 "connected_platforms": connected_platforms
@@ -593,6 +597,8 @@ async def get_current_user(
             "id": user.id,
             "email": user.email,
             "username": user.username if hasattr(user, 'username') else None,
+            "niche": user.niche if hasattr(user, 'niche') else None,
+            "creator_tone": user.creator_tone if hasattr(user, 'creator_tone') else None,
             "is_verified": user.is_verified,
             "is_admin": bool(settings.ADMIN_EMAIL) and user.email == settings.ADMIN_EMAIL,
             "connected_platforms": connected_platforms,
@@ -629,6 +635,10 @@ async def update_me(
 
         if request.username is not None:
             user.username = request.username
+        if request.niche is not None:
+            user.niche = request.niche
+        if request.creator_tone is not None:
+            user.creator_tone = request.creator_tone
 
         user.updated_at = datetime.utcnow()
         db.commit()
@@ -640,6 +650,8 @@ async def update_me(
             "id": str(user.id),
             "email": user.email,
             "username": user.username,
+            "niche": user.niche,
+            "creator_tone": user.creator_tone,
             "is_verified": user.is_verified,
             "updated_at": user.updated_at.isoformat()
         }
