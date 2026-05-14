@@ -16,6 +16,10 @@ const authStore = useAuthStore();
 
 onMounted(() => {
   authStore.initAuth();
+  // Refresh user data from server on every start so isAdmin / isVerified are always current
+  if (authStore.isAuthenticated) {
+    authStore.refreshUser().catch(() => {/* silent — initAuth fallback stays active */});
+  }
 });
 </script>
 
