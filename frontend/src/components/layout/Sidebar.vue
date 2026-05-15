@@ -91,6 +91,12 @@ const navGroups = computed(() => {
       ],
     },
     {
+      label: 'Optimieren',
+      items: [
+        { name: 'analytics', path: '/analytics', icon: 'pi pi-chart-bar', label: 'Analyse' },
+      ],
+    },
+    {
       label: 'Verbinden',
       items: [
         { name: 'platforms', path: '/platforms', icon: 'pi pi-link', label: 'Plattformen' },

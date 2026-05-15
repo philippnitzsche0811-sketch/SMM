@@ -14,6 +14,7 @@ from datetime import datetime, timedelta, timezone
 from routers.optimizer import router as optimizer_router
 from routers.admin import router as admin_router
 from routers.ideas import router as ideas_router
+from routers.analytics import router as analytics_router
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
@@ -130,6 +131,7 @@ app.include_router(upload_groups_router, prefix="/api/upload-groups")
 app.include_router(smart_upload_router, prefix="/api/smart-upload")
 app.include_router(admin_router)
 app.include_router(ideas_router, prefix="/api/ideas")
+app.include_router(analytics_router, prefix="/api")
 # Health Check
 @app.get("/health")
 async def health_check():

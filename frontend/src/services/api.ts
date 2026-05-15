@@ -465,6 +465,57 @@ export const deleteIdea = async (ideaId: string, userId: string) => {
 };
 
 // ==========================================
+// Analytics
+// ==========================================
+
+export interface PlatformStats {
+  view_count: number;
+  like_count: number;
+  comment_count: number;
+  share_count: number;
+  fetched_at: string | null;
+}
+
+export interface AnalyticsVideo {
+  id: string;
+  title: string;
+  description: string | null;
+  platforms: string[];
+  upload_results: Record<string, Record<string, unknown>>;
+  created_at: string | null;
+  stats: Record<string, PlatformStats>;
+}
+
+export interface AnalyticsComment {
+  id?: string;
+  username: string;
+  text: string;
+  timestamp: string;
+  like_count?: number;
+}
+
+export const getAnalyticsVideos = async (userId: string): Promise<{ videos: AnalyticsVideo[] }> => {
+  const response = await api.get('/api/analytics/videos', { params: { user_id: userId } });
+  return response.data;
+};
+
+export const refreshVideoStats = async (videoId: string): Promise<{ status: string; refreshed: Record<string, boolean> }> => {
+  const response = await api.post(`/api/analytics/video/${videoId}/refresh`);
+  return response.data;
+};
+
+export const getVideoComments = async (
+  videoId: string,
+  platform: string = 'instagram',
+  filterType: string = 'all',
+): Promise<{ comments: AnalyticsComment[]; total: number; mock?: boolean }> => {
+  const response = await api.get(`/api/analytics/video/${videoId}/comments`, {
+    params: { platform, filter_type: filterType },
+  });
+  return response.data;
+};
+
+// ==========================================
 // Health Check
 // ==========================================
 

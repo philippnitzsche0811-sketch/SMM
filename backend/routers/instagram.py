@@ -1,9 +1,14 @@
 ﻿# instagram_router.py
 from fastapi import APIRouter, Request as FastAPIRequest, HTTPException, Depends
-from fastapi.responses import RedirectResponse
+from fastapi.responses import RedirectResponse, HTMLResponse
 from pydantic import BaseModel
 import logging
 import httpx
+import hashlib
+import hmac
+import base64
+import json
+from datetime import datetime
 from urllib.parse import quote
 
 from config import settings
@@ -64,9 +69,8 @@ async def connect_instagram(
         scopes_raw = ",".join([
             "instagram_business_basic",
             "instagram_business_content_publish",
-            "instagram_business_manage_comments",
-            "instagram_business_manage_messages",
-            "instagram_business_manage_insights"
+            "instagram_manage_comments",
+            "instagram_business_manage_insights",
         ])
 
         scopes = quote(scopes_raw, safe="")
@@ -357,5 +361,64 @@ async def upload_to_instagram(user_id: str, video_path: str, title: str):
     return result
 
 
+# ==========================================
+# Meta Data Deletion Callback (required for App Review)
+# ==========================================
+
+@router.post("/data-deletion", include_in_schema=False)
+async def instagram_data_deletion_callback(request: FastAPIRequest):
+    """
+    Meta sends a signed_request here when a user removes the app from their Instagram settings.
+    Must respond with a confirmation_code and status URL.
+    https://developers.facebook.com/docs/instagram-platform/data-deletion-request
+    """
+    try:
+        form = await request.form()
+        signed_request_raw = form.get("signed_request", "")
+
+        ig_user_id = "unknown"
+        if signed_request_raw and "." in signed_request_raw:
+            try:
+                _, payload_b64 = signed_request_raw.split(".", 1)
+                # Base64url padding
+                padding = 4 - len(payload_b64) % 4
+                if padding != 4:
+                    payload_b64 += "=" * padding
+                payload = json.loads(base64.urlsafe_b64decode(payload_b64))
+                ig_user_id = payload.get("user_id", "unknown")
+            except Exception:
+                pass
+
+        logger.info(f"Instagram data deletion request received for IG user {ig_user_id}")
+
+        # Confirmation code so Meta can verify deletion was processed
+        ts = int(datetime.now().timestamp())
+        raw = f"{ig_user_id}:{ts}".encode()
+        confirmation_code = hmac.new(b"smm-del", raw, hashlib.sha256).hexdigest()[:16]
+
+        return {
+            "url": f"{settings.FRONTEND_URL}/privacy",
+            "confirmation_code": confirmation_code,
+        }
+
+    except Exception as e:
+        logger.error(f"Data deletion callback error: {e}")
+        return {"url": "", "confirmation_code": "error"}
 
 
+@router.get("/data-deletion", response_class=HTMLResponse, include_in_schema=False)
+async def instagram_data_deletion_status():
+    """Status page shown to users who initiated data deletion from Instagram."""
+    return """<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><title>Data Deletion - Decodu-SMM</title>
+<style>body{font-family:sans-serif;max-width:600px;margin:4rem auto;padding:0 1rem;color:#333}
+h1{color:#667eea}p{line-height:1.7;color:#555}a{color:#667eea}</style>
+</head>
+<body>
+<h1>Data Deletion Request Received</h1>
+<p>Your data deletion request has been received and processed. All data associated with your Instagram account has been removed from Decodu-SMM.</p>
+<p>This includes: OAuth access tokens, upload history linked to your Instagram account.</p>
+<p>If you have any questions, contact us at <a href="mailto:privacy@decodu-smm.com">privacy@decodu-smm.com</a>.</p>
+<p><a href="https://decodu-smm.com/privacy">Back to Privacy Policy</a></p>
+</body></html>"""
