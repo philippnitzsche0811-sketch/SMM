@@ -66,11 +66,12 @@ async def connect_instagram(
         if not redirect_uri:
             raise HTTPException(400, "Instagram Redirect URI nicht konfiguriert.")
 
+        # Valid scopes for Instagram Platform (https://www.instagram.com/oauth/authorize)
+        # instagram_business_manage_insights is NOT valid here — it's a Facebook Graph API permission
         scopes_raw = ",".join([
             "instagram_business_basic",
             "instagram_business_content_publish",
             "instagram_manage_comments",
-            "instagram_business_manage_insights",
         ])
 
         scopes = quote(scopes_raw, safe="")
