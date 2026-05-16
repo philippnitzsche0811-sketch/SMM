@@ -24,7 +24,7 @@ async def collect_stats_for_uploaded_videos(db: Session) -> None:
     # Videos uploaded at least 20h ago with no stats entry yet
     rows = db.execute(
         text("""
-            SELECT v.id, v.user_id, v.platforms, v.upload_results
+            SELECT v.id AS video_id, v.user_id, v.platforms, v.upload_results
             FROM videos v
             WHERE v.status = 'uploaded'
               AND v.created_at <= :cutoff
