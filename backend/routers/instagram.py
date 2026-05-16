@@ -71,7 +71,7 @@ async def connect_instagram(
         scopes_raw = ",".join([
             "instagram_business_basic",
             "instagram_business_content_publish",
-            "instagram_manage_comments",
+            "instagram_business_manage_comments",
         ])
 
         scopes = quote(scopes_raw, safe="")
