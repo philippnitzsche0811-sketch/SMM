@@ -139,6 +139,42 @@
             <p class="comment-text">{{ comment.text }}</p>
             <span v-if="isQuestion(comment.text)" class="comment-tag comment-tag--question">Frage</span>
             <span v-else-if="isIdea(comment.text)" class="comment-tag comment-tag--idea">Idee</span>
+
+            <!-- Reply -->
+            <div v-if="comment.id" class="comment-reply-section">
+              <button
+                v-if="!replyingTo || replyingTo !== comment.id"
+                class="btn-reply"
+                @click="replyingTo = comment.id; replyTexts[comment.id] = replyTexts[comment.id] || ''"
+              >
+                <i class="pi pi-reply"></i> Antworten
+              </button>
+
+              <div v-if="replyingTo === comment.id" class="reply-form">
+                <textarea
+                  v-model="replyTexts[comment.id]"
+                  class="reply-textarea"
+                  placeholder="Deine Antwort…"
+                  rows="2"
+                  :disabled="replyLoading[comment.id]"
+                />
+                <div class="reply-actions">
+                  <button class="btn-reply-cancel" @click="replyingTo = null">Abbrechen</button>
+                  <button
+                    class="btn-reply-send"
+                    :disabled="!replyTexts[comment.id]?.trim() || replyLoading[comment.id]"
+                    @click="sendReply(comment)"
+                  >
+                    <i v-if="replyLoading[comment.id]" class="pi pi-spin pi-spinner"></i>
+                    <span v-else>Senden</span>
+                  </button>
+                </div>
+                <p v-if="replySuccess[comment.id]" class="reply-success">
+                  <i class="pi pi-check"></i> Antwort gesendet
+                </p>
+                <p v-if="replyError[comment.id]" class="reply-error">{{ replyError[comment.id] }}</p>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -153,6 +189,7 @@ import {
   getAnalyticsVideos,
   refreshVideoStats,
   getVideoComments,
+  postCommentReply,
   type AnalyticsVideo,
   type AnalyticsComment,
 } from '@/services/api';
@@ -167,6 +204,11 @@ const activeFilter = ref('all');
 const comments = ref<AnalyticsComment[]>([]);
 const commentsLoading = ref(false);
 const mockComments = ref(false);
+const replyingTo = ref<string | null>(null);
+const replyTexts = ref<Record<string, string>>({});
+const replyLoading = ref<Record<string, boolean>>({});
+const replySuccess = ref<Record<string, boolean>>({});
+const replyError = ref<Record<string, string>>({});
 
 const filters = [
   { label: 'Alle', value: 'all' },
@@ -231,6 +273,26 @@ async function loadComments(filter: string) {
     comments.value = [];
   } finally {
     commentsLoading.value = false;
+  }
+}
+
+async function sendReply(comment: AnalyticsComment) {
+  const id = comment.id;
+  if (!id || !replyTexts.value[id]?.trim() || !selectedVideoId.value) return;
+  replyLoading.value[id] = true;
+  replyError.value[id] = '';
+  try {
+    await postCommentReply(selectedVideoId.value, id, replyTexts.value[id]);
+    replySuccess.value[id] = true;
+    replyTexts.value[id] = '';
+    setTimeout(() => {
+      replySuccess.value[id] = false;
+      replyingTo.value = null;
+    }, 2500);
+  } catch {
+    replyError.value[id] = 'Antwort fehlgeschlagen. Bitte erneut versuchen.';
+  } finally {
+    replyLoading.value[id] = false;
   }
 }
 
@@ -576,5 +638,103 @@ function platformIcon(platform: string): string {
 .slide-down-leave-to {
   opacity: 0;
   transform: translateY(-12px);
+}
+
+/* Reply UI */
+.comment-reply-section {
+  margin-top: 0.6rem;
+}
+
+.btn-reply {
+  background: none;
+  border: none;
+  color: var(--color-primary, #667eea);
+  cursor: pointer;
+  font-size: 0.78rem;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  opacity: 0.8;
+  transition: opacity 0.15s;
+}
+
+.btn-reply:hover { opacity: 1; }
+
+.reply-form {
+  margin-top: 0.5rem;
+  padding-left: 0.75rem;
+  border-left: 2px solid var(--color-primary, #667eea);
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.reply-textarea {
+  width: 100%;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 6px;
+  color: var(--text-primary, #f1f5f9);
+  font-size: 0.85rem;
+  padding: 0.5rem 0.75rem;
+  resize: none;
+  outline: none;
+  box-sizing: border-box;
+  font-family: inherit;
+}
+
+.reply-textarea:focus {
+  border-color: var(--color-primary, #667eea);
+}
+
+.reply-actions {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: flex-end;
+}
+
+.btn-reply-cancel {
+  background: none;
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 6px;
+  color: var(--text-secondary, #94a3b8);
+  cursor: pointer;
+  font-size: 0.8rem;
+  padding: 0.3rem 0.75rem;
+  transition: background 0.15s;
+}
+
+.btn-reply-cancel:hover { background: rgba(255,255,255,0.06); }
+
+.btn-reply-send {
+  background: var(--color-primary, #667eea);
+  border: none;
+  border-radius: 6px;
+  color: #fff;
+  cursor: pointer;
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 0.3rem 0.9rem;
+  transition: opacity 0.15s;
+  min-width: 60px;
+}
+
+.btn-reply-send:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn-reply-send:not(:disabled):hover { opacity: 0.85; }
+
+.reply-success {
+  font-size: 0.8rem;
+  color: #4ade80;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.reply-error {
+  font-size: 0.8rem;
+  color: #f87171;
+  margin: 0;
 }
 </style>

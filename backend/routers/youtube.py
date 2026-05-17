@@ -133,7 +133,9 @@ async def youtube_oauth_callback(request: FastAPIRequest, db: Session = Depends(
 
         logger.info("Credentials obtained!")
 
-        token_storage.save_youtube_credentials(user_id, credentials)
+        channel_title, channel_id = fetch_youtube_channel_info(credentials)
+
+        token_storage.save_youtube_credentials(user_id, credentials, channel_title=channel_title, channel_id=channel_id)
         user_service.set_platform_credentials(
             user_id=user_id,
             platform="youtube",
@@ -162,6 +164,24 @@ async def youtube_oauth_callback(request: FastAPIRequest, db: Session = Depends(
             url=f"{settings.FRONTEND_URL}/platforms?error=youtube&message={str(e)}",
             status_code=302
         )
+
+
+def fetch_youtube_channel_info(credentials) -> tuple[str | None, str | None]:
+    """Fetches YouTube channel title and ID using the OAuth credentials."""
+    try:
+        from googleapiclient.discovery import build
+        youtube = build("youtube", "v3", credentials=credentials)
+        response = youtube.channels().list(part="snippet", mine=True).execute()
+        items = response.get("items", [])
+        if items:
+            snippet = items[0].get("snippet", {})
+            title = snippet.get("title")
+            channel_id = items[0].get("id")
+            logger.info(f"YouTube channel fetched: {title} ({channel_id})")
+            return title, channel_id
+    except Exception as e:
+        logger.warning(f"Could not fetch YouTube channel info: {e}")
+    return None, None
 
 
 class DisconnectRequest(BaseModel):

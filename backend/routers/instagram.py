@@ -71,7 +71,7 @@ async def connect_instagram(
         scopes_raw = ",".join([
             "instagram_business_basic",
             "instagram_business_content_publish",
-            "instagram_business_manage_comments",
+            "instagram_manage_comments",
         ])
 
         scopes = quote(scopes_raw, safe="")
@@ -147,8 +147,11 @@ async def instagram_oauth_callback(request: FastAPIRequest):
         # Convert to long-lived token (60 days)
         long_lived_token = await get_long_lived_token(access_token)
 
+        # Fetch account username
+        ig_username = await fetch_instagram_username(long_lived_token)
+
         # Save to token storage
-        token_storage.save_instagram_credentials(user_id, long_lived_token, ig_user_id)
+        token_storage.save_instagram_credentials(user_id, long_lived_token, ig_user_id, username=ig_username)
 
         # Save to user service
         user_service.set_platform_credentials(
@@ -250,6 +253,24 @@ async def get_long_lived_token(short_lived_token: str) -> str:
     except httpx.HTTPError as e:
         raise ValueError(f"Long-lived token exchange request failed: {str(e)}")
 
+
+
+async def fetch_instagram_username(access_token: str) -> str | None:
+    """Fetches the Instagram username for the connected account."""
+    try:
+        async with httpx.AsyncClient(timeout=10) as client:
+            resp = await client.get(
+                "https://graph.instagram.com/me",
+                params={"fields": "username", "access_token": access_token}
+            )
+            data = resp.json()
+            username = data.get("username")
+            if username:
+                logger.info(f"Instagram username fetched: {username}")
+            return username
+    except Exception as e:
+        logger.warning(f"Could not fetch Instagram username: {e}")
+        return None
 
 
 # ==========================================

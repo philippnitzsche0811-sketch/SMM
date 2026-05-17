@@ -2,6 +2,7 @@
 Analytics Router - video performance stats and comment collection
 """
 from fastapi import APIRouter, Depends, HTTPException, Query
+from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from datetime import datetime
 import uuid
@@ -14,6 +15,7 @@ from services.analytics_service import (
     fetch_instagram_insights,
     fetch_instagram_comments,
     fetch_youtube_stats,
+    reply_to_instagram_comment,
 )
 from services.token_storage import TokenStorage
 
@@ -159,6 +161,41 @@ async def get_video_comments(
         }
 
     return {"comments": [], "platform": platform, "filter": filter_type, "total": 0}
+
+
+class ReplyRequest(BaseModel):
+    message: str
+    platform: str = "instagram"
+
+
+@router.post("/video/{video_id}/comments/{comment_id}/reply")
+async def reply_to_comment(
+    video_id: str,
+    comment_id: str,
+    body: ReplyRequest,
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Posts a reply to a comment on the given platform."""
+    video = db.query(VideoModel).filter(VideoModel.id == video_id).first()
+    if not video:
+        raise HTTPException(404, "Video not found")
+    if str(video.user_id) != str(current_user["id"]):
+        raise HTTPException(403, "Not authorized")
+
+    user_id = str(current_user["id"])
+
+    if body.platform == "instagram":
+        ig_creds = token_storage.load_instagram_credentials(user_id)
+        if not ig_creds:
+            raise HTTPException(400, "Instagram nicht verbunden")
+        try:
+            result = await reply_to_instagram_comment(comment_id, body.message, ig_creds["access_token"])
+            return {"status": "success", "reply_id": result.get("id")}
+        except ValueError as e:
+            raise HTTPException(400, str(e))
+
+    raise HTTPException(400, f"Antworten für {body.platform} noch nicht unterstützt")
 
 
 def _apply_filter(comments: list, filter_type: str) -> list:

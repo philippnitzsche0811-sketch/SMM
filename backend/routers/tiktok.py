@@ -154,8 +154,12 @@ async def tiktok_oauth_callback(request: FastAPIRequest):
         
         # Exchange code for token (with code_verifier)
         access_token, open_id, refresh_token, expires_in = await exchange_code_for_token(code, code_verifier)
-        token_storage.save_tiktok_credentials(user_id, access_token, open_id, refresh_token, expires_in=expires_in)
-        
+
+        # Fetch display name
+        tiktok_username = await fetch_tiktok_username(access_token, open_id)
+
+        token_storage.save_tiktok_credentials(user_id, access_token, open_id, refresh_token, expires_in=expires_in, username=tiktok_username)
+
         user_service.set_platform_credentials(
             user_id=user_id,
             platform="tiktok",
@@ -232,6 +236,26 @@ async def exchange_code_for_token(code: str, code_verifier: str) -> tuple[str, s
         logger.error(f"TikTok Token Exchange fehlgeschlagen: {str(e)}")
         raise ValueError(f"Token Exchange fehlgeschlagen: {str(e)}")
 
+
+
+async def fetch_tiktok_username(access_token: str, open_id: str) -> str | None:
+    """Fetches TikTok display_name via User Info API."""
+    try:
+        async with httpx.AsyncClient(timeout=10) as client:
+            resp = await client.get(
+                "https://open.tiktokapis.com/v2/user/info/",
+                params={"fields": "display_name,username"},
+                headers={"Authorization": f"Bearer {access_token}"}
+            )
+            data = resp.json()
+            user = data.get("data", {}).get("user", {})
+            name = user.get("display_name") or user.get("username")
+            if name:
+                logger.info(f"TikTok username fetched: {name}")
+            return name
+    except Exception as e:
+        logger.warning(f"Could not fetch TikTok username: {e}")
+        return None
 
 
 # ==========================================

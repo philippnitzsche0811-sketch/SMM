@@ -515,6 +515,19 @@ export const getVideoComments = async (
   return response.data;
 };
 
+export const postCommentReply = async (
+  videoId: string,
+  commentId: string,
+  message: string,
+  platform: string = 'instagram',
+): Promise<{ status: string; reply_id?: string }> => {
+  const response = await api.post(
+    `/api/analytics/video/${videoId}/comments/${commentId}/reply`,
+    { message, platform },
+  );
+  return response.data;
+};
+
 // ==========================================
 // Health Check
 // ==========================================

@@ -77,7 +77,7 @@ async def fetch_instagram_comments(media_id: str, access_token: str, limit: int 
             resp = await client.get(
                 f"{GRAPH_BASE}/{media_id}/comments",
                 params={
-                    "fields": "text,username,timestamp,like_count",
+                    "fields": "id,text,username,timestamp,like_count",
                     "limit": limit,
                     "access_token": access_token,
                 }
@@ -89,6 +89,25 @@ async def fetch_instagram_comments(media_id: str, access_token: str, limit: int 
     except Exception as e:
         logger.error(f"Instagram comments error: {e}")
         return []
+
+
+async def reply_to_instagram_comment(comment_id: str, message: str, access_token: str) -> dict:
+    """Posts a reply to an Instagram comment."""
+    try:
+        async with httpx.AsyncClient(timeout=15) as client:
+            resp = await client.post(
+                f"{GRAPH_BASE}/{comment_id}/replies",
+                data={"message": message, "access_token": access_token},
+            )
+            if resp.status_code != 200:
+                error_msg = resp.json().get("error", {}).get("message", "Reply fehlgeschlagen")
+                raise ValueError(error_msg)
+            return resp.json()
+    except ValueError:
+        raise
+    except Exception as e:
+        logger.error(f"Instagram reply error: {e}")
+        raise ValueError(str(e))
 
 
 async def fetch_youtube_stats(video_id: str) -> dict:

@@ -119,7 +119,7 @@ class TokenStorage:
 
     def save_tiktok_credentials(self, user_id: str, access_token: str,
                              open_id: str, refresh_token: str = None,
-                             expires_in: int = 86400):
+                             expires_in: int = 86400, username: str = None):
         db = self._get_db()
         try:
             expiry = datetime.now() + timedelta(seconds=expires_in)
@@ -135,6 +135,8 @@ class TokenStorage:
                 existing.token_expiry = expiry
                 existing.connected = True
                 existing.updated_at = datetime.now()
+                if username:
+                    existing.username = username
             else:
                 from models.database import PlatformConnection as PC
                 import secrets
@@ -147,6 +149,7 @@ class TokenStorage:
                     refresh_token=refresh_token or "",
                     channel_id=open_id,
                     token_expiry=expiry,
+                    username=username,
                     created_at=datetime.now(),
                     updated_at=datetime.now()
                 )
