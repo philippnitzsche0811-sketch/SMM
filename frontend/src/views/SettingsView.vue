@@ -1,14 +1,37 @@
 <template>
   <div class="settings-view">
     <div class="page-header">
-      <h1>Settings</h1>
-      <p class="subtitle">Manage your profile and account preferences</p>
+      <h1>Einstellungen</h1>
+      <p class="subtitle">Profil, Plattformen und Konto verwalten</p>
     </div>
 
-    <div class="settings-grid">
-      <!-- Profile -->
-      <div class="settings-card">
-        <h3 class="settings-card-title"><i class="pi pi-user"></i> Profile</h3>
+    <!-- Tab-Navigation -->
+    <div class="settings-tabs">
+      <button class="settings-tab" :class="{ active: activeTab === 'profile' }" @click="activeTab = 'profile'">
+        <i class="pi pi-user"></i> Profil
+      </button>
+      <button class="settings-tab" :class="{ active: activeTab === 'platforms' }" @click="activeTab = 'platforms'">
+        <i class="pi pi-link"></i> Plattformen
+      </button>
+      <button class="settings-tab" :class="{ active: activeTab === 'account' }" @click="activeTab = 'account'">
+        <i class="pi pi-cog"></i> Konto
+      </button>
+    </div>
+
+    <!-- Tab: Plattformen -->
+    <div v-if="activeTab === 'platforms'" class="platforms-tab">
+      <p class="platforms-hint">Verbinde deine Social-Media-Konten, um Videos von hier hochzuladen.</p>
+      <div class="platforms-connect-grid">
+        <YouTubeConnect />
+        <TikTokConnect />
+        <InstagramConnect />
+      </div>
+    </div>
+
+    <div v-if="activeTab === 'profile' || activeTab === 'account'" class="settings-grid">
+      <!-- Profile (nur in Profil-Tab) -->
+      <div v-if="activeTab === 'profile'" class="settings-card">
+        <h3 class="settings-card-title"><i class="pi pi-user"></i> Profil</h3>
         <div class="form-field">
           <span class="form-label">Username</span>
           <InputText v-model="profile.username" placeholder="Username" class="w-full" />
@@ -23,8 +46,8 @@
         </div>
       </div>
 
-      <!-- Creator Profile -->
-      <div class="settings-card">
+      <!-- Creator Profile (nur in Profil-Tab) -->
+      <div v-if="activeTab === 'profile'" class="settings-card">
         <h3 class="settings-card-title"><i class="pi pi-sparkles"></i> Creator Profile</h3>
         <p class="field-hint" style="margin:0">These settings personalize the AI — it generates niche-specific titles, descriptions and hashtags that match your content style.</p>
         <div class="form-field">
@@ -55,8 +78,8 @@
         </div>
       </div>
 
-      <!-- Change Password -->
-      <div class="settings-card">
+      <!-- Change Password (nur in Konto-Tab) -->
+      <div v-if="activeTab === 'account'" class="settings-card">
         <h3 class="settings-card-title"><i class="pi pi-lock"></i> Change Password</h3>
         <div class="form-field">
           <span class="form-label">Current Password</span>
@@ -76,8 +99,8 @@
         </div>
       </div>
 
-      <!-- Account Info -->
-      <div class="settings-card info-card">
+      <!-- Account Info (nur in Konto-Tab) -->
+      <div v-if="activeTab === 'account'" class="settings-card info-card">
         <h3 class="settings-card-title"><i class="pi pi-info-circle"></i> Account Info</h3>
         <div class="info-row">
           <span class="info-label">Account ID</span>
@@ -96,8 +119,8 @@
         </div>
       </div>
 
-      <!-- Legal Links -->
-      <div class="settings-card">
+      <!-- Legal Links (nur in Konto-Tab) -->
+      <div v-if="activeTab === 'account'" class="settings-card">
         <h3 class="settings-card-title"><i class="pi pi-file"></i> Legal</h3>
         <div class="legal-links">
           <a href="/terms" target="_blank" class="legal-link">
@@ -113,8 +136,8 @@
         </div>
       </div>
 
-      <!-- Data Deletion -->
-      <div class="settings-card data-card">
+      <!-- Data Deletion (nur in Konto-Tab) -->
+      <div v-if="activeTab === 'account'" class="settings-card data-card">
         <h3 class="settings-card-title"><i class="pi pi-database"></i> Your Data</h3>
         <p class="data-text">You have the right to delete all your stored data, including:</p>
         <div class="data-list">
@@ -129,13 +152,13 @@
         </p>
       </div>
 
-      <!-- Danger Zone -->
-      <div class="settings-card danger-card">
+      <!-- Danger Zone (nur in Konto-Tab) -->
+      <div v-if="activeTab === 'account'" class="settings-card danger-card">
         <h3 class="settings-card-title danger"><i class="pi pi-exclamation-triangle"></i> Danger Zone</h3>
         <p class="danger-text">This action is permanent and cannot be undone.</p>
         <Button label="Delete Account" icon="pi pi-trash" class="p-button-danger p-button-outlined" @click="confirmDeleteAccount" />
       </div>
-    </div>
+    </div><!-- end settings-grid -->
 
     <ConfirmDialog />
     <Toast />
@@ -156,6 +179,9 @@ import Tag from 'primevue/tag';
 import ConfirmDialog from 'primevue/confirmdialog';
 import Toast from 'primevue/toast';
 import api from '@/services/api';
+import { YouTubeConnect, TikTokConnect, InstagramConnect } from '@/components/connect';
+
+const activeTab = ref<'profile' | 'platforms' | 'account'>('profile');
 
 const authStore = useAuthStore();
 const toast     = useToast();
@@ -270,7 +296,44 @@ const confirmDeleteAccount = () => {
 </script>
 
 <style scoped>
-.settings-view { max-width: 900px; margin: 0 auto; }
+.settings-view { max-width: 900px; margin: 0 auto; padding: 1.5rem 1rem; }
+
+/* Tabs */
+.settings-tabs {
+  display: flex;
+  gap: 0.25rem;
+  margin-bottom: 1.5rem;
+  border-bottom: 1px solid var(--border-color, #3f3f46);
+}
+.settings-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.625rem 1rem;
+  border: none;
+  background: none;
+  color: var(--text-secondary, #a1a1aa);
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  transition: color 0.15s, border-color 0.15s;
+}
+.settings-tab:hover { color: var(--text-primary, #f4f4f5); }
+.settings-tab.active { color: var(--primary-400, #a78bfa); border-bottom-color: var(--primary-400, #a78bfa); }
+
+/* Plattformen-Tab */
+.platforms-hint {
+  font-size: 0.875rem;
+  color: var(--text-secondary, #a1a1aa);
+  margin: 0 0 1.25rem;
+}
+.platforms-connect-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1rem;
+}
 
 .page-header { margin-bottom: 1.75rem; }
 .page-header h1 {

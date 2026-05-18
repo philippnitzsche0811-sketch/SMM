@@ -301,7 +301,7 @@ async function confirmDelete(idea: Idea) {
 
 function goToUpload(idea: Idea) {
   router.push({
-    path: '/upload/simple',
+    path: '/upload',
     query: {
       title: idea.title,
       description: idea.concept || '',

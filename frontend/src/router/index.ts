@@ -70,25 +70,21 @@ const router = createRouter({
       component: () => import('@/components/layout/DashboardLayout.vue'),
       meta: { requiresAuth: true },
       children: [
+        // ── Hauptseiten ──────────────────────────────────────────────────────
         {
           path: 'dashboard',
           name: 'dashboard',
           component: () => import('@/views/DashboardView.vue'),
         },
         {
+          path: 'plan',
+          name: 'plan',
+          component: () => import('@/views/PlanView.vue'),
+        },
+        {
           path: 'upload',
           name: 'upload',
           component: () => import('@/views/UploadView.vue'),
-        },
-        {
-          path: 'upload/simple',
-          name: 'upload-simple',
-          component: () => import('@/views/SimpleUploadView.vue'),
-        },
-        {
-          path: 'upload/smart',
-          name: 'upload-smart',
-          component: () => import('@/views/SmartUploadView.vue'),
         },
         {
           path: 'upload/groups',
@@ -101,19 +97,9 @@ const router = createRouter({
           component: () => import('@/views/UploadGroupsView.vue'),
         },
         {
-          path: 'uploads',
-          name: 'uploads',
-          component: () => import('@/views/UploadsView.vue'),
-        },
-        {
-          path: 'connect',
-          name: 'connect',
-          component: () => import('@/views/ConnectView.vue'),
-        },
-        {
-          path: 'platforms',
-          name: 'platforms',
-          component: () => import('@/views/PlatformsView.vue'),
+          path: 'analytics',
+          name: 'analytics',
+          component: () => import('@/views/AnalyticsView.vue'),
         },
         {
           path: 'settings',
@@ -121,19 +107,9 @@ const router = createRouter({
           component: () => import('@/views/SettingsView.vue'),
         },
         {
-          path: 'calendar',
-          name: 'calendar',
-          component: () => import('@/views/CalendarView.vue'),
-        },
-        {
-          path: 'plan',
-          name: 'plan',
-          component: () => import('@/views/IdeasView.vue'),
-        },
-        {
-          path: 'analytics',
-          name: 'analytics',
-          component: () => import('@/views/AnalyticsView.vue'),
+          path: 'connect',
+          name: 'connect',
+          component: () => import('@/views/ConnectView.vue'),
         },
         {
           path: 'admin',
@@ -141,6 +117,12 @@ const router = createRouter({
           component: () => import('@/views/AdminView.vue'),
           meta: { requiresAdmin: true },
         },
+        // ── Redirects (alte Routen) ──────────────────────────────────────────
+        { path: 'calendar',      redirect: '/plan'      },
+        { path: 'platforms',     redirect: '/settings'  },
+        { path: 'uploads',       redirect: '/dashboard' },
+        { path: 'upload/simple', redirect: '/upload'    },
+        { path: 'upload/smart',  redirect: '/upload'    },
       ],
     },
   ],

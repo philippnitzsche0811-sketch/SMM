@@ -5,12 +5,13 @@ from typing import List, Optional
 from datetime import datetime
 import logging
 
-from models.database import get_db, VideoModel
+from models.database import get_db, VideoModel, UserModel
 from models.video import VideoStatus
 from services.video_service import VideoService
 from services.video_analysis_service import analyze_video_frames, analyze_hook, get_analysis
 from services.file_service import FileService
 from services.upload_group_service import add_video_to_group, get_group
+from config import settings
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["Smart Upload"])
@@ -44,6 +45,11 @@ async def start_analysis(
     tags: str = Form(""),
     db: Session = Depends(get_db),
 ):
+    user = db.query(UserModel).filter(UserModel.id == user_id).first()
+    is_admin = bool(settings.ADMIN_EMAIL) and getattr(user, "email", "") == settings.ADMIN_EMAIL
+    if not user or (getattr(user, "plan", "free") != "pro" and not is_admin):
+        raise HTTPException(status_code=403, detail="Video-Analyse ist nur im Pro-Plan verfügbar.")
+
     content_type = video.content_type or ""
     filename = video.filename or ""
     is_video = content_type.startswith("video/") or any(

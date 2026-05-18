@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 
 from models.database import get_db, UserModel
 from routers.auth import get_current_user
+from config import settings
 from services.optimizer_service import (
     generate_suggestions,
     get_trending_hashtags,
@@ -60,6 +61,11 @@ async def suggest(
         raise HTTPException(status_code=400, detail="At least one platform must be specified.")
 
     user = db.query(UserModel).filter(UserModel.id == body.user_id).first()
+
+    is_admin = bool(settings.ADMIN_EMAIL) and getattr(user, "email", "") == settings.ADMIN_EMAIL
+    if not user or (getattr(user, "plan", "free") != "pro" and not is_admin):
+        raise HTTPException(status_code=403, detail="KI-Optimierung ist nur im Pro-Plan verfügbar.")
+
     niche = getattr(user, "niche", None) or "default"
     creator_tone = getattr(user, "creator_tone", None) or "informative"
 

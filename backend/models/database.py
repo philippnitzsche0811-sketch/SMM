@@ -37,6 +37,7 @@ class UserModel(Base):
     reset_token_expires = Column(DateTime, nullable=True)
     niche = Column(String, nullable=True)          # fitness | food | finance | gaming | tech | lifestyle | education | comedy | beauty | travel | default
     creator_tone = Column(String, nullable=True)   # educational | entertainer | inspirational | informative
+    plan = Column(String, default="free", nullable=False, server_default="free")  # free | pro
     created_at = Column(DateTime, default=datetime.now)
     updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
 

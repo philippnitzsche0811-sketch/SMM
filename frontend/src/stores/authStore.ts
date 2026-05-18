@@ -15,6 +15,7 @@ export interface User {
   username?: string | null;
   niche?: string | null;
   creatorTone?: string | null;
+  plan?: 'free' | 'pro';
   isVerified: boolean;
   isAdmin?: boolean;
   connectedPlatforms?: ConnectedPlatform[];
@@ -70,6 +71,7 @@ export const useAuthStore = defineStore('auth', () => {
         username: response.data.user.username,
         niche: response.data.user.niche || null,
         creatorTone: response.data.user.creator_tone || null,
+        plan: response.data.user.plan || 'free',
         isVerified: response.data.user.is_verified,
         isAdmin: response.data.user.is_admin ?? false,
         connectedPlatforms: response.data.user.connected_platforms || [],
@@ -167,6 +169,7 @@ export const useAuthStore = defineStore('auth', () => {
         username: response.data.username,
         niche: response.data.niche || null,
         creatorTone: response.data.creator_tone || null,
+        plan: response.data.plan || 'free',
         isVerified: response.data.is_verified,
         isAdmin: response.data.is_admin ?? false,
         connectedPlatforms: response.data.connected_platforms || [],

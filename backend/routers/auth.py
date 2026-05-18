@@ -599,6 +599,7 @@ async def get_current_user(
             "username": user.username if hasattr(user, 'username') else None,
             "niche": user.niche if hasattr(user, 'niche') else None,
             "creator_tone": user.creator_tone if hasattr(user, 'creator_tone') else None,
+            "plan": getattr(user, 'plan', 'free') or 'free',
             "is_verified": user.is_verified,
             "is_admin": bool(settings.ADMIN_EMAIL) and user.email == settings.ADMIN_EMAIL,
             "connected_platforms": connected_platforms,

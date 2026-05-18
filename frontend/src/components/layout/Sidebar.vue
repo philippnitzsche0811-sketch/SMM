@@ -77,33 +77,16 @@ const isCollapsed = ref(false);
 const navGroups = computed(() => {
   const groups = [
     {
-      label: 'Planen',
+      label: '',
       items: [
-        { name: 'calendar', path: '/calendar', icon: 'pi pi-calendar', label: 'Kalender' },
-        { name: 'plan',     path: '/plan',     icon: 'pi pi-lightbulb', label: 'Ideen'    },
+        { name: 'dashboard', path: '/dashboard', icon: 'pi pi-home',         label: 'Home'       },
+        { name: 'plan',      path: '/plan',      icon: 'pi pi-lightbulb',    label: 'Planen'     },
+        { name: 'upload',    path: '/upload',    icon: 'pi pi-cloud-upload', label: 'Hochladen'  },
+        { name: 'analytics', path: '/analytics', icon: 'pi pi-chart-bar',   label: 'Analysieren'},
       ],
     },
     {
-      label: 'Erstellen',
-      items: [
-        { name: 'upload',    path: '/upload',    icon: 'pi pi-cloud-upload', label: 'Hochladen'    },
-        { name: 'dashboard', path: '/dashboard', icon: 'pi pi-video',        label: 'Meine Videos' },
-      ],
-    },
-    {
-      label: 'Optimieren',
-      items: [
-        { name: 'analytics', path: '/analytics', icon: 'pi pi-chart-bar', label: 'Analyse' },
-      ],
-    },
-    {
-      label: 'Verbinden',
-      items: [
-        { name: 'platforms', path: '/platforms', icon: 'pi pi-link', label: 'Plattformen' },
-      ],
-    },
-    {
-      label: 'Konto',
+      label: '',
       items: [
         { name: 'settings', path: '/settings', icon: 'pi pi-cog', label: 'Einstellungen' },
         ...(authStore.isAdmin
