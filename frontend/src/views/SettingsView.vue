@@ -21,10 +21,122 @@
     <!-- Tab: Plattformen -->
     <div v-if="activeTab === 'platforms'" class="platforms-tab">
       <p class="platforms-hint">Verbinde deine Social-Media-Konten, um Videos von hier hochzuladen.</p>
-      <div class="platforms-connect-grid">
-        <YouTubeConnect />
-        <TikTokConnect />
-        <InstagramConnect />
+      <div class="platforms-list">
+
+        <!-- YouTube -->
+        <div class="platform-row">
+          <div class="platform-row-left">
+            <div class="platform-icon-wrap youtube"><i class="pi pi-youtube"></i></div>
+            <div class="platform-row-info">
+              <span class="platform-row-name">YouTube</span>
+              <span class="platform-row-sub" v-if="platformStore.isConnected('youtube')">
+                {{ platformStore.getConnectionStatus('youtube')?.username || 'Verbunden' }}
+              </span>
+              <span class="platform-row-sub" v-else>Client Secret (JSON) hochladen</span>
+            </div>
+          </div>
+          <div class="platform-row-right">
+            <span class="platform-status-dot" :class="platformStore.isConnected('youtube') ? 'connected' : 'disconnected'">
+              {{ platformStore.isConnected('youtube') ? 'Verbunden' : 'Nicht verbunden' }}
+            </span>
+            <FileUpload
+              v-if="!platformStore.isConnected('youtube')"
+              mode="basic"
+              accept="application/json"
+              :maxFileSize="1000000"
+              chooseLabel="Verbinden"
+              customUpload
+              @uploader="handleYouTubeUpload"
+              :auto="false"
+              :disabled="ytUploading"
+              class="platform-upload-btn"
+            />
+            <Button
+              v-else
+              label="Trennen"
+              severity="danger"
+              outlined
+              size="small"
+              @click="handleDisconnect('youtube')"
+              :loading="disconnecting === 'youtube'"
+            />
+          </div>
+        </div>
+
+        <!-- TikTok -->
+        <div class="platform-row">
+          <div class="platform-row-left">
+            <div class="platform-icon-wrap tiktok"><i class="pi pi-mobile"></i></div>
+            <div class="platform-row-info">
+              <span class="platform-row-name">TikTok</span>
+              <span class="platform-row-sub" v-if="platformStore.isConnected('tiktok')">
+                @{{ platformStore.getConnectionStatus('tiktok')?.username || 'Verbunden' }}
+              </span>
+              <span class="platform-row-sub" v-else>OAuth — du wirst weitergeleitet</span>
+            </div>
+          </div>
+          <div class="platform-row-right">
+            <span class="platform-status-dot" :class="platformStore.isConnected('tiktok') ? 'connected' : 'disconnected'">
+              {{ platformStore.isConnected('tiktok') ? 'Verbunden' : 'Nicht verbunden' }}
+            </span>
+            <Button
+              v-if="!platformStore.isConnected('tiktok')"
+              label="Verbinden"
+              icon="pi pi-sign-in"
+              outlined
+              size="small"
+              @click="handleTikTokConnect"
+              :loading="connecting === 'tiktok'"
+            />
+            <Button
+              v-else
+              label="Trennen"
+              severity="danger"
+              outlined
+              size="small"
+              @click="handleDisconnect('tiktok')"
+              :loading="disconnecting === 'tiktok'"
+            />
+          </div>
+        </div>
+
+        <!-- Instagram -->
+        <div class="platform-row">
+          <div class="platform-row-left">
+            <div class="platform-icon-wrap instagram"><i class="pi pi-instagram"></i></div>
+            <div class="platform-row-info">
+              <span class="platform-row-name">Instagram</span>
+              <span class="platform-row-sub" v-if="platformStore.isConnected('instagram')">
+                @{{ platformStore.getConnectionStatus('instagram')?.username || 'Verbunden' }}
+              </span>
+              <span class="platform-row-sub" v-else>Business / Creator Konto erforderlich</span>
+            </div>
+          </div>
+          <div class="platform-row-right">
+            <span class="platform-status-dot" :class="platformStore.isConnected('instagram') ? 'connected' : 'disconnected'">
+              {{ platformStore.isConnected('instagram') ? 'Verbunden' : 'Nicht verbunden' }}
+            </span>
+            <Button
+              v-if="!platformStore.isConnected('instagram')"
+              label="Verbinden"
+              icon="pi pi-sign-in"
+              outlined
+              size="small"
+              @click="handleInstagramConnect"
+              :loading="connecting === 'instagram'"
+            />
+            <Button
+              v-else
+              label="Trennen"
+              severity="danger"
+              outlined
+              size="small"
+              @click="handleDisconnect('instagram')"
+              :loading="disconnecting === 'instagram'"
+            />
+          </div>
+        </div>
+
       </div>
     </div>
 
@@ -99,6 +211,36 @@
         </div>
       </div>
 
+      <!-- Plan Status (nur in Konto-Tab) -->
+      <div v-if="activeTab === 'account'" class="settings-card plan-card">
+        <h3 class="settings-card-title"><i class="pi pi-star"></i> Dein Plan</h3>
+        <div class="plan-status-row">
+          <div class="plan-badge" :class="isProUser ? 'pro' : 'free'">
+            <i class="pi pi-star-fill" v-if="isProUser"></i>
+            <i class="pi pi-user" v-else></i>
+            {{ isProUser ? 'Pro' : 'Free' }}
+          </div>
+          <div>
+            <p class="plan-desc" v-if="!isProUser">
+              Free-Plan: Alle Uploads, Scheduling, Kalender, Analytics — ohne KI.
+            </p>
+            <p class="plan-desc" v-else>
+              Pro-Plan: KI-Optimierung für Titel, Beschreibung, Hashtags und Video-Analyse aktiv.
+            </p>
+          </div>
+        </div>
+        <div v-if="!isProUser" class="plan-features">
+          <div class="plan-feature-item"><i class="pi pi-check-circle"></i> Alle 3 Plattformen</div>
+          <div class="plan-feature-item"><i class="pi pi-check-circle"></i> Unbegrenzte Uploads &amp; Scheduling</div>
+          <div class="plan-feature-item"><i class="pi pi-check-circle"></i> Upload-Gruppen &amp; Kalender</div>
+          <div class="plan-feature-item pro-locked"><i class="pi pi-lock"></i> KI: Titel, Beschreibung, Hashtags</div>
+          <div class="plan-feature-item pro-locked"><i class="pi pi-lock"></i> KI: Hook-Score &amp; Video-Analyse</div>
+        </div>
+        <div class="card-footer" v-if="!isProUser">
+          <Button label="Upgrade auf Pro — €12/Monat" icon="pi pi-star" @click="showUpgradeDialog = true" />
+        </div>
+      </div>
+
       <!-- Account Info (nur in Konto-Tab) -->
       <div v-if="activeTab === 'account'" class="settings-card info-card">
         <h3 class="settings-card-title"><i class="pi pi-info-circle"></i> Account Info</h3>
@@ -160,6 +302,23 @@
       </div>
     </div><!-- end settings-grid -->
 
+    <!-- Upgrade Dialog -->
+    <Dialog v-model:visible="showUpgradeDialog" header="Pro freischalten" :modal="true" :style="{ width: '420px' }">
+      <div class="upgrade-dialog-body">
+        <p class="upgrade-price">€12 / Monat</p>
+        <div class="upgrade-features">
+          <div class="upgrade-feature"><i class="pi pi-check-circle"></i> KI-Titel, Beschreibung &amp; Hashtags</div>
+          <div class="upgrade-feature"><i class="pi pi-check-circle"></i> Hook-Score &amp; Video-Analyse</div>
+          <div class="upgrade-feature"><i class="pi pi-check-circle"></i> Hook-Vorschläge im Planen-Tab</div>
+          <div class="upgrade-feature"><i class="pi pi-check-circle"></i> Kommentar-Hub (demnächst)</div>
+        </div>
+        <p class="upgrade-contact">Sende eine E-Mail an <a href="mailto:support@decodu-smm.com">support@decodu-smm.com</a>, um deinen Plan zu aktivieren.</p>
+      </div>
+      <template #footer>
+        <Button label="Schließen" class="p-button-text" @click="showUpgradeDialog = false" />
+      </template>
+    </Dialog>
+
     <ConfirmDialog />
     <Toast />
   </div>
@@ -171,22 +330,32 @@ import { useRouter } from 'vue-router';
 import { useAuthStore } from '@/stores/authStore';
 import { useToast } from 'primevue/usetoast';
 import { useConfirm } from 'primevue/useconfirm';
+import { usePlan } from '@/composables/usePlan';
+import { usePlatformStore } from '@/stores/platformStore';
 import Button from 'primevue/button';
 import InputText from 'primevue/inputtext';
 import Password from 'primevue/password';
 import Dropdown from 'primevue/dropdown';
 import Tag from 'primevue/tag';
+import Dialog from 'primevue/dialog';
+import FileUpload from 'primevue/fileupload';
 import ConfirmDialog from 'primevue/confirmdialog';
 import Toast from 'primevue/toast';
-import api from '@/services/api';
-import { YouTubeConnect, TikTokConnect, InstagramConnect } from '@/components/connect';
+import api, { connectYouTube, connectInstagram } from '@/services/api';
 
 const activeTab = ref<'profile' | 'platforms' | 'account'>('profile');
 
-const authStore = useAuthStore();
-const toast     = useToast();
-const confirm   = useConfirm();
-const router    = useRouter();
+const authStore      = useAuthStore();
+const toast          = useToast();
+const confirm        = useConfirm();
+const router         = useRouter();
+const platformStore  = usePlatformStore();
+const { isProUser }  = usePlan();
+
+const showUpgradeDialog = ref(false);
+const ytUploading       = ref(false);
+const connecting        = ref<string | null>(null);
+const disconnecting     = ref<string | null>(null);
 
 const savingProfile  = ref(false);
 const savingPassword = ref(false);
@@ -274,6 +443,57 @@ const changePassword = async () => {
   } finally { savingPassword.value = false; }
 };
 
+const handleYouTubeUpload = async (event: any) => {
+  const file = event.files[0];
+  if (!file || !authStore.userId) return;
+  ytUploading.value = true;
+  try {
+    const response = await connectYouTube(authStore.userId, file);
+    if (response.auth_url) {
+      toast.add({ severity: 'info', summary: 'YouTube', detail: 'Weiterleitung zur Google-Anmeldung…', life: 2000 });
+      setTimeout(() => { window.location.href = response.auth_url; }, 1200);
+    }
+  } catch {
+    toast.add({ severity: 'error', summary: 'Fehler', detail: 'YouTube-Verbindung fehlgeschlagen', life: 5000 });
+  } finally { ytUploading.value = false; }
+};
+
+const handleTikTokConnect = async () => {
+  connecting.value = 'tiktok';
+  try {
+    const response = await api.post('/api/tiktok/connect', { user_id: authStore.userId });
+    if (response.data.auth_url) {
+      toast.add({ severity: 'info', summary: 'TikTok', detail: 'Weiterleitung zur TikTok-Anmeldung…', life: 2000 });
+      setTimeout(() => { window.location.href = response.data.auth_url; }, 1200);
+    }
+  } catch {
+    toast.add({ severity: 'error', summary: 'Fehler', detail: 'TikTok-Verbindung fehlgeschlagen', life: 5000 });
+  } finally { connecting.value = null; }
+};
+
+const handleInstagramConnect = async () => {
+  connecting.value = 'instagram';
+  try {
+    const response = await connectInstagram(authStore.userId!);
+    if (response.auth_url) {
+      toast.add({ severity: 'info', summary: 'Instagram', detail: 'Weiterleitung zur Instagram-Anmeldung…', life: 2000 });
+      setTimeout(() => { window.location.href = response.auth_url; }, 1200);
+    }
+  } catch {
+    toast.add({ severity: 'error', summary: 'Fehler', detail: 'Instagram-Verbindung fehlgeschlagen', life: 5000 });
+  } finally { connecting.value = null; }
+};
+
+const handleDisconnect = async (platform: string) => {
+  disconnecting.value = platform;
+  try {
+    await platformStore.disconnectPlatform(platform);
+    toast.add({ severity: 'success', summary: 'Getrennt', detail: `${platform} wurde erfolgreich getrennt`, life: 3000 });
+  } catch {
+    toast.add({ severity: 'error', summary: 'Fehler', detail: 'Trennen fehlgeschlagen', life: 5000 });
+  } finally { disconnecting.value = null; }
+};
+
 const confirmDeleteAccount = () => {
   confirm.require({
     message:     'Your account and all associated data will be permanently deleted.',
@@ -329,11 +549,124 @@ const confirmDeleteAccount = () => {
   color: var(--text-secondary, #a1a1aa);
   margin: 0 0 1.25rem;
 }
-.platforms-connect-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+
+.platforms-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+.platform-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1.25rem;
+  background: rgba(255,255,255,0.02);
+  gap: 1rem;
+  border-bottom: 1px solid var(--border-color);
+}
+.platform-row:last-child { border-bottom: none; }
+.platform-row:hover { background: rgba(255,255,255,0.04); }
+
+.platform-row-left {
+  display: flex;
+  align-items: center;
+  gap: 0.875rem;
+  flex: 1;
+  min-width: 0;
+}
+
+.platform-icon-wrap {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+  flex-shrink: 0;
+}
+.platform-icon-wrap.youtube   { background: rgba(239,68,68,0.12);  color: #f87171; }
+.platform-icon-wrap.tiktok    { background: rgba(255,255,255,0.06); color: #cbd5e1; }
+.platform-icon-wrap.instagram { background: rgba(236,72,153,0.12); color: #f9a8d4; }
+
+.platform-row-info { display: flex; flex-direction: column; gap: 1px; }
+.platform-row-name { font-size: 0.9rem; font-weight: 600; color: var(--text-primary); }
+.platform-row-sub  { font-size: 0.78rem; color: var(--text-secondary); }
+
+.platform-row-right {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-shrink: 0;
+}
+
+.platform-status-dot {
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 10px;
+  white-space: nowrap;
+}
+.platform-status-dot.connected    { background: rgba(16,185,129,0.12); color: #10b981; }
+.platform-status-dot.disconnected { background: rgba(161,161,170,0.1); color: var(--text-secondary); }
+
+:deep(.platform-upload-btn .p-button) {
+  padding: 0.375rem 0.875rem;
+  font-size: 0.8125rem;
+}
+
+/* Plan card */
+.plan-card { border-color: rgba(139,92,246,0.25); }
+
+.plan-status-row {
+  display: flex;
+  align-items: flex-start;
   gap: 1rem;
 }
+
+.plan-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.375rem 0.875rem;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+.plan-badge.pro  { background: rgba(139,92,246,0.15); color: #a78bfa; border: 1px solid rgba(139,92,246,0.4); }
+.plan-badge.free { background: rgba(161,161,170,0.1); color: var(--text-secondary); border: 1px solid var(--border-color); }
+
+.plan-desc { font-size: 0.875rem; color: var(--text-secondary); margin: 0.25rem 0 0; line-height: 1.5; }
+
+.plan-features {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+.plan-feature-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+  color: var(--text-primary);
+}
+.plan-feature-item .pi-check-circle { color: #22c55e; }
+.plan-feature-item.pro-locked { color: var(--text-secondary); }
+.plan-feature-item.pro-locked .pi-lock { color: #71717a; }
+
+/* Upgrade Dialog */
+.upgrade-dialog-body { display: flex; flex-direction: column; gap: 1rem; }
+.upgrade-price { font-size: 1.5rem; font-weight: 700; color: var(--text-primary); margin: 0; text-align: center; }
+.upgrade-features { display: flex; flex-direction: column; gap: 0.5rem; }
+.upgrade-feature { display: flex; align-items: center; gap: 0.5rem; font-size: 0.875rem; color: var(--text-primary); }
+.upgrade-feature .pi-check-circle { color: #22c55e; }
+.upgrade-contact { font-size: 0.8125rem; color: var(--text-secondary); margin: 0; text-align: center; }
+.upgrade-contact a { color: var(--primary-color); }
 
 .page-header { margin-bottom: 1.75rem; }
 .page-header h1 {

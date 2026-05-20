@@ -1,25 +1,25 @@
 <template>
   <div class="dashboard">
 
-    <!-- Begrüßung + Quick Action -->
+    <!-- Greeting + Quick Action -->
     <div class="dashboard-hero">
       <div class="hero-left">
-        <h1>Hallo, {{ authStore.userName || 'Creator' }} 👋</h1>
-        <p class="subtitle">Was willst du heute hochladen?</p>
+        <h1>Hey, {{ authStore.userName || 'Creator' }} 👋</h1>
+        <p class="subtitle">{{ heroSubtitle }}</p>
       </div>
       <button class="btn-upload-hero" @click="router.push('/upload')">
         <i class="pi pi-cloud-upload"></i>
-        Video hochladen
+        Upload Video
       </button>
     </div>
 
     <!-- Smart Cards -->
     <div class="smart-row">
-      <!-- Bereit zum Hochladen (Ready-Ideen) -->
+      <!-- Ready to Upload (Ready Ideas) -->
       <div class="smart-card ready-card" v-if="readyIdeas.length > 0">
         <div class="smart-card-header">
           <i class="pi pi-lightbulb smart-icon ready"></i>
-          <span class="smart-card-title">Bereit zum Hochladen</span>
+          <span class="smart-card-title">Ready to Upload</span>
           <span class="smart-badge">{{ readyIdeas.length }}</span>
         </div>
         <div class="ready-ideas-list">
@@ -30,32 +30,32 @@
           >
             <span class="ready-idea-title">{{ idea.title }}</span>
             <button class="btn-upload-idea" @click="uploadIdea(idea)">
-              <i class="pi pi-cloud-upload"></i> Hochladen
+              <i class="pi pi-cloud-upload"></i> Upload
             </button>
           </div>
         </div>
         <button class="smart-card-link" @click="router.push('/plan')">
-          Alle Ideen ansehen <i class="pi pi-arrow-right"></i>
+          View all ideas <i class="pi pi-arrow-right"></i>
         </button>
       </div>
 
-      <!-- Leere Ideen-Card -->
+      <!-- Empty Ideas Card -->
       <div class="smart-card ready-card empty" v-else>
         <div class="smart-card-header">
           <i class="pi pi-lightbulb smart-icon ready"></i>
-          <span class="smart-card-title">Ideen planen</span>
+          <span class="smart-card-title">Plan Ideas</span>
         </div>
-        <p class="smart-empty-text">Noch keine fertigen Ideen. Erstelle eine im Planen-Tab.</p>
+        <p class="smart-empty-text">No finished ideas yet. Create one in the Plan tab.</p>
         <button class="smart-card-link" @click="router.push('/plan')">
-          Zu Planen <i class="pi pi-arrow-right"></i>
+          Go to Plan <i class="pi pi-arrow-right"></i>
         </button>
       </div>
 
-      <!-- Letzte Performance -->
+      <!-- Recent Performance -->
       <div class="smart-card perf-card">
         <div class="smart-card-header">
           <i class="pi pi-chart-bar smart-icon perf"></i>
-          <span class="smart-card-title">Letzte Performance</span>
+          <span class="smart-card-title">Recent Performance</span>
         </div>
         <div v-if="recentVideos.length > 0" class="perf-list">
           <div v-for="v in recentVideos.slice(0, 3)" :key="v.id" class="perf-item">
@@ -70,9 +70,9 @@
             <Tag :value="statusLabel(v.status)" :severity="statusSeverity(v.status)" />
           </div>
         </div>
-        <p v-else class="smart-empty-text">Noch keine Videos hochgeladen.</p>
-        <button class="smart-card-link" @click="activeTab = 'videos'">
-          Alle Videos <i class="pi pi-arrow-right"></i>
+        <p v-else class="smart-empty-text">No videos uploaded yet.</p>
+        <button class="smart-card-link" @click="scrollToVideos">
+          All videos <i class="pi pi-arrow-right"></i>
         </button>
       </div>
 
@@ -80,35 +80,40 @@
       <div class="smart-card stats-card">
         <div class="smart-card-header">
           <i class="pi pi-info-circle smart-icon stats"></i>
-          <span class="smart-card-title">Überblick</span>
+          <span class="smart-card-title">Overview</span>
         </div>
         <div class="stats-list">
           <div class="stats-row-item">
-            <span class="stats-label">Videos gesamt</span>
+            <span class="stats-label">Total videos</span>
             <span class="stats-value">{{ videos.length }}</span>
           </div>
           <div class="stats-row-item">
-            <span class="stats-label">Veröffentlicht</span>
+            <span class="stats-label">Published</span>
             <span class="stats-value success">{{ uploadedCount }}</span>
           </div>
           <div class="stats-row-item">
-            <span class="stats-label">Plattformen</span>
+            <span class="stats-label">Platforms</span>
             <span class="stats-value">{{ connectedCount }}</span>
           </div>
           <div class="stats-row-item">
-            <span class="stats-label">In Bearbeitung</span>
+            <span class="stats-label">In progress</span>
             <span class="stats-value warn">{{ processingCount }}</span>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- Tab: Alle Videos -->
-    <div class="videos-section">
+    <!-- All Videos -->
+    <div class="videos-section" ref="videosSection">
       <div class="videos-card">
         <div class="videos-card-header">
-          <span class="videos-title">Meine Videos</span>
-          <InputText v-model="searchQuery" placeholder="Suchen…" class="search-input" />
+          <span class="videos-title">My Videos</span>
+          <div class="videos-header-right">
+            <button class="btn-groups-link" @click="router.push('/upload/groups')">
+              <i class="pi pi-folder"></i> Upload Groups
+            </button>
+            <InputText v-model="searchQuery" placeholder="Search…" class="search-input" />
+          </div>
         </div>
 
         <div v-if="loading" class="loading-state">
@@ -117,9 +122,9 @@
 
         <div v-else-if="filteredVideos.length === 0" class="empty-state">
           <div class="empty-icon-wrap"><i class="pi pi-cloud-upload"></i></div>
-          <p class="empty-title">Noch keine Videos</p>
-          <p class="empty-sub">Lade dein erstes Video hoch</p>
-          <Button label="Video hochladen" icon="pi pi-upload" @click="router.push('/upload')" outlined />
+          <p class="empty-title">No videos yet</p>
+          <p class="empty-sub">Upload your first video</p>
+          <Button label="Upload Video" icon="pi pi-upload" @click="router.push('/upload')" outlined />
         </div>
 
         <DataTable
@@ -130,7 +135,7 @@
           stripedRows
           class="video-table"
         >
-          <Column field="title" header="Titel" sortable>
+          <Column field="title" header="Title" sortable>
             <template #body="{ data }">
               <div class="video-title-cell">
                 <div class="video-thumb"><i class="pi pi-video"></i></div>
@@ -141,7 +146,7 @@
               </div>
             </template>
           </Column>
-          <Column field="platforms" header="Plattformen">
+          <Column field="platforms" header="Platforms">
             <template #body="{ data }">
               <div class="platform-badges">
                 <span v-for="p in data.platforms" :key="p" class="platform-badge" :class="p">
@@ -155,15 +160,15 @@
               <Tag :value="statusLabel(data.status)" :severity="statusSeverity(data.status)" />
             </template>
           </Column>
-          <Column field="privacy" header="Sichtbarkeit">
+          <Column field="privacy" header="Visibility">
             <template #body="{ data }">
               <span class="privacy-badge">
                 <i :class="data.privacy === 'public' ? 'pi pi-globe' : 'pi pi-lock'"></i>
-                {{ data.privacy === 'public' ? 'Öffentlich' : data.privacy === 'unlisted' ? 'Nicht gelistet' : 'Privat' }}
+                {{ data.privacy === 'public' ? 'Public' : data.privacy === 'unlisted' ? 'Unlisted' : 'Private' }}
               </span>
             </template>
           </Column>
-          <Column header="Aktionen" style="width:110px">
+          <Column header="Actions" style="width:110px">
             <template #body="{ data }">
               <div class="action-buttons">
                 <Button icon="pi pi-pencil" class="p-button-text p-button-sm p-button-secondary" v-tooltip="'Bearbeiten'" @click="openEditDialog(data)" />
@@ -176,40 +181,40 @@
     </div>
 
     <!-- Edit Dialog -->
-    <Dialog v-model:visible="showDialog" header="Video bearbeiten" :modal="true" :style="{ width: '560px' }" :closable="!saving">
+    <Dialog v-model:visible="showDialog" header="Edit Video" :modal="true" :style="{ width: '560px' }" :closable="!saving">
       <div class="dialog-form">
         <div class="form-field">
-          <label>Titel *</label>
-          <InputText v-model="form.title" placeholder="Titel eingeben" class="w-full" />
+          <label>Title *</label>
+          <InputText v-model="form.title" placeholder="Enter title" class="w-full" />
         </div>
         <div class="form-field">
-          <label>Beschreibung</label>
-          <Textarea v-model="form.description" placeholder="Beschreibung" rows="3" class="w-full" />
+          <label>Description</label>
+          <Textarea v-model="form.description" placeholder="Description" rows="3" class="w-full" />
         </div>
         <div class="form-field">
           <label>Tags</label>
           <InputText v-model="form.tags" placeholder="tag1, tag2, tag3" class="w-full" />
         </div>
         <div class="form-field">
-          <label>Sichtbarkeit</label>
+          <label>Visibility</label>
           <Dropdown v-model="form.privacy" :options="privacyOptions" optionLabel="label" optionValue="value" class="w-full" />
         </div>
       </div>
       <template #footer>
-        <Button label="Abbrechen" class="p-button-text" @click="closeDialog" :disabled="saving" />
-        <Button label="Speichern" icon="pi pi-check" :loading="saving" :disabled="!form.title.trim()" @click="handleSave" />
+        <Button label="Cancel" class="p-button-text" @click="closeDialog" :disabled="saving" />
+        <Button label="Save" icon="pi pi-check" :loading="saving" :disabled="!form.title.trim()" @click="handleSave" />
       </template>
     </Dialog>
 
     <!-- Delete Dialog -->
-    <Dialog v-model:visible="showDeleteDialog" header="Video löschen" :modal="true" :style="{ width: '420px' }" :closable="!deleting">
+    <Dialog v-model:visible="showDeleteDialog" header="Delete Video" :modal="true" :style="{ width: '420px' }" :closable="!deleting">
       <div class="delete-confirm-body">
         <i class="pi pi-exclamation-triangle delete-warn-icon"></i>
-        <p>„<strong>{{ deleteTarget?.title }}</strong>" wirklich löschen?</p>
+        <p>Delete <strong>{{ deleteTarget?.title }}</strong>? This cannot be undone.</p>
       </div>
       <template #footer>
-        <Button label="Abbrechen" class="p-button-text" @click="showDeleteDialog = false" :disabled="deleting" />
-        <Button label="Löschen" icon="pi pi-trash" severity="danger" :loading="deleting" @click="handleDeleteConfirmed" />
+        <Button label="Cancel" class="p-button-text" @click="showDeleteDialog = false" :disabled="deleting" />
+        <Button label="Delete" icon="pi pi-trash" severity="danger" :loading="deleting" @click="handleDeleteConfirmed" />
       </template>
     </Dialog>
 
@@ -218,7 +223,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, nextTick } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAuthStore } from '@/stores/authStore';
 import { useToast } from 'primevue/usetoast';
@@ -249,13 +254,18 @@ const showDeleteDialog = ref(false);
 const deleteTarget     = ref<any>(null);
 const deleting         = ref(false);
 const activeTab        = ref<'overview' | 'videos'>('overview');
+const videosSection    = ref<HTMLElement | null>(null);
+
+function scrollToVideos() {
+  videosSection.value?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
 
 const form = ref({ title: '', description: '', tags: '', privacy: 'private' });
 
 const privacyOptions = [
-  { label: 'Privat',         value: 'private'  },
-  { label: 'Nicht gelistet', value: 'unlisted' },
-  { label: 'Öffentlich',     value: 'public'   },
+  { label: 'Private',  value: 'private'  },
+  { label: 'Unlisted', value: 'unlisted' },
+  { label: 'Public',   value: 'public'   },
 ];
 
 const connectedCount  = computed(() => authStore.user?.connectedPlatforms?.length || 0);
@@ -263,6 +273,19 @@ const uploadedCount   = computed(() => videos.value.filter(v => v.status === 'up
 const processingCount = computed(() => videos.value.filter(v => ['processing','pending'].includes(v.status)).length);
 const recentVideos    = computed(() => [...videos.value].slice(0, 5));
 const readyIdeas      = computed(() => ideas.value.filter(i => i.status === 'ready'));
+
+const heroSubtitle = computed(() => {
+  if (loading.value) return '';
+  const ready = readyIdeas.value.length;
+  const inProgress = ideas.value.filter(i => ['idea','planning'].includes(i.status)).length;
+  if (ideas.value.length === 0 && videos.value.length === 0)
+    return 'Start your creator workflow — create your first idea in the Plan tab.';
+  if (ready > 0)
+    return `${ready} idea${ready !== 1 ? 's' : ''} ready to publish!`;
+  if (inProgress > 0)
+    return `You have ${inProgress} idea${inProgress !== 1 ? 's' : ''} in progress.`;
+  return 'What are you uploading today?';
+});
 
 const filteredVideos = computed(() => {
   if (!searchQuery.value) return videos.value;
@@ -274,18 +297,23 @@ const platformIcon = (p: string) =>
   ({ youtube: 'pi pi-youtube', tiktok: 'pi pi-video', instagram: 'pi pi-instagram' }[p] || 'pi pi-globe');
 
 const statusLabel = (s: string) =>
-  ({ pending: 'Ausstehend', processing: 'Verarbeitung', uploaded: 'Fertig', failed: 'Fehler' }[s] || s);
+  ({ pending: 'Pending', processing: 'Processing', uploaded: 'Published', failed: 'Failed' }[s] || s);
 
 const statusSeverity = (s: string): any =>
   ({ pending: 'secondary', processing: 'info', uploaded: 'success', failed: 'danger' }[s] || 'secondary');
 
 const formatDate = (d: string) =>
-  new Date(d).toLocaleDateString('de-DE', { month: 'short', day: 'numeric', year: 'numeric' });
+  new Date(d).toLocaleDateString('en-GB', { month: 'short', day: 'numeric', year: 'numeric' });
 
 function uploadIdea(idea: any) {
   router.push({
     path: '/upload',
-    query: { title: idea.title, description: idea.concept || '', platforms: (idea.target_platforms || []).join(',') },
+    query: {
+      title: idea.title,
+      description: idea.concept || '',
+      platforms: (idea.target_platforms || []).join(','),
+      tags: (idea.tags || []).join(','),
+    },
   });
 }
 
@@ -314,10 +342,10 @@ const handleSave = async () => {
     });
     const idx = videos.value.findIndex(v => v.id === editingVideo.value.id);
     if (idx > -1) videos.value[idx] = { ...videos.value[idx], title: form.value.title, description: form.value.description, tags: form.value.tags.split(',').map((t: string) => t.trim()), privacy: form.value.privacy };
-    toast.add({ severity: 'success', summary: 'Gespeichert', detail: 'Video aktualisiert', life: 3000 });
+    toast.add({ severity: 'success', summary: 'Saved', detail: 'Video updated', life: 3000 });
     closeDialog();
   } catch (err: any) {
-    toast.add({ severity: 'error', summary: 'Fehler', detail: err.response?.data?.detail || err.message, life: 5000 });
+    toast.add({ severity: 'error', summary: 'Error', detail: err.response?.data?.detail || err.message, life: 5000 });
   } finally { saving.value = false; }
 };
 
@@ -331,11 +359,11 @@ const handleDeleteConfirmed = async () => {
   try {
     await api.delete(`/api/upload/video/${video.id}`, { data: { user_id: userId } });
     videos.value = videos.value.filter(v => v.id !== video.id);
-    toast.add({ severity: 'success', summary: 'Gelöscht', detail: `„${video.title}" wurde gelöscht`, life: 3000 });
+    toast.add({ severity: 'success', summary: 'Deleted', detail: `"${video.title}" was deleted`, life: 3000 });
     showDeleteDialog.value = false;
     deleteTarget.value = null;
   } catch (err: any) {
-    toast.add({ severity: 'error', summary: 'Fehler', detail: err.response?.data?.detail || 'Löschen fehlgeschlagen', life: 5000 });
+    toast.add({ severity: 'error', summary: 'Error', detail: err.response?.data?.detail || 'Delete failed', life: 5000 });
   } finally { deleting.value = false; }
 };
 
@@ -352,7 +380,7 @@ onMounted(async () => {
       status: v.status, platforms: v.platforms, tags: v.tags,
       privacy: v.privacy_status, createdAt: v.created_at,
     }));
-  } catch (err) { console.error('Dashboard laden fehlgeschlagen:', err); }
+  } catch (err) { console.error('Dashboard load failed:', err); }
   finally { loading.value = false; }
 });
 </script>
@@ -562,6 +590,29 @@ onMounted(async () => {
   letter-spacing: -0.01em;
 }
 .search-input { width: 220px; }
+
+.videos-header-right {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.btn-groups-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.375rem 0.875rem;
+  background: none;
+  border: 1px solid var(--border-color);
+  border-radius: 7px;
+  color: var(--text-secondary);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+  white-space: nowrap;
+}
+.btn-groups-link:hover { color: var(--text-primary); border-color: var(--text-secondary); }
 
 /* Table */
 .video-title-cell { display: flex; align-items: center; gap: 0.75rem; }

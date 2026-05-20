@@ -11,7 +11,7 @@ from models.database import get_db, ContentIdeaModel
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["Content Ideas"])
 
-VALID_STATUSES = {"idea", "filming", "editing", "ready"}
+VALID_STATUSES = {"idea", "planning", "ready"}
 
 
 # ── Request Models ──────────────────────────────────────────────────────────

@@ -181,7 +181,7 @@ class ContentIdeaModel(Base):
     concept = Column(Text, nullable=True)
     target_platforms = Column(JSON, nullable=True)   # ["tiktok", "instagram"]
     target_date = Column(DateTime, nullable=True)
-    status = Column(String, default="idea")          # idea | filming | editing | ready
+    status = Column(String, default="idea")          # idea | planning | ready
     tags = Column(JSON, nullable=True)
     ai_suggestions = Column(JSON, nullable=True)     # {titles: [], hashtags: []}
     created_at = Column(DateTime, default=datetime.now)

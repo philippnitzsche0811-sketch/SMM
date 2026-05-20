@@ -529,6 +529,37 @@ export const postCommentReply = async (
 };
 
 // ==========================================
+// Script Analysis
+// ==========================================
+
+export const analyzeScriptText = async (data: {
+  user_id: string;
+  idea_title: string;
+  text: string;
+  platforms: string[];
+}): Promise<{ hook_score: number; hook_feedback: string; structure_feedback: string; tips: string[] }> => {
+  const response = await api.post('/script-analysis/text', data);
+  return response.data;
+};
+
+export const analyzeScriptAudio = async (data: {
+  user_id: string;
+  idea_title: string;
+  platforms: string[];
+  file: File;
+}): Promise<{ hook_score: number; hook_feedback: string; structure_feedback: string; tips: string[] }> => {
+  const formData = new FormData();
+  formData.append('user_id', data.user_id);
+  formData.append('idea_title', data.idea_title);
+  formData.append('platforms', data.platforms.join(','));
+  formData.append('file', data.file);
+  const response = await api.post('/script-analysis/audio', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+  return response.data;
+};
+
+// ==========================================
 // Health Check
 // ==========================================
 

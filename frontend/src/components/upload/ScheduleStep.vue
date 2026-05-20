@@ -15,6 +15,9 @@
           <div class="option-label">
             <i :class="opt.icon"></i>
             {{ opt.label }}
+            <span v-if="opt.value === 'recommended' && recommendedLabel" class="rec-badge">
+              {{ recommendedLabel }}
+            </span>
           </div>
           <p>{{ opt.description }}</p>
         </div>
@@ -23,7 +26,7 @@
 
     <!-- Datetime picker -->
     <div v-if="scheduleType === 'datetime'" class="schedule-detail">
-      <label>Upload date &amp; time (your local time)</label>
+      <label>Date and time (your local timezone)</label>
       <Calendar
         :modelValue="scheduledAt ? new Date(scheduledAt) : null"
         @update:modelValue="onDateSelect"
@@ -62,13 +65,14 @@
         </template>
       </Dropdown>
       <small v-if="selectedGroupId" class="field-hint">
-        The scheduler will auto-assign the best upload time based on the group's video count.
+        The scheduler auto-assigns the best upload time based on the group's video count.
       </small>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue';
 import Calendar from 'primevue/calendar';
 import Dropdown from 'primevue/dropdown';
 import type { UploadGroup } from '@/types/upload_group.types';
@@ -78,6 +82,7 @@ const props = defineProps<{
   scheduledAt: string | null;
   selectedGroupId: string | null;
   groups: UploadGroup[];
+  recommendedAt?: string | null;
 }>();
 
 const emit = defineEmits<{
@@ -92,13 +97,19 @@ const minDate = new Date();
 const options = [
   {
     value: 'now',
-    label: 'Publish now',
+    label: 'Publish Now',
     icon: 'pi pi-send',
     description: 'Upload to all selected platforms immediately.',
   },
   {
+    value: 'recommended',
+    label: 'Recommended Time',
+    icon: 'pi pi-star',
+    description: 'Upload at the optimal time for your platforms — based on when your audience is most active.',
+  },
+  {
     value: 'datetime',
-    label: 'Schedule for later',
+    label: 'Schedule for Later',
     icon: 'pi pi-clock',
     description: 'Choose a specific date and time for the upload.',
   },
@@ -109,6 +120,14 @@ const options = [
     description: 'Queue this video in a group — the scheduler picks the best time automatically.',
   },
 ];
+
+const recommendedLabel = computed(() => {
+  if (!props.recommendedAt) return null;
+  const d = new Date(props.recommendedAt);
+  return d.toLocaleDateString('en-GB', { weekday: 'short', month: 'short', day: 'numeric' })
+    + ' · '
+    + d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+});
 
 function onDateSelect(date: Date | null) {
   emit('update:scheduledAt', date ? date.toISOString() : null);
@@ -150,9 +169,7 @@ function onDateSelect(date: Date | null) {
   transition: border-color 0.2s;
   position: relative;
 }
-.radio-dot.active {
-  border-color: #4f7fff;
-}
+.radio-dot.active { border-color: #4f7fff; }
 .radio-dot.active::after {
   content: '';
   position: absolute;
@@ -170,8 +187,20 @@ function onDateSelect(date: Date | null) {
   font-weight: 600;
   color: var(--text-primary);
   margin-bottom: 0.2rem;
+  flex-wrap: wrap;
 }
 .option-label i { color: #7da5ff; font-size: 0.875rem; }
+
+.rec-badge {
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.15rem 0.5rem;
+  background: rgba(79,127,255,0.15);
+  border: 1px solid rgba(79,127,255,0.3);
+  border-radius: 10px;
+  color: #93c5fd;
+  white-space: nowrap;
+}
 
 .option-body p { font-size: 0.825rem; color: var(--text-secondary); margin: 0; }
 
@@ -211,10 +240,7 @@ function onDateSelect(date: Date | null) {
   align-items: center;
   width: 100%;
 }
-.group-count {
-  font-size: 0.78rem;
-  color: var(--text-disabled);
-}
+.group-count { font-size: 0.78rem; color: var(--text-disabled); }
 
 .field-hint { font-size: 0.78rem; color: var(--text-disabled); }
 </style>

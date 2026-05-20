@@ -24,7 +24,13 @@
       "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\Philipp\\\\SMM\" -Recurse -Directory)",
       "Bash(Select-Object -First 20)",
       "Bash(dir C:\\\\Users\\\\Philipp\\\\SMM\\\\frontend\\\\src\\\\types *)",
-      "Bash(xargs grep -l \"AnalyticsComment\\\\|getVideoComments\")"
+      "Bash(xargs grep -l \"AnalyticsComment\\\\|getVideoComments\")",
+      "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\Philipp\\\\SMM\\\\backend\\\\routers\" -File)",
+      "Bash(Select-Object Name)",
+      "Bash(Select-Object -ExpandProperty FullName)",
+      "Bash(Sort-Object)",
+      "Bash(Start-Sleep -Seconds 3)",
+      "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); paths=[p for p in d['paths'] if 'script' in p]; print\\(paths\\)\")"
     ]
   }
 }

@@ -1,12 +1,13 @@
 <template>
+  <div class="ideas-view-wrap" :class="{ 'panel-open': !!selectedIdea }">
   <div class="ideas-view">
     <div class="ideas-header">
       <div>
-        <h1 class="page-title">Ideen</h1>
-        <p class="page-subtitle">Plane deinen Content bevor du die Kamera anmachst</p>
+        <h1 class="page-title">Ideas</h1>
+        <p class="page-subtitle">Plan your content before you pick up the camera</p>
       </div>
       <button class="btn-primary" @click="openCreateModal">
-        <i class="pi pi-plus"></i> Neue Idee
+        <i class="pi pi-plus"></i> New Idea
       </button>
     </div>
 
@@ -28,7 +29,8 @@
             v-for="idea in ideasByStatus(col.status)"
             :key="idea.id"
             class="idea-card"
-            @click="openEditModal(idea)"
+            :class="{ selected: selectedIdea?.id === idea.id }"
+            @click="selectedIdea = idea"
           >
             <div class="card-title">{{ idea.title }}</div>
             <div class="card-concept" v-if="idea.concept">{{ idea.concept }}</div>
@@ -48,141 +50,182 @@
             </div>
             <div class="card-actions">
               <button
-                v-if="idea.status === 'ready'"
-                class="btn-to-upload"
-                @click.stop="goToUpload(idea)"
-                title="Zu Upload weiterleiten"
+                class="btn-optimize"
+                @click.stop="selectedIdea = idea"
+                title="Optimize"
               >
-                <i class="pi pi-cloud-upload"></i> Hochladen
+                <i class="pi pi-sparkles"></i>
               </button>
-              <button class="btn-delete" @click.stop="confirmDelete(idea)" title="Löschen">
+              <button
+                v-if="idea.status === 'ready'"
+                class="btn-upload-card"
+                @click.stop="goToUpload(idea)"
+                title="Upload now"
+              >
+                <i class="pi pi-cloud-upload"></i>
+              </button>
+              <button class="btn-edit" @click.stop="openEditModal(idea)" title="Edit">
+                <i class="pi pi-pencil"></i>
+              </button>
+              <button class="btn-delete" @click.stop="confirmDelete(idea)" title="Delete">
                 <i class="pi pi-trash"></i>
               </button>
             </div>
           </div>
 
           <div class="empty-col" v-if="ideasByStatus(col.status).length === 0">
-            Keine Ideen hier
+            No ideas here
           </div>
         </div>
       </div>
     </div>
 
     <div v-if="loading" class="loading-state">
-      <i class="pi pi-spin pi-spinner"></i> Lade Ideen...
+      <i class="pi pi-spin pi-spinner"></i> Loading ideas...
     </div>
 
-    <!-- Create / Edit Modal -->
+  </div><!-- end ideas-view -->
+
+  <!-- Optimize Panel -->
+  <transition name="panel-slide">
+    <div v-if="selectedIdea" class="optimize-panel-wrap">
+      <IdeaOptimizePanel :idea="selectedIdea" @close="selectedIdea = null" />
+    </div>
+  </transition>
+
+  <!-- Create / Edit Modal -->
     <div v-if="showModal" class="modal-backdrop" @click.self="closeModal">
       <div class="idea-modal">
         <div class="modal-header">
-          <h3>{{ editingIdea ? 'Idee bearbeiten' : 'Neue Idee' }}</h3>
+          <h3>{{ editingIdea ? 'Edit Idea' : 'New Idea' }}</h3>
           <button class="modal-close" @click="closeModal"><i class="pi pi-times"></i></button>
         </div>
 
         <div class="modal-body">
           <div class="form-group">
-            <label>Titel *</label>
+            <label>Title *</label>
             <input
               v-model="form.title"
-              type="text"
-              placeholder="Was ist das Video-Thema?"
               class="form-input"
+              placeholder="What's the video about?"
               maxlength="120"
             />
           </div>
 
           <div class="form-group">
-            <label>Konzept / Beschreibung</label>
+            <label>Concept</label>
             <textarea
               v-model="form.concept"
-              placeholder="Worum geht es? Welcher Hook? Was ist der Call to Action?"
               class="form-textarea"
+              placeholder="Hook idea, angle, key message…"
               rows="3"
-            />
+            ></textarea>
           </div>
 
           <div class="form-group">
-            <label>Zielplattformen</label>
-            <div class="platform-checkboxes">
-              <label v-for="p in ['tiktok', 'instagram', 'youtube']" :key="p" class="platform-check">
-                <input
-                  type="checkbox"
-                  :value="p"
-                  v-model="form.target_platforms"
-                />
-                <i :class="platformIcon(p)"></i> {{ p }}
+            <label>Platforms</label>
+            <div class="platform-checks">
+              <label v-for="p in platformOptions" :key="p.value" class="check-label">
+                <input type="checkbox" :value="p.value" v-model="form.target_platforms" />
+                <i :class="p.icon"></i> {{ p.label }}
               </label>
             </div>
           </div>
 
-          <div class="form-row">
-            <div class="form-group">
-              <label>Zieldatum</label>
-              <input v-model="form.target_date" type="date" class="form-input" />
-            </div>
-            <div class="form-group">
-              <label>Status</label>
-              <select v-model="form.status" class="form-input">
-                <option value="idea">Idee</option>
-                <option value="filming">Dreht</option>
-                <option value="editing">Schneidet</option>
-                <option value="ready">Fertig</option>
-              </select>
-            </div>
+          <div class="form-group">
+            <label>Target Date</label>
+            <input type="date" v-model="form.target_date" class="form-input" />
           </div>
 
           <div class="form-group">
-            <label>Tags (kommagetrennt)</label>
+            <label>Status</label>
+            <select v-model="form.status" class="form-select">
+              <option value="idea">Idea</option>
+              <option value="planning">Planning</option>
+              <option value="ready">Ready</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label>Tags</label>
             <input
-              v-model="tagsInput"
-              type="text"
-              placeholder="gaming, tutorial, deutsch"
+              v-model="form.tags"
               class="form-input"
+              placeholder="tag1, tag2, tag3"
             />
           </div>
         </div>
 
         <div class="modal-footer">
-          <button class="btn-secondary" @click="closeModal">Abbrechen</button>
-          <button class="btn-primary" @click="saveIdea" :disabled="!form.title.trim() || saving">
+          <button class="btn-cancel" @click="closeModal">Cancel</button>
+          <button
+            class="btn-save"
+            :disabled="!form.title.trim() || saving"
+            @click="saveIdea"
+          >
             <i v-if="saving" class="pi pi-spin pi-spinner"></i>
-            {{ editingIdea ? 'Speichern' : 'Erstellen' }}
+            {{ editingIdea ? 'Save' : 'Create' }}
           </button>
         </div>
       </div>
     </div>
+
+  <!-- Delete Confirm -->
+  <div v-if="deleteTarget" class="modal-backdrop" @click.self="deleteTarget = null">
+    <div class="confirm-modal">
+      <h3>Delete idea?</h3>
+      <p>"{{ deleteTarget.title }}" will be permanently removed.</p>
+      <div class="confirm-actions">
+        <button class="btn-cancel" @click="deleteTarget = null">Cancel</button>
+        <button class="btn-danger" :disabled="saving" @click="doDelete">Delete</button>
+      </div>
+    </div>
+  </div>
+
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAuthStore } from '@/stores/authStore';
 import { listIdeas, createIdea, updateIdea, deleteIdea } from '@/services/api';
+import IdeaOptimizePanel from '@/components/plan/IdeaOptimizePanel.vue';
+import { useToast } from 'primevue/usetoast';
 
 interface Idea {
   id: string;
-  user_id: string;
   title: string;
   concept?: string;
   target_platforms: string[];
   target_date?: string;
   status: string;
-  tags: string[];
-  ai_suggestions: Record<string, unknown>;
-  created_at?: string;
-  updated_at?: string;
+  tags?: string[];
 }
 
 const authStore = useAuthStore();
-const router = useRouter();
+const router    = useRouter();
+const toast     = useToast();
 
-const loading = ref(false);
-const saving = ref(false);
-const ideas = ref<Idea[]>([]);
-const showModal = ref(false);
-const editingIdea = ref<Idea | null>(null);
+const ideas        = ref<Idea[]>([]);
+const loading      = ref(true);
+const selectedIdea = ref<Idea | null>(null);
+const showModal    = ref(false);
+const editingIdea  = ref<Idea | null>(null);
+const deleteTarget = ref<Idea | null>(null);
+const saving       = ref(false);
+
+const columns = [
+  { status: 'idea',     label: 'Idea' },
+  { status: 'planning', label: 'Planning' },
+  { status: 'ready',    label: 'Ready' },
+];
+
+const platformOptions = [
+  { value: 'tiktok',    label: 'TikTok',    icon: 'pi pi-mobile' },
+  { value: 'instagram', label: 'Instagram', icon: 'pi pi-instagram' },
+  { value: 'youtube',   label: 'YouTube',   icon: 'pi pi-youtube' },
+];
 
 const form = ref({
   title: '',
@@ -190,50 +233,36 @@ const form = ref({
   target_platforms: [] as string[],
   target_date: '',
   status: 'idea',
+  tags: '',
 });
-const tagsInput = ref('');
-
-const columns = [
-  { status: 'idea',    label: 'Idee' },
-  { status: 'filming', label: 'Drehen' },
-  { status: 'editing', label: 'Schneiden' },
-  { status: 'ready',   label: 'Bereit' },
-];
 
 function ideasByStatus(status: string) {
   return ideas.value.filter(i => i.status === status);
 }
 
 function platformIcon(p: string) {
-  const map: Record<string, string> = {
-    tiktok: 'pi pi-tiktok',
-    youtube: 'pi pi-youtube',
-    instagram: 'pi pi-instagram',
-  };
-  return map[p] || 'pi pi-send';
+  return { youtube: 'pi pi-youtube', tiktok: 'pi pi-mobile', instagram: 'pi pi-instagram' }[p] ?? 'pi pi-video';
 }
 
 function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString('de-DE', { day: '2-digit', month: 'short' });
+  return new Date(iso).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' });
 }
 
-async function loadIdeas() {
-  const userId = authStore.userId;
-  if (!userId) return;
+async function load() {
+  if (!authStore.userId) return;
   loading.value = true;
   try {
-    ideas.value = await listIdeas(userId);
-  } catch (e) {
-    console.error('Ideen laden fehlgeschlagen', e);
+    ideas.value = await listIdeas(authStore.userId);
   } finally {
     loading.value = false;
   }
 }
 
+onMounted(load);
+
 function openCreateModal() {
   editingIdea.value = null;
-  form.value = { title: '', concept: '', target_platforms: [], target_date: '', status: 'idea' };
-  tagsInput.value = '';
+  form.value = { title: '', concept: '', target_platforms: [], target_date: '', status: 'idea', tags: '' };
   showModal.value = true;
 }
 
@@ -242,11 +271,11 @@ function openEditModal(idea: Idea) {
   form.value = {
     title: idea.title,
     concept: idea.concept || '',
-    target_platforms: [...idea.target_platforms],
-    target_date: idea.target_date ? idea.target_date.slice(0, 10) : '',
+    target_platforms: [...(idea.target_platforms || [])],
+    target_date: idea.target_date ? idea.target_date.split('T')[0] : '',
     status: idea.status,
+    tags: (idea.tags || []).join(', '),
   };
-  tagsInput.value = (idea.tags || []).join(', ');
   showModal.value = true;
 }
 
@@ -256,46 +285,62 @@ function closeModal() {
 }
 
 async function saveIdea() {
-  const userId = authStore.userId;
-  if (!userId || !form.value.title.trim()) return;
+  if (!authStore.userId || !form.value.title.trim()) return;
   saving.value = true;
   try {
-    const tags = tagsInput.value.split(',').map(t => t.trim()).filter(Boolean);
-    const payload = {
-      user_id: userId,
-      title: form.value.title.trim(),
-      concept: form.value.concept || undefined,
-      target_platforms: form.value.target_platforms,
-      target_date: form.value.target_date || undefined,
-      status: form.value.status,
-      tags,
-    };
-
+    const tags = form.value.tags
+      .split(',')
+      .map(t => t.trim())
+      .filter(Boolean);
     if (editingIdea.value) {
-      const updated = await updateIdea(editingIdea.value.id, payload);
-      const idx = ideas.value.findIndex(i => i.id === editingIdea.value!.id);
-      if (idx !== -1) ideas.value[idx] = updated;
+      await updateIdea(editingIdea.value.id, {
+        user_id: authStore.userId,
+        title: form.value.title,
+        concept: form.value.concept || null,
+        target_platforms: form.value.target_platforms,
+        target_date: form.value.target_date || null,
+        status: form.value.status,
+        tags,
+      });
+      toast.add({ severity: 'success', summary: 'Saved', life: 2000 });
     } else {
-      const created = await createIdea(payload);
-      ideas.value.unshift(created);
+      await createIdea({
+        user_id: authStore.userId,
+        title: form.value.title,
+        concept: form.value.concept || undefined,
+        target_platforms: form.value.target_platforms,
+        target_date: form.value.target_date || undefined,
+        status: form.value.status,
+        tags,
+      });
+      toast.add({ severity: 'success', summary: 'Idea created', life: 2000 });
     }
     closeModal();
-  } catch (e) {
-    console.error('Idee speichern fehlgeschlagen', e);
+    await load();
+  } catch {
+    toast.add({ severity: 'error', summary: 'Error', detail: 'Could not save idea', life: 3000 });
   } finally {
     saving.value = false;
   }
 }
 
-async function confirmDelete(idea: Idea) {
-  const userId = authStore.userId;
-  if (!userId) return;
-  if (!confirm(`Idee "${idea.title}" wirklich löschen?`)) return;
+function confirmDelete(idea: Idea) {
+  deleteTarget.value = idea;
+}
+
+async function doDelete() {
+  if (!deleteTarget.value || !authStore.userId) return;
+  saving.value = true;
   try {
-    await deleteIdea(idea.id, userId);
-    ideas.value = ideas.value.filter(i => i.id !== idea.id);
-  } catch (e) {
-    console.error('Idee löschen fehlgeschlagen', e);
+    await deleteIdea(deleteTarget.value.id, authStore.userId);
+    if (selectedIdea.value?.id === deleteTarget.value.id) selectedIdea.value = null;
+    deleteTarget.value = null;
+    await load();
+    toast.add({ severity: 'success', summary: 'Deleted', life: 2000 });
+  } catch {
+    toast.add({ severity: 'error', summary: 'Error', detail: 'Could not delete idea', life: 3000 });
+  } finally {
+    saving.value = false;
   }
 }
 
@@ -306,100 +351,79 @@ function goToUpload(idea: Idea) {
       title: idea.title,
       description: idea.concept || '',
       platforms: (idea.target_platforms || []).join(','),
+      tags: (idea.tags || []).join(','),
     },
   });
 }
-
-onMounted(loadIdeas);
 </script>
 
 <style scoped>
-.ideas-view {
-  padding: 1.5rem 2rem;
-  max-width: 1400px;
+.ideas-view-wrap {
+  display: flex;
+  height: 100%;
+  gap: 0;
+  overflow: hidden;
 }
+
+.ideas-view {
+  flex: 1;
+  min-width: 0;
+  overflow-y: auto;
+  padding: 0 1rem 2rem;
+  transition: flex 0.3s ease;
+}
+
+.panel-open .ideas-view { flex: 1; }
 
 .ideas-header {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  margin-bottom: 1.5rem;
-  flex-wrap: wrap;
   gap: 1rem;
+  margin-bottom: 1.5rem;
 }
 
-.page-title {
-  font-size: 1.5rem;
-  font-weight: 700;
-  color: var(--text-primary, #f4f4f5);
-  margin: 0;
-}
-
-.page-subtitle {
-  font-size: 0.875rem;
-  color: var(--text-muted, #71717a);
-  margin: 0.25rem 0 0;
-}
+.page-title   { font-size: 1.5rem; font-weight: 700; color: var(--text-primary); margin: 0 0 0.2rem; }
+.page-subtitle{ font-size: 0.875rem; color: var(--text-secondary); margin: 0; }
 
 .btn-primary {
   display: inline-flex;
   align-items: center;
   gap: 0.4rem;
-  background: var(--primary-600, #7c3aed);
-  color: white;
+  padding: 0.5rem 1rem;
+  background: linear-gradient(135deg, #4f7fff, #7c3aed);
+  color: #fff;
   border: none;
   border-radius: 8px;
-  padding: 0.5rem 1.1rem;
   font-size: 0.875rem;
   font-weight: 600;
   cursor: pointer;
-  transition: background 0.15s;
-  text-decoration: none;
+  white-space: nowrap;
+  transition: opacity 0.15s;
 }
-.btn-primary:hover { background: var(--primary-700, #6d28d9); }
-.btn-primary:disabled { opacity: 0.5; cursor: default; }
-
-.btn-secondary {
-  background: var(--surface-card, #27272a);
-  color: var(--text-secondary, #a1a1aa);
-  border: 1px solid var(--border-color, #3f3f46);
-  border-radius: 8px;
-  padding: 0.5rem 1.1rem;
-  font-size: 0.875rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background 0.15s;
-}
-.btn-secondary:hover { background: var(--surface-hover, #3f3f46); }
+.btn-primary:hover { opacity: 0.85; }
 
 /* Kanban */
 .kanban-board {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(3, 1fr);
   gap: 1rem;
   align-items: start;
 }
 
-@media (max-width: 900px) {
-  .kanban-board { grid-template-columns: repeat(2, 1fr); }
-}
-@media (max-width: 600px) {
-  .kanban-board { grid-template-columns: 1fr; }
-}
-
 .kanban-col {
-  background: var(--surface-card, #27272a);
+  background: rgba(255,255,255,0.02);
   border: 1px solid var(--border-color, #3f3f46);
   border-radius: 12px;
-  overflow: hidden;
+  padding: 0.875rem;
+  min-height: 200px;
 }
 
 .col-header {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  padding: 0.75rem 1rem;
-  border-bottom: 1px solid var(--border-color, #3f3f46);
+  margin-bottom: 0.75rem;
 }
 
 .col-dot {
@@ -408,60 +432,47 @@ onMounted(loadIdeas);
   border-radius: 50%;
   flex-shrink: 0;
 }
-.col-dot.idea    { background: #6366f1; }
-.col-dot.filming { background: #f59e0b; }
-.col-dot.editing { background: #3b82f6; }
-.col-dot.ready   { background: #22c55e; }
+.col-dot.idea     { background: #60a5fa; }
+.col-dot.planning { background: #fb923c; }
+.col-dot.ready    { background: #4ade80; }
 
-.col-title {
-  font-size: 0.85rem;
-  font-weight: 700;
-  color: var(--text-primary, #f4f4f5);
-  flex: 1;
-}
-
+.col-title { font-size: 0.8125rem; font-weight: 700; color: var(--text-primary); flex: 1; }
 .col-count {
-  font-size: 0.75rem;
+  font-size: 0.72rem;
   font-weight: 700;
-  color: var(--text-muted, #71717a);
-  background: var(--surface-hover, #3f3f46);
+  background: rgba(255,255,255,0.08);
+  padding: 1px 6px;
   border-radius: 10px;
-  padding: 1px 7px;
+  color: var(--text-muted, #71717a);
 }
 
-.col-cards {
-  padding: 0.5rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  min-height: 80px;
-}
+.col-cards { display: flex; flex-direction: column; gap: 0.5rem; }
 
 .idea-card {
-  background: var(--surface-ground, #18181b);
+  background: var(--surface-card, #27272a);
   border: 1px solid var(--border-color, #3f3f46);
   border-radius: 8px;
   padding: 0.75rem;
   cursor: pointer;
-  transition: border-color 0.15s, background 0.15s;
+  transition: border-color 0.15s, transform 0.1s;
 }
-.idea-card:hover {
-  border-color: var(--primary-500, #8b5cf6);
-  background: #1f1f23;
-}
+.idea-card:hover { border-color: rgba(124,58,237,0.35); transform: translateY(-1px); }
+.idea-card.selected { border-color: rgba(124,58,237,0.6); background: rgba(124,58,237,0.05); }
 
 .card-title {
-  font-size: 0.875rem;
+  font-size: 0.8375rem;
   font-weight: 600;
-  color: var(--text-primary, #f4f4f5);
+  color: var(--text-primary);
   margin-bottom: 0.25rem;
-  line-height: 1.3;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 .card-concept {
   font-size: 0.775rem;
   color: var(--text-muted, #71717a);
-  line-height: 1.4;
   margin-bottom: 0.5rem;
   display: -webkit-box;
   -webkit-line-clamp: 2;
@@ -473,68 +484,82 @@ onMounted(loadIdeas);
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-top: 0.5rem;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
 }
 
-.card-platforms { display: flex; gap: 4px; font-size: 0.85rem; color: var(--text-muted, #71717a); }
+.card-platforms { display: flex; gap: 0.35rem; }
+.card-platforms i { font-size: 0.8rem; color: var(--text-muted, #71717a); }
 
 .card-date {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 0.25rem;
   font-size: 0.72rem;
   color: var(--text-muted, #71717a);
 }
+.card-date i { font-size: 0.65rem; }
 
 .card-actions {
   display: flex;
-  gap: 0.4rem;
-  margin-top: 0.5rem;
+  gap: 0.25rem;
+  justify-content: flex-end;
 }
 
-.btn-to-upload {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 0.75rem;
-  font-weight: 600;
-  background: var(--primary-900, #2e1065);
-  color: var(--primary-300, #c4b5fd);
-  border: 1px solid var(--primary-700, #6d28d9);
+.btn-optimize, .btn-edit, .btn-delete, .btn-upload-card {
+  width: 26px;
+  height: 26px;
   border-radius: 6px;
-  padding: 3px 8px;
-  cursor: pointer;
-  transition: background 0.15s;
-  flex: 1;
-}
-.btn-to-upload:hover { background: var(--primary-800, #4c1d95); }
-
-.btn-delete {
-  background: none;
-  border: none;
+  border: 1px solid transparent;
+  background: rgba(255,255,255,0.04);
   color: var(--text-muted, #71717a);
   cursor: pointer;
-  font-size: 0.8rem;
-  padding: 3px 5px;
-  border-radius: 6px;
-  transition: color 0.15s, background 0.15s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  transition: background 0.15s, color 0.15s;
 }
-.btn-delete:hover { color: #f87171; background: rgba(239,68,68,0.08); }
+.btn-optimize:hover { background: rgba(124,58,237,0.15); color: #a78bfa; }
+.btn-edit:hover     { background: rgba(59,130,246,0.15); color: #60a5fa; }
+.btn-delete:hover   { background: rgba(239,68,68,0.15);  color: #f87171; }
+.btn-upload-card    { background: rgba(16,185,129,0.1); color: #34d399; border-color: rgba(16,185,129,0.25); }
+.btn-upload-card:hover { background: rgba(16,185,129,0.2); color: #4ade80; }
 
 .empty-col {
-  font-size: 0.78rem;
-  color: var(--text-muted, #71717a);
+  padding: 1rem 0;
   text-align: center;
-  padding: 1.5rem 0.5rem;
-  opacity: 0.6;
+  font-size: 0.8rem;
+  color: var(--text-muted, #71717a);
+  font-style: italic;
 }
 
 .loading-state {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  color: var(--text-muted, #71717a);
+  gap: 0.75rem;
+  color: var(--text-secondary);
   padding: 2rem;
+}
+
+/* Optimize panel slide-in */
+.optimize-panel-wrap {
+  width: 340px;
+  flex-shrink: 0;
+  border-left: 1px solid var(--border-color, #3f3f46);
+  background: var(--surface-card, #27272a);
+  overflow-y: auto;
+  height: 100%;
+}
+
+.panel-slide-enter-active,
+.panel-slide-leave-active {
+  transition: all 0.25s ease;
+}
+.panel-slide-enter-from,
+.panel-slide-leave-to {
+  opacity: 0;
+  transform: translateX(20px);
 }
 
 /* Modal */
@@ -542,101 +567,124 @@ onMounted(loadIdeas);
   position: fixed;
   inset: 0;
   background: rgba(0,0,0,0.6);
-  z-index: 500;
   display: flex;
   align-items: center;
   justify-content: center;
+  z-index: 1000;
   padding: 1rem;
 }
 
-.idea-modal {
-  background: var(--surface-card, #27272a);
-  border: 1px solid var(--border-color, #3f3f46);
-  border-radius: 12px;
+.idea-modal, .confirm-modal {
+  background: var(--bg-card, #1e293b);
+  border: 1px solid var(--border-color, #334155);
+  border-radius: 14px;
   width: 100%;
-  max-width: 500px;
+  max-width: 480px;
+  overflow: hidden;
 }
 
 .modal-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 1.25rem 1.5rem;
-  border-bottom: 1px solid var(--border-color, #3f3f46);
+  padding: 1.25rem 1.5rem 1rem;
+  border-bottom: 1px solid var(--border-color);
 }
+.modal-header h3 { margin: 0; font-size: 1rem; font-weight: 700; color: var(--text-primary); }
+.modal-close { background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 0.9rem; padding: 2px; }
 
-.modal-header h3 {
-  margin: 0;
-  font-size: 1rem;
-  font-weight: 700;
-  color: var(--text-primary, #f4f4f5);
+.modal-body { padding: 1.25rem 1.5rem; display: flex; flex-direction: column; gap: 1rem; max-height: 65vh; overflow-y: auto; }
+
+.form-group { display: flex; flex-direction: column; gap: 0.35rem; }
+.form-group label { font-size: 0.8125rem; font-weight: 600; color: var(--text-secondary); }
+
+.form-input, .form-textarea, .form-select {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid var(--border-color, #334155);
+  border-radius: 8px;
+  color: var(--text-primary);
+  font-size: 0.875rem;
+  padding: 0.5rem 0.75rem;
+  outline: none;
+  width: 100%;
+  box-sizing: border-box;
+  font-family: inherit;
+  transition: border-color 0.15s;
 }
+.form-input:focus, .form-textarea:focus, .form-select:focus { border-color: rgba(124,58,237,0.5); }
+.form-textarea { resize: vertical; }
+.form-select { cursor: pointer; }
 
-.modal-close {
-  background: none;
-  border: none;
-  color: var(--text-muted, #71717a);
-  cursor: pointer;
-  font-size: 1rem;
-}
-
-.modal-body {
-  padding: 1.25rem 1.5rem;
+.platform-checks { display: flex; gap: 1rem; flex-wrap: wrap; }
+.check-label {
   display: flex;
-  flex-direction: column;
-  gap: 1rem;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.8125rem;
+  color: var(--text-secondary);
+  cursor: pointer;
 }
+.check-label input { cursor: pointer; }
 
 .modal-footer {
   display: flex;
   justify-content: flex-end;
   gap: 0.75rem;
   padding: 1rem 1.5rem;
-  border-top: 1px solid var(--border-color, #3f3f46);
+  border-top: 1px solid var(--border-color);
 }
 
-.form-group { display: flex; flex-direction: column; gap: 0.35rem; }
-
-.form-group label {
-  font-size: 0.8rem;
-  font-weight: 600;
-  color: var(--text-secondary, #a1a1aa);
-}
-
-.form-input, .form-textarea {
-  background: var(--surface-ground, #18181b);
-  border: 1px solid var(--border-color, #3f3f46);
+.btn-cancel {
+  padding: 0.45rem 1rem;
+  background: none;
+  border: 1px solid var(--border-color);
   border-radius: 8px;
-  color: var(--text-primary, #f4f4f5);
+  color: var(--text-secondary);
+  cursor: pointer;
   font-size: 0.875rem;
-  padding: 0.5rem 0.75rem;
-  width: 100%;
-  box-sizing: border-box;
-  transition: border-color 0.15s;
+  transition: background 0.15s;
 }
-.form-input:focus, .form-textarea:focus {
-  outline: none;
-  border-color: var(--primary-500, #8b5cf6);
-}
+.btn-cancel:hover { background: rgba(255,255,255,0.04); }
 
-.form-textarea { resize: vertical; font-family: inherit; }
-
-.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
-
-.platform-checkboxes {
-  display: flex;
-  gap: 1rem;
-  flex-wrap: wrap;
-}
-
-.platform-check {
-  display: flex;
+.btn-save {
+  display: inline-flex;
   align-items: center;
   gap: 0.4rem;
-  font-size: 0.85rem;
-  color: var(--text-secondary, #a1a1aa);
+  padding: 0.45rem 1.25rem;
+  background: linear-gradient(135deg, #4f7fff, #7c3aed);
+  border: none;
+  border-radius: 8px;
+  color: #fff;
+  font-size: 0.875rem;
+  font-weight: 600;
   cursor: pointer;
-  user-select: none;
+  transition: opacity 0.15s;
 }
-.platform-check input { cursor: pointer; }
+.btn-save:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn-save:not(:disabled):hover { opacity: 0.85; }
+
+/* Confirm modal */
+.confirm-modal { max-width: 380px; padding: 1.5rem; }
+.confirm-modal h3 { margin: 0 0 0.5rem; font-size: 1rem; color: var(--text-primary); }
+.confirm-modal p  { margin: 0 0 1.25rem; font-size: 0.875rem; color: var(--text-secondary); }
+.confirm-actions  { display: flex; gap: 0.75rem; justify-content: flex-end; }
+.btn-danger {
+  padding: 0.45rem 1rem;
+  background: #ef4444;
+  border: none;
+  border-radius: 8px;
+  color: #fff;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+.btn-danger:hover { opacity: 0.85; }
+.btn-danger:disabled { opacity: 0.5; cursor: not-allowed; }
+
+@media (max-width: 768px) {
+  .kanban-board { grid-template-columns: 1fr; }
+  .ideas-view-wrap.panel-open { flex-direction: column; }
+  .optimize-panel-wrap { width: 100%; height: auto; border-left: none; border-top: 1px solid var(--border-color); }
+}
 </style>

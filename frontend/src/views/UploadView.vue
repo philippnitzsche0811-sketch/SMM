@@ -33,10 +33,10 @@
             <div class="divider"></div>
 
             <div class="field-group">
-              <label>Videotitel <span class="required">*</span></label>
+              <label>Video title <span class="required">*</span></label>
               <InputText
                 v-model="meta.title"
-                placeholder="Wie heißt dein Video?"
+                placeholder="What's your video called?"
                 class="w-full"
                 :maxlength="200"
               />
@@ -49,7 +49,7 @@
             <div class="divider"></div>
 
             <div class="category-row">
-              <label>Kategorie</label>
+              <label>Category</label>
               <Dropdown
                 v-model="meta.category"
                 :options="categoryOptions"
@@ -62,7 +62,7 @@
             <div class="divider"></div>
 
             <div class="field-group">
-              <label>Hochladen auf <span class="required">*</span></label>
+              <label>Upload to <span class="required">*</span></label>
               <PlatformSelector v-model="selectedPlatforms" />
             </div>
 
@@ -74,10 +74,10 @@
                   :disabled="selectedPlatforms.length === 0 || !meta.title.trim()"
                   @click="goToManual"
                 >
-                  Manuell ausfüllen
+                  Fill in manually
                 </button>
                 <Button
-                  label="Mit KI generieren"
+                  label="Generate with AI"
                   icon="pi pi-sparkles"
                   iconPos="right"
                   :loading="isOptimizing"
@@ -88,13 +88,13 @@
               <template v-else>
                 <div style="flex:1">
                   <UpgradePrompt
-                    title="KI-Optimierung ist Pro"
-                    description="Titel, Beschreibung und Hashtags werden automatisch für jede Plattform generiert."
+                    title="AI optimization is Pro"
+                    description="Title, description and hashtags are auto-generated for each platform."
                     @upgrade="$router.push('/settings')"
                   />
                 </div>
                 <Button
-                  label="Weiter"
+                  label="Continue"
                   icon="pi pi-arrow-right"
                   iconPos="right"
                   :disabled="selectedPlatforms.length === 0 || !meta.title.trim()"
@@ -110,13 +110,50 @@
       <div v-show="currentStep === 2" class="step-content">
         <div v-if="isOptimizing" class="ai-loading">
           <i class="pi pi-spin pi-spinner"></i>
-          <span>KI optimiert deine Metadaten…</span>
+          <span>AI is optimizing your metadata…</span>
         </div>
 
         <template v-else>
           <div v-if="liveDataAge && isProUser" class="live-data-badge">
             <i class="pi pi-globe"></i>
-            Live YouTube-Daten · Aktualisiert {{ liveDataAge }}
+            Live YouTube data · Updated {{ liveDataAge }}
+          </div>
+
+          <!-- Shared Metadata (manual mode, multiple platforms) -->
+          <div v-if="isManualMode && selectedPlatforms.length > 1" class="shared-meta-box">
+            <div class="shared-meta-header">
+              <i class="pi pi-link"></i>
+              <span>For all platforms</span>
+              <span class="shared-meta-hint">Fields are applied to all platform tabs — customize per platform afterwards</span>
+            </div>
+            <div class="shared-fields">
+              <div class="review-section">
+                <label class="review-label">Description</label>
+                <Textarea
+                  v-model="sharedDescription"
+                  :rows="3"
+                  class="w-full"
+                  placeholder="Description for all platforms…"
+                  @update:modelValue="syncSharedToAll"
+                />
+              </div>
+              <div class="review-section" style="margin-top: 0.875rem;">
+                <label class="review-label">Hashtags</label>
+                <div class="tags-row">
+                  <span v-for="(tag, i) in sharedTags" :key="i" class="tag-chip">
+                    #{{ tag }}
+                    <button class="tag-remove" @click="removeSharedTag(i)">×</button>
+                  </span>
+                  <input
+                    v-model="sharedNewTag"
+                    class="tag-input"
+                    placeholder="Add tag…"
+                    @keydown.enter.prevent="addSharedTag"
+                    @keydown.comma.prevent="addSharedTag"
+                  />
+                </div>
+              </div>
+            </div>
           </div>
 
           <div v-if="selectedPlatforms.length > 1" class="platform-tabs">
@@ -141,20 +178,20 @@
                 v-model="currentMeta.title"
               />
               <div v-else class="field-group">
-                <label class="review-label">Titel <span class="required">*</span></label>
-                <InputText v-model="currentMeta.title" class="w-full" placeholder="Videotitel…" />
+                <label class="review-label">Title <span class="required">*</span></label>
+                <InputText v-model="currentMeta.title" class="w-full" placeholder="Video title…" />
               </div>
             </div>
 
             <div class="divider"></div>
 
             <div class="review-section">
-              <label class="review-label">Beschreibung</label>
+              <label class="review-label">Description</label>
               <Textarea
                 v-model="currentMeta.description"
                 :rows="4"
                 class="w-full"
-                placeholder="Videobeschreibung…"
+                placeholder="Video description…"
               />
             </div>
 
@@ -170,7 +207,7 @@
                 <input
                   v-model="currentMeta.newTag"
                   class="tag-input"
-                  placeholder="Tag hinzufügen…"
+                  placeholder="Add tag…"
                   @keydown.enter.prevent="addTagToCurrentPlatform"
                   @keydown.comma.prevent="addTagToCurrentPlatform"
                 />
@@ -181,7 +218,7 @@
 
             <div class="field-group">
               <label class="review-label">
-                Sichtbarkeit
+                Visibility
                 <span v-if="activeTab === 'tiktok'" class="required">*</span>
               </label>
               <Dropdown
@@ -190,7 +227,7 @@
                 :options="tiktokPrivacyOptions"
                 optionLabel="label"
                 optionValue="value"
-                placeholder="Sichtbarkeit wählen…"
+                placeholder="Select visibility…"
                 style="width: 260px"
               />
               <Dropdown
@@ -207,15 +244,15 @@
             <template v-if="activeTab === 'tiktok' && currentMeta">
               <div class="divider"></div>
               <div class="tiktok-section">
-                <label class="review-label">Interaktionen erlauben</label>
+                <label class="review-label">Allow interactions</label>
                 <div class="checkbox-group">
                   <div class="checkbox-row">
                     <Checkbox v-model="currentMeta.allowComment" :binary="true" inputId="ck-comment" />
-                    <label for="ck-comment">Kommentare</label>
+                    <label for="ck-comment">Comments</label>
                   </div>
                   <div class="checkbox-row">
                     <Checkbox v-model="currentMeta.allowDuet" :binary="true" inputId="ck-duet" />
-                    <label for="ck-duet">Duett</label>
+                    <label for="ck-duet">Duet</label>
                   </div>
                   <div class="checkbox-row">
                     <Checkbox v-model="currentMeta.allowStitch" :binary="true" inputId="ck-stitch" />
@@ -227,8 +264,8 @@
               <div class="tiktok-section">
                 <div class="disclosure-header">
                   <div>
-                    <label class="review-label">Inhalt offenlegen</label>
-                    <p class="disclosure-hint">Aktivieren wenn das Video Produkte oder Dienstleistungen bewirbt</p>
+                    <label class="review-label">Disclose content</label>
+                    <p class="disclosure-hint">Enable if the video promotes products or services</p>
                   </div>
                   <InputSwitch v-model="currentMeta.contentDisclosure" />
                 </div>
@@ -237,20 +274,20 @@
                     <div class="checkbox-row">
                       <Checkbox v-model="currentMeta.yourBrand" :binary="true" inputId="ck-your-brand" />
                       <div>
-                        <label for="ck-your-brand" class="disclosure-option-label">Eigene Marke</label>
-                        <p class="disclosure-hint">Du bewirbst dich oder dein eigenes Unternehmen</p>
+                        <label for="ck-your-brand" class="disclosure-option-label">Your Brand</label>
+                        <p class="disclosure-hint">You are promoting yourself or your own business</p>
                       </div>
                     </div>
                     <div class="checkbox-row">
                       <Checkbox v-model="currentMeta.brandedContent" :binary="true" inputId="ck-branded" />
                       <div>
                         <label for="ck-branded" class="disclosure-option-label">Branded Content</label>
-                        <p class="disclosure-hint">Du bewirbst eine andere Marke oder Drittpartei</p>
+                        <p class="disclosure-hint">You are promoting another brand or third party</p>
                       </div>
                     </div>
                   </div>
                   <p class="compliance-text" v-if="currentMeta.brandedContent">
-                    Mit dem Hochladen stimmst du TikToks Branded Content Policy zu.
+                    By uploading you agree to TikTok's Branded Content Policy.
                   </p>
                 </template>
               </div>
@@ -258,7 +295,7 @@
 
             <div v-if="isProUser" class="regen-row">
               <Button
-                label="Neu generieren"
+                label="Regenerate"
                 icon="pi pi-refresh"
                 severity="secondary"
                 outlined
@@ -266,14 +303,14 @@
                 :loading="isRegenerating"
                 @click="regenerate"
               />
-              <span class="regen-hint">Gleicher Kontext, neue KI-Vorschläge</span>
+              <span class="regen-hint">Same context, new AI suggestions</span>
             </div>
           </div>
         </template>
 
         <div class="nav-buttons">
-          <Button label="Zurück" severity="secondary" outlined @click="currentStep = 1" :disabled="isOptimizing" />
-          <Button label="Weiter" @click="currentStep = 3" :disabled="!canProceedFromStep2 || isOptimizing" />
+          <Button label="Back" severity="secondary" outlined @click="currentStep = 1" :disabled="isOptimizing" />
+          <Button label="Next" @click="currentStep = 3" :disabled="!canProceedFromStep2 || isOptimizing" />
         </div>
       </div>
 
@@ -284,11 +321,12 @@
           v-model:scheduledAt="scheduledAt"
           v-model:selectedGroupId="selectedGroupId"
           :groups="groups"
+          :recommendedAt="recommendedAt"
           @create-group="showCreateGroupDialog = true"
         />
 
         <div class="nav-buttons">
-          <Button label="Zurück" severity="secondary" outlined @click="currentStep = 2" />
+          <Button label="Back" severity="secondary" outlined @click="currentStep = 2" />
           <Button
             :label="submitLabel"
             icon="pi pi-check"
@@ -304,7 +342,7 @@
       <div v-if="isSubmitting" class="progress-section">
         <div class="progress-header">
           <i class="pi pi-spin pi-spinner"></i>
-          <span>Hochladen…</span>
+          <span>Uploading…</span>
         </div>
         <ProgressBar :value="uploadProgress" />
       </div>
@@ -314,18 +352,18 @@
   <!-- Create-Group-Dialog -->
   <Dialog
     v-model:visible="showCreateGroupDialog"
-    header="Upload-Gruppe erstellen"
+    header="Create Upload Group"
     :modal="true"
     :style="{ width: '400px' }"
     :closable="!isSaving"
   >
     <div class="dialog-field">
-      <label>Gruppenname</label>
-      <InputText v-model="newGroupName" placeholder="z.B. Wöchentliche Shorts" class="w-full" autofocus />
+      <label>Group name</label>
+      <InputText v-model="newGroupName" placeholder="e.g. Weekly Shorts" class="w-full" autofocus />
     </div>
     <template #footer>
-      <Button label="Abbrechen" class="p-button-text" @click="showCreateGroupDialog = false" :disabled="isSaving" />
-      <Button label="Erstellen" icon="pi pi-plus" :loading="isSaving" :disabled="!newGroupName.trim()" @click="handleCreateGroup" />
+      <Button label="Cancel" class="p-button-text" @click="showCreateGroupDialog = false" :disabled="isSaving" />
+      <Button label="Create" icon="pi pi-plus" :loading="isSaving" :disabled="!newGroupName.trim()" @click="handleCreateGroup" />
     </template>
   </Dialog>
 </template>
@@ -366,9 +404,17 @@ onMounted(() => {
   if (q.title) meta.value.title = String(q.title);
   if (q.description) aiContext.value = String(q.description);
   if (q.platforms) selectedPlatforms.value = String(q.platforms).split(',').filter(Boolean);
+  if (q.tags) {
+    const prefilledTags = String(q.tags).split(',').map(t => t.trim()).filter(Boolean);
+    if (prefilledTags.length > 0) {
+      sharedTags.value = prefilledTags;
+      // Will be synced to platform metas when initPlatformMetas() runs
+      prefillTags.value = prefilledTags;
+    }
+  }
 });
 
-const steps = ['Video', 'Metadaten', 'Zeitpunkt'];
+const steps = ['Video', 'Metadata', 'Schedule'];
 const currentStep = ref(1);
 const videoFile = ref<File | null>(null);
 
@@ -394,6 +440,10 @@ const activeTab = ref('');
 const currentMeta = computed(() => platformMetas.value[activeTab.value] ?? null);
 
 const aiContext = ref('');
+const isManualMode = ref(false);
+const sharedDescription = ref('');
+const sharedTags = ref<string[]>([]);
+const sharedNewTag = ref('');
 const isOptimizing = ref(false);
 const isRegenerating = ref(false);
 const trendRefreshedAt = ref<string | null>(null);
@@ -403,10 +453,11 @@ const liveDataAge = computed(() => {
   const ageMs = Date.now() - new Date(trendRefreshedAt.value).getTime();
   const ageHours = Math.floor(ageMs / 3_600_000);
   if (ageHours >= 6) return null;
-  return ageHours === 0 ? 'gerade eben' : `vor ${ageHours}h`;
+  return ageHours === 0 ? 'just now' : `${ageHours}h ago`;
 });
 
 const selectedPlatforms = ref<string[]>([]);
+const prefillTags = ref<string[]>([]);
 const scheduleType = ref('now');
 const scheduledAt = ref<string | null>(null);
 const selectedGroupId = ref<string | null>(null);
@@ -416,21 +467,21 @@ const isSubmitting = ref(false);
 const uploadProgress = ref(0);
 
 const privacyOptions = [
-  { label: 'Privat',       value: 'private'  },
-  { label: 'Nicht gelistet', value: 'unlisted' },
-  { label: 'Öffentlich',   value: 'public'   },
+  { label: 'Private',    value: 'private'  },
+  { label: 'Unlisted',   value: 'unlisted' },
+  { label: 'Public',     value: 'public'   },
 ];
 const tiktokPrivacyOptions = [
-  { label: 'Privat (nur ich)',  value: 'SELF_ONLY'             },
-  { label: 'Freunde',           value: 'MUTUAL_FOLLOW_FRIENDS' },
-  { label: 'Öffentlich',        value: 'PUBLIC_TO_EVERYONE'    },
+  { label: 'Private (only me)',  value: 'SELF_ONLY'             },
+  { label: 'Friends',            value: 'MUTUAL_FOLLOW_FRIENDS' },
+  { label: 'Public',             value: 'PUBLIC_TO_EVERYONE'    },
 ];
 const categoryOptions = [
-  { label: 'Standard',        value: 'default'       },
+  { label: 'Default',          value: 'default'       },
   { label: 'Entertainment',   value: 'entertainment' },
   { label: 'Education',       value: 'education'     },
   { label: 'Gaming',          value: 'gaming'        },
-  { label: 'Musik',           value: 'music'         },
+  { label: 'Music',            value: 'music'         },
   { label: 'Sport',           value: 'sports'        },
   { label: 'Tech',            value: 'tech'          },
   { label: 'Lifestyle',       value: 'lifestyle'     },
@@ -453,15 +504,17 @@ const canProceedFromStep2 = computed(() => {
 
 const canSubmit = computed(() => {
   if (scheduleType.value === 'datetime' && !scheduledAt.value) return false;
+  if (scheduleType.value === 'recommended' && !recommendedAt.value) return false;
   if (scheduleType.value === 'group' && !selectedGroupId.value) return false;
   return true;
 });
 
 const submitLabel = computed(() => ({
-  now:      'Jetzt hochladen',
-  datetime: 'Upload planen',
-  group:    'Zur Gruppe hinzufügen',
-}[scheduleType.value] ?? 'Hochladen'));
+  now:         'Publish Now',
+  datetime:    'Schedule Upload',
+  recommended: 'Schedule for Recommended Time',
+  group:       'Add to Group',
+}[scheduleType.value] ?? 'Upload'));
 
 function handleFileSelect(file: File) {
   videoFile.value = file;
@@ -479,7 +532,7 @@ function initPlatformMetas() {
       title: meta.value.title,
       titleOptions: [],
       description: '',
-      tags: [],
+      tags: prefillTags.value.length > 0 ? [...prefillTags.value] : [],
       privacyStatus: p === 'tiktok' ? null : 'private',
       newTag: '',
       allowComment: false,
@@ -495,6 +548,36 @@ function initPlatformMetas() {
     activeTab.value = selectedPlatforms.value[0] ?? '';
   }
 }
+
+// Compute recommended upload time from selected platforms
+const recommendedAt = computed<string | null>(() => {
+  if (selectedPlatforms.value.length === 0) return null;
+  // Best days (0=Sun,1=Mon,...,6=Sat) and hour per platform
+  const bestSlots: Record<string, { days: number[]; hour: number }> = {
+    tiktok:    { days: [2, 4], hour: 19 }, // Tue, Thu 19:00
+    instagram: { days: [1, 3], hour: 18 }, // Mon, Wed 18:00
+    youtube:   { days: [2, 4], hour: 18 }, // Tue, Thu 18:00
+  };
+  // Pick the first platform's slot as the recommendation
+  const platform = selectedPlatforms.value[0];
+  const slot = bestSlots[platform] ?? { days: [2, 4], hour: 19 };
+  const now = new Date();
+  const nowDay = now.getDay();
+  // Find next occurrence of a best day (must be at least 2h from now)
+  for (let offset = 1; offset <= 7; offset++) {
+    const candidate = new Date(now);
+    candidate.setDate(now.getDate() + offset);
+    candidate.setHours(slot.hour, 0, 0, 0);
+    if (slot.days.includes(candidate.getDay())) {
+      return candidate.toISOString();
+    }
+  }
+  // Fallback: tomorrow same hour
+  const fallback = new Date(now);
+  fallback.setDate(now.getDate() + 1);
+  fallback.setHours(slot.hour, 0, 0, 0);
+  return fallback.toISOString();
+});
 
 async function runOptimize(isRegen = false) {
   if (isRegen) isRegenerating.value = true;
@@ -522,20 +605,49 @@ async function runOptimize(isRegen = false) {
       }
     }
   } catch {
-    toast.add({ severity: 'warn', summary: 'KI nicht verfügbar', detail: 'Bitte manuell ausfüllen.', life: 4000 });
+    toast.add({ severity: 'warn', summary: 'AI unavailable', detail: 'Please fill in manually.', life: 4000 });
   } finally {
     isOptimizing.value = false;
     isRegenerating.value = false;
   }
 }
 
+function syncSharedToAll() {
+  for (const p of selectedPlatforms.value) {
+    if (platformMetas.value[p]) {
+      platformMetas.value[p].description = sharedDescription.value;
+      platformMetas.value[p].tags = [...sharedTags.value];
+    }
+  }
+}
+
+function addSharedTag() {
+  const t = sharedNewTag.value.replace(/^#/, '').trim();
+  if (t && !sharedTags.value.includes(t)) {
+    sharedTags.value.push(t);
+    syncSharedToAll();
+  }
+  sharedNewTag.value = '';
+}
+
+function removeSharedTag(i: number) {
+  sharedTags.value.splice(i, 1);
+  syncSharedToAll();
+}
+
 async function goToReview() {
+  isManualMode.value = false;
   initPlatformMetas();
   currentStep.value = 2;
   await runOptimize(false);
 }
 
 function goToManual() {
+  isManualMode.value = true;
+  sharedDescription.value = aiContext.value || '';
+  if (prefillTags.value.length > 0 && sharedTags.value.length === 0) {
+    sharedTags.value = [...prefillTags.value];
+  }
   initPlatformMetas();
   currentStep.value = 2;
 }
@@ -598,22 +710,24 @@ async function handleSubmit() {
     formData.append('platforms', selectedPlatforms.value.join(','));
     formData.append('privacy_status', primaryMeta.privacyStatus || 'private');
     formData.append('upload_mode', 'simple');
-    formData.append('schedule_type', scheduleType.value);
+    const effectiveScheduleType = scheduleType.value === 'recommended' ? 'datetime' : scheduleType.value;
+    const effectiveScheduledAt  = scheduleType.value === 'recommended' ? recommendedAt.value : scheduledAt.value;
+    formData.append('schedule_type', effectiveScheduleType);
     formData.append('platform_metadata', JSON.stringify(platformMetaJson));
-    if (scheduledAt.value) formData.append('scheduled_at', scheduledAt.value);
+    if (effectiveScheduledAt) formData.append('scheduled_at', effectiveScheduledAt);
     if (selectedGroupId.value) formData.append('group_id', selectedGroupId.value);
 
     await simpleUpload(formData, (pct) => { uploadProgress.value = pct; });
 
-    const detail = scheduleType.value === 'now'
-      ? 'Upload gestartet! Dein Video wird verarbeitet.'
-      : scheduleType.value === 'group'
-        ? 'Video zur Gruppe hinzugefügt.'
-        : 'Upload geplant.';
-    toast.add({ severity: 'success', summary: 'Fertig!', detail, life: 6000 });
+    const detail =
+      scheduleType.value === 'now'         ? 'Upload started — your video is being processed.' :
+      scheduleType.value === 'group'        ? 'Video added to group.' :
+      scheduleType.value === 'recommended'  ? 'Scheduled for the recommended time.' :
+                                              'Upload scheduled.';
+    toast.add({ severity: 'success', summary: 'Done!', detail, life: 6000 });
     router.push('/dashboard');
   } catch (err: any) {
-    toast.add({ severity: 'error', summary: 'Upload fehlgeschlagen', detail: err.response?.data?.detail || 'Etwas ist schiefgelaufen', life: 5000 });
+    toast.add({ severity: 'error', summary: 'Upload failed', detail: err.response?.data?.detail || 'Something went wrong', life: 5000 });
   } finally {
     isSubmitting.value = false;
   }
@@ -739,6 +853,29 @@ async function handleSubmit() {
 /* Step 2 */
 .review-section { display: flex; flex-direction: column; gap: 0.5rem; }
 .review-label { font-size: 0.875rem; font-weight: 500; color: var(--text-secondary); display: block; margin-bottom: 0.25rem; }
+
+.shared-meta-box {
+  background: rgba(79,127,255,0.05);
+  border: 1px solid rgba(79,127,255,0.2);
+  border-radius: 10px;
+  padding: 1rem 1.125rem;
+  margin-bottom: 1.25rem;
+}
+.shared-meta-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.875rem;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #93c5fd;
+}
+.shared-meta-hint {
+  font-size: 0.75rem;
+  font-weight: 400;
+  color: var(--text-secondary);
+}
+.shared-fields { display: flex; flex-direction: column; }
 
 .platform-tabs {
   display: flex;

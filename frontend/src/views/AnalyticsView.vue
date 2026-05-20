@@ -1,22 +1,22 @@
 <template>
   <div class="analytics-page">
     <div class="page-header">
-      <h1 class="page-title">Performance Analyse</h1>
-      <p class="page-subtitle">Views, Likes und Kommentare deiner hochgeladenen Videos</p>
+      <h1 class="page-title">Performance Analytics</h1>
+      <p class="page-subtitle">Views, likes and comments for your uploaded videos</p>
     </div>
 
     <!-- Loading -->
     <div v-if="loading" class="loading-state">
       <i class="pi pi-spin pi-spinner" style="font-size:2rem;color:var(--color-primary)"></i>
-      <p>Lade Videos…</p>
+      <p>Loading videos…</p>
     </div>
 
     <!-- Empty state -->
     <div v-else-if="!videos.length" class="empty-state">
       <i class="pi pi-chart-bar" style="font-size:3rem;color:#94a3b8"></i>
-      <h3>Noch keine hochgeladenen Videos</h3>
-      <p>Lade ein Video hoch, damit hier die Performance-Daten erscheinen.</p>
-      <router-link to="/upload" class="btn-primary">Video hochladen</router-link>
+      <h3>No uploaded videos yet</h3>
+      <p>Upload a video to see performance data here.</p>
+      <router-link to="/upload" class="btn-primary">Upload a video</router-link>
     </div>
 
     <!-- Video list -->
@@ -86,8 +86,8 @@
             </template>
             <template v-else>
               <span class="no-stats">
-                Noch keine Daten —
-                <button class="link-btn" @click="refreshStats(video.id)">jetzt laden</button>
+                No data yet —
+                <button class="link-btn" @click="refreshStats(video.id)">load now</button>
               </span>
             </template>
           </div>
@@ -95,11 +95,25 @@
       </div>
     </div>
 
+    <!-- Creator Loop CTA -->
+    <div v-if="!loading && videos.length > 0" class="loop-cta">
+      <div class="loop-cta-content">
+        <i class="pi pi-lightbulb loop-cta-icon"></i>
+        <div>
+          <p class="loop-cta-title">Ready for the next round?</p>
+          <p class="loop-cta-sub">Use your performance data to spark your next idea</p>
+        </div>
+      </div>
+      <router-link to="/plan" class="loop-cta-btn">
+        Create New Idea <i class="pi pi-arrow-right"></i>
+      </router-link>
+    </div>
+
     <!-- Comments panel (slides in below selected video) -->
     <Transition name="slide-down">
       <div v-if="selectedVideoId" class="comments-panel">
         <div class="comments-header">
-          <h2>Kommentare — {{ selectedVideo?.title }}</h2>
+          <h2>Comments — {{ selectedVideo?.title }}</h2>
           <div class="comment-filters">
             <button
               v-for="f in filters"
@@ -118,13 +132,13 @@
 
         <div v-if="commentsLoading" class="comments-loading">
           <i class="pi pi-spin pi-spinner"></i>
-          <span>Lade Kommentare…</span>
+          <span>Loading comments…</span>
         </div>
 
         <div v-else-if="comments.length === 0" class="comments-empty">
           <i class="pi pi-comment"></i>
-          <span v-if="mockComments">Kommentare sind im Mock-Modus nicht verfügbar.</span>
-          <span v-else>Keine Kommentare für diesen Filter gefunden.</span>
+          <span v-if="mockComments">Comments are not available in mock mode.</span>
+          <span v-else>No comments found for this filter.</span>
         </div>
 
         <div v-else class="comment-list">
@@ -211,9 +225,9 @@ const replySuccess = ref<Record<string, boolean>>({});
 const replyError = ref<Record<string, string>>({});
 
 const filters = [
-  { label: 'Alle', value: 'all' },
-  { label: 'Fragen', value: 'questions' },
-  { label: 'Ideen', value: 'ideas' },
+  { label: 'All',       value: 'all' },
+  { label: 'Questions', value: 'questions' },
+  { label: 'Ideas',     value: 'ideas' },
 ];
 
 const IDEA_KEYWORDS = ['solltest', 'könntest', 'wäre cool', 'idea', 'idee', 'würde', 'vorschlag', 'suggestion'];
@@ -737,4 +751,59 @@ function platformIcon(platform: string): string {
   color: #f87171;
   margin: 0;
 }
+
+/* Loop CTA */
+.loop-cta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-top: 2rem;
+  padding: 1.25rem 1.5rem;
+  background: rgba(124,58,237,0.07);
+  border: 1px solid rgba(124,58,237,0.2);
+  border-radius: 12px;
+  flex-wrap: wrap;
+}
+
+.loop-cta-content {
+  display: flex;
+  align-items: center;
+  gap: 0.875rem;
+}
+
+.loop-cta-icon {
+  font-size: 1.5rem;
+  color: #a78bfa;
+  flex-shrink: 0;
+}
+
+.loop-cta-title {
+  font-size: 0.9375rem;
+  font-weight: 700;
+  color: var(--text-primary, #f1f5f9);
+  margin: 0 0 0.2rem;
+}
+
+.loop-cta-sub {
+  font-size: 0.825rem;
+  color: var(--text-secondary, #94a3b8);
+  margin: 0;
+}
+
+.loop-cta-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.5rem 1.125rem;
+  background: linear-gradient(135deg, #4f7fff, #7c3aed);
+  color: #fff;
+  border-radius: 8px;
+  text-decoration: none;
+  font-size: 0.875rem;
+  font-weight: 600;
+  white-space: nowrap;
+  transition: opacity 0.15s;
+}
+.loop-cta-btn:hover { opacity: 0.85; }
 </style>

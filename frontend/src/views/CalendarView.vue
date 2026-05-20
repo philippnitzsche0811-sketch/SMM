@@ -81,6 +81,11 @@
           <i class="pi pi-folder"></i>
           <span>Gruppe: {{ selectedEvent.group_name }}</span>
         </div>
+        <div v-if="selectedEvent.source === 'idea'" class="modal-idea-actions">
+          <button class="btn-plan-link" @click="router.push('/plan'); selectedEvent = null">
+            <i class="pi pi-lightbulb"></i> Im Planen-Tab öffnen
+          </button>
+        </div>
       </div>
     </div>
 
@@ -99,8 +104,9 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue';
+import { useRouter } from 'vue-router';
 import { useAuthStore } from '@/stores/authStore';
-import { getCalendarEvents } from '@/services/api';
+import { getCalendarEvents, listIdeas } from '@/services/api';
 
 interface CalendarEvent {
   id: string;
@@ -108,10 +114,12 @@ interface CalendarEvent {
   platforms: string[];
   scheduled_at: string;
   status: string;
-  source: 'direct' | 'group';
+  source: 'direct' | 'group' | 'idea';
   group_name?: string;
   group_id?: string;
 }
+
+const router = useRouter();
 
 const authStore = useAuthStore();
 const loading = ref(false);
@@ -198,8 +206,28 @@ async function loadEvents() {
   try {
     const firstDay = new Date(currentYear.value, currentMonth.value, 1);
     const lastDay = new Date(currentYear.value, currentMonth.value + 1, 0);
-    const data = await getCalendarEvents(userId, toDateStr(firstDay), toDateStr(lastDay) + 'T23:59:59');
-    events.value = data.events || [];
+    const [calData, ideasData] = await Promise.all([
+      getCalendarEvents(userId, toDateStr(firstDay), toDateStr(lastDay) + 'T23:59:59'),
+      listIdeas(userId).catch(() => []),
+    ]);
+    const calEvents: CalendarEvent[] = calData.events || [];
+    const firstDayStr = toDateStr(firstDay);
+    const lastDayStr = toDateStr(lastDay);
+    const ideaEvents: CalendarEvent[] = (ideasData as any[])
+      .filter(idea => {
+        if (!idea.target_date) return false;
+        const d = idea.target_date.slice(0, 10);
+        return d >= firstDayStr && d <= lastDayStr;
+      })
+      .map(idea => ({
+        id: `idea-${idea.id}`,
+        title: idea.title,
+        platforms: idea.target_platforms || [],
+        scheduled_at: idea.target_date,
+        status: idea.status,
+        source: 'idea' as const,
+      }));
+    events.value = [...calEvents, ...ideaEvents];
   } catch (e) {
     console.error('Kalender laden fehlgeschlagen', e);
   } finally {
@@ -403,6 +431,12 @@ onMounted(loadEvents);
   color: #d6d3d1;
   border-color: #57534e;
 }
+.event-chip.idea {
+  background: rgba(99,102,241,0.12);
+  color: #a5b4fc;
+  border-color: #6366f1;
+  border-style: dashed;
+}
 .event-chip:hover { filter: brightness(1.15); }
 
 .event-platform-icons { display: flex; gap: 2px; font-size: 0.65rem; }
@@ -509,4 +543,22 @@ onMounted(loadEvents);
   transition: background 0.15s;
 }
 .btn-primary:hover { background: var(--primary-700, #6d28d9); }
+
+.modal-idea-actions { margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px solid var(--border-color, #3f3f46); }
+
+.btn-plan-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: rgba(99,102,241,0.1);
+  color: #a5b4fc;
+  border: 1px solid #6366f1;
+  border-radius: 7px;
+  padding: 0.4rem 0.875rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.btn-plan-link:hover { background: rgba(99,102,241,0.2); }
 </style>
